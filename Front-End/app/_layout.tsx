@@ -7,7 +7,6 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="splash" />
         <Stack.Screen name="login" />
-        <Stack.Screen name="unauthorized" />
         <Stack.Screen name="(authenticated)" />
 
       </Stack>

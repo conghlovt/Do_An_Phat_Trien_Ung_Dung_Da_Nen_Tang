@@ -1,7 +1,7 @@
 import express, { type Application, type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-// Load environment variables (Moved to server.ts)
+import { sendResponse } from './utils/response.util';
 
 
 import authRoutes from './routes/auth.routes';
@@ -19,7 +19,7 @@ app.use('/api/auth', authRoutes);
 
 // Basic Health Check Route
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', message: 'Server is healthy' });
+  sendResponse(res, 200, 'Server is healthy', { status: 'OK' });
 });
 
 // TODO: Add routes here
@@ -27,11 +27,11 @@ app.get('/health', (req: Request, res: Response) => {
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    errors: err.errors || []
-  });
+  const code = err.status || 500;
+  const message = err.message || 'Internal Server Error';
+  const data = err.errors || null;
+  
+  sendResponse(res, code, message, data);
 });
 
 export default app;
