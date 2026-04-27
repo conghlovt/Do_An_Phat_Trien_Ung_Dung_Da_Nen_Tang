@@ -8,7 +8,10 @@ import { AdminDashboard } from '../../src/modules/dashboard/components/AdminDash
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading, isAuthenticated } = useAuth();
+
+  const ADMIN_ROLES = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];
+  const isAdmin = user && ADMIN_ROLES.includes(user.role);
 
   const handleLogout = async () => {
     try {
@@ -26,9 +29,28 @@ export default function DashboardScreen() {
     }
   };
 
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login' as any);
+      return;
+    }
+
+    // If user is logged in but trying to access admin dashboard without permission
+    // In this specific layout, dashboard.tsx handles both, but we should ensure
+    // we don't show admin UI to customers/partners
+  }, [isAuthenticated, isLoading, user]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   const renderContent = () => {
-    if (user?.role === 'admin') {
-      return <AdminDashboard user={user} />;
+    if (isAdmin) {
+      return <AdminDashboard user={user} onLogout={handleLogout} />;
     }
     return <UserDashboard user={user} />;
   };
@@ -40,9 +62,11 @@ export default function DashboardScreen() {
           <Text style={styles.welcomeText}>Hello,</Text>
           <Text style={styles.usernameText}>{user?.username || 'User'}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        {!isAdmin && (
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.content}>

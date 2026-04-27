@@ -5,6 +5,7 @@ import { sendResponse } from './utils/response.util';
 
 
 import authRoutes from './routes/auth.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app: Application = express();
 
@@ -15,6 +16,7 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // Basic Health Check Route

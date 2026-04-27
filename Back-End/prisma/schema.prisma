@@ -11,6 +11,22 @@ enum Role {
   admin
   partner
   customer
+  SUPER_ADMIN
+  OPERATOR
+  ACCOUNTANT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PropertyStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
 }
 
 model User {
@@ -23,5 +39,80 @@ model User {
   avatar        String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  
+  properties    Property[]      // Only for partners
+  bookings      Booking[]       // Only for customers
+  reviews       Review[]
+}
+
+model Property {
+  id            String          @id @default(uuid())
+  name          String
+  description   String?
+  address       String
+  city          String
+  type          String          // Hotel, Homestay, Resort
+  status        PropertyStatus  @default(PENDING)
+  ownerId       String
+  owner         User            @relation(fields: [ownerId], references: [id])
+  rooms         Room[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Room {
+  id            String          @id @default(uuid())
+  propertyId    String
+  property      Property        @relation(fields: [propertyId], references: [id])
+  name          String
+  type          String          // Single, Double, Suite
+  price         Float
+  capacity      Int
+  bookings      Booking[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Booking {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  roomId        String
+  room          Room            @relation(fields: [roomId], references: [id])
+  checkIn       DateTime
+  checkOut      DateTime
+  totalPrice    Float
+  status        BookingStatus   @default(PENDING)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Review {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  bookingId     String
+  rating        Int
+  comment       String?
+  createdAt     DateTime        @default(now())
+}
+
+model Voucher {
+  id            String          @id @default(uuid())
+  code          String          @unique
+  discount      Float
+  type          String          // PERCENTAGE or FIXED
+  expiry        DateTime
+  isActive      Boolean         @default(true)
+}
+
+model Finance {
+  id            String          @id @default(uuid())
+  month         String
+  totalRevenue  Float
+  platformFee   Float
+  partnerNet    Float
+  status        String          // PENDING, COMPLETED, ERROR
+  createdAt     DateTime        @default(now())
 }
 

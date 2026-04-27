@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 
 interface AdminDashboardProps {
   user: any;
+  onLogout?: () => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
