@@ -3,28 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard - Tổng quan</title>
+    <title>Admin Dashboard - Booking Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              brand: {
-                50: '#EEF4FF',
-                100: '#DDE8FF',
-                500: '#3B82F6',
-                600: '#2563EB',
-                700: '#1D4ED8'
-              },
-              secondary: '#8B5CF6',
-              success: '#22C55E',
-              warning: '#F59E0B',
-              danger: '#EF4444',
-              slatebg: '#F6F8FC'
+              brand: { 50: '#EFF6FF', 100: '#DBEAFE', 500: '#3B82F6', 600: '#2563EB', 700: '#1D4ED8' },
+              accent: '#14B8A6',
+              success: '#16A34A',
+              warning: '#D97706',
+              danger: '#DC2626',
+              neutralBg: '#F8FAFC'
             },
             boxShadow: {
-              soft: '0 10px 30px rgba(15, 23, 42, 0.07)'
+              soft: '0 12px 30px rgba(2, 6, 23, 0.06)'
             },
             fontFamily: {
               sans: ['Inter', 'Roboto', 'ui-sans-serif', 'system-ui']
@@ -37,160 +31,246 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body class="font-sans bg-slatebg text-slate-800">
+  <body class="font-sans bg-neutralBg text-slate-800">
     <div class="min-h-screen flex">
-      <!-- Sidebar -->
-      <aside class="w-80 shrink-0 bg-white border-r border-slate-200 p-4 hidden lg:flex lg:flex-col sticky top-0 h-screen overflow-y-auto">
-        <div class="flex items-center justify-between mb-6 px-2">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-secondary"></div>
-            <div>
-              <p class="text-xs uppercase tracking-wider text-slate-500">Admin Portal</p>
-              <h1 class="font-bold">StayManage</h1>
+      <aside id="sidebar" class="w-80 transition-all duration-300 shrink-0 bg-white border-r border-slate-200 p-4 hidden lg:flex lg:flex-col sticky top-0 h-screen overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent"></div>
+            <div class="sidebar-label">
+              <p class="text-xs uppercase tracking-wider text-slate-500">Booking Admin</p>
+              <h1 class="font-bold text-lg leading-tight">StayManage Pro</h1>
             </div>
           </div>
-          <button class="p-2 rounded-lg hover:bg-slate-100" title="Thu gọn">
+          <button id="collapseBtn" class="p-2 rounded-lg hover:bg-slate-100" title="Thu gọn menu">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
         </div>
 
         <nav class="space-y-1 text-sm">
-          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-brand-50 text-brand-700 font-semibold" href="#">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-            Tổng quan
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-brand-50 text-brand-700 font-semibold" href="#overview">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg><span class="sidebar-label">Tổng quan</span>
           </a>
 
-          <details class="group">
-            <summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Quản lý người dùng</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
-            <div class="ml-9 mt-1 space-y-1 text-slate-600">
-              <p class="py-1">Khách hàng</p><p class="py-1">Đối tác</p><p class="py-1">Nhân viên/Admin</p><p class="py-1">Phân quyền</p>
-            </div>
-          </details>
-
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Quản lý đối tác</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Danh sách</p><p class="py-1">Chờ duyệt</p><p class="py-1">Vi phạm</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4"/></svg>Quản lý lưu trú</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Cơ sở lưu trú</p><p class="py-1">Phòng</p><p class="py-1">Loại phòng</p><p class="py-1">Tiện ích</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>Quản lý booking</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Tất cả</p><p class="py-1">Mới</p><p class="py-1">Đang xử lý</p><p class="py-1">Hoàn tất</p><p class="py-1">Đã hủy</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Thanh toán</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Giao dịch</p><p class="py-1">Hoàn tiền</p><p class="py-1">Lỗi thanh toán</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Doanh thu & Đối soát</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Doanh thu hệ thống</p><p class="py-1">Doanh thu đối tác</p><p class="py-1">Phí nền tảng</p><p class="py-1">Kỳ đối soát</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L12 22l-8.59-8.59a2 2 0 0 1 0-2.82L12 2l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>Voucher & Khuyến mãi</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Voucher nền tảng</p><p class="py-1">Voucher đối tác</p><p class="py-1">Lịch sử sử dụng</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Đánh giá & Khiếu nại</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Đánh giá</p><p class="py-1">Khiếu nại</p><p class="py-1">Hỗ trợ khách hàng</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M12 4h9"/><path d="M12 12h9"/><path d="M3 4h.01M3 12h.01M3 20h.01"/></svg>Nội dung hiển thị</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Banner</p><p class="py-1">Địa điểm nổi bật</p><p class="py-1">Chính sách</p><p class="py-1">FAQ</p></div></details>
-          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Thông báo</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Gửi thông báo</p><p class="py-1">Lịch sử thông báo</p></div></details>
-
-          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Báo cáo thống kê</a>
-          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>Nhật ký hệ thống</a>
-          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Cấu hình hệ thống</a>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="sidebar-label">Quản lý người dùng</span></span><svg class="w-4 h-4 group-open:rotate-180 transition sidebar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600 sidebar-label"><p>Khách hàng</p><p>Đối tác</p><p>Nhân viên/Admin</p><p>Phân quyền</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg><span class="sidebar-label">Quản lý đối tác</span></span><svg class="w-4 h-4 group-open:rotate-180 transition sidebar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600 sidebar-label"><p>Danh sách</p><p>Chờ duyệt</p><p>Vi phạm</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4"/></svg><span class="sidebar-label">Quản lý lưu trú</span></span><svg class="w-4 h-4 group-open:rotate-180 transition sidebar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600 sidebar-label"><p>Cơ sở lưu trú</p><p>Phòng</p><p>Loại phòng</p><p>Tiện ích</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="sidebar-label">Quản lý booking</span></span><svg class="w-4 h-4 group-open:rotate-180 transition sidebar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600 sidebar-label"><p>Tất cả</p><p>Mới</p><p>Đang xử lý</p><p>Hoàn tất</p><p>Đã hủy</p></div></details>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#booking-table"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="sidebar-label">Thanh toán</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#finance"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg><span class="sidebar-label">Doanh thu & Đối soát</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L12 22l-8.59-8.59a2 2 0 0 1 0-2.82L12 2l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg><span class="sidebar-label">Voucher & Khuyến mãi</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="sidebar-label">Đánh giá & Khiếu nại</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M12 4h9"/><path d="M12 12h9"/></svg><span class="sidebar-label">Nội dung hiển thị</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18"/></svg><span class="sidebar-label">Thông báo</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 17V9M13 17V5M8 17v-3"/></svg><span class="sidebar-label">Báo cáo thống kê</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#overview"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg><span class="sidebar-label">Nhật ký hệ thống</span></a>
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100" href="#permissions"><svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82"/></svg><span class="sidebar-label">Cấu hình hệ thống</span></a>
         </nav>
       </aside>
 
       <main class="flex-1 min-w-0">
-        <!-- Header -->
         <header class="bg-white border-b border-slate-200 px-4 md:px-8 py-4 sticky top-0 z-10">
           <div class="flex items-center gap-3 md:gap-5">
             <button class="lg:hidden p-2 rounded-lg hover:bg-slate-100">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
             </button>
             <div class="flex-1 relative">
-              <input type="text" placeholder="Tìm kiếm booking, đối tác, khách hàng..." class="w-full bg-slate-100 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-brand-200" />
+              <input type="text" placeholder="Tìm booking, đối tác, khách hàng..." class="w-full bg-slate-100 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-brand-200" />
               <svg class="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
             </div>
-            <button class="relative p-2 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-danger rounded-full"></span></button>
-            <button class="p-2 rounded-xl hover:bg-slate-100 text-sm font-medium">VN ▾</button>
-            <button class="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100">
-              <img src="https://i.pravatar.cc/80?img=12" alt="Admin" class="w-9 h-9 rounded-lg" />
-              <span class="hidden md:block text-sm font-semibold">Admin Tổng</span>
-            </button>
+            <button class="relative p-2 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18"/></svg><span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-danger rounded-full"></span></button>
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200">
+              <img src="https://i.pravatar.cc/100?img=12" class="w-8 h-8 rounded-lg" alt="Admin avatar" />
+              <span class="text-sm font-semibold hidden sm:block">Super Admin</span>
+            </div>
+            <button class="bg-slate-800 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-900">Đăng xuất</button>
           </div>
         </header>
 
-        <section class="p-4 md:p-8 space-y-6">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="text-2xl font-bold">Tổng quan hệ thống</h2>
-              <p class="text-slate-500 text-sm">Theo dõi nhanh hiệu suất vận hành và doanh thu nền tảng lưu trú.</p>
+        <section class="p-4 md:p-8 space-y-8">
+          <article id="overview" class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-2xl font-bold">Tổng quan Dashboard</h2>
+                <p class="text-slate-500 text-sm">Bố cục tối ưu theo phong cách các mẫu trong thư mục <strong>anh-admin</strong>: sidebar đậm cấu trúc + dashboard dạng card/chart ưu tiên khả năng quét dữ liệu nhanh.</p>
+              </div>
+              <button class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Xuất báo cáo</button>
             </div>
-            <button class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-brand-700">Xuất báo cáo</button>
-          </div>
 
-          <!-- Summary cards -->
-          <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng doanh thu</p><p class="mt-2 text-2xl font-bold">₫12.84 tỷ</p><p class="mt-3 text-sm text-success font-semibold">▲ +18.6%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
-            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng số booking</p><p class="mt-2 text-2xl font-bold">24,580</p><p class="mt-3 text-sm text-success font-semibold">▲ +9.2%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
-            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Đối tác đang hoạt động</p><p class="mt-2 text-2xl font-bold">1,245</p><p class="mt-3 text-sm text-warning font-semibold">▼ -1.4%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
-            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Voucher đã sử dụng</p><p class="mt-2 text-2xl font-bold">8,964</p><p class="mt-3 text-sm text-success font-semibold">▲ +14.1%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
-          </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng doanh thu</p><p class="mt-2 text-2xl font-bold">₫15.42 tỷ</p><p class="mt-3 text-sm text-success font-semibold">▲ +16.8%</p></div>
+              <div class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng booking mới</p><p class="mt-2 text-2xl font-bold">3,286</p><p class="mt-3 text-sm text-success font-semibold">▲ +10.4%</p></div>
+              <div class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Khách hàng mới</p><p class="mt-2 text-2xl font-bold">1,147</p><p class="mt-3 text-sm text-warning font-semibold">▼ -2.1%</p></div>
+              <div class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Đối tác mới</p><p class="mt-2 text-2xl font-bold">86</p><p class="mt-3 text-sm text-success font-semibold">▲ +8.7%</p></div>
+            </div>
 
-          <!-- Dashboard charts -->
-          <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-            <article class="xl:col-span-8 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <div class="flex justify-between items-center mb-4"><h3 class="font-semibold">Doanh thu theo ngày</h3><span class="text-xs px-2 py-1 bg-brand-50 text-brand-700 rounded-lg">30 ngày</span></div>
-              <svg viewBox="0 0 820 260" class="w-full h-64">
-                <polyline points="0,220 90,195 180,180 270,150 360,175 450,130 540,115 630,92 720,88 820,55" fill="none" stroke="#2563EB" stroke-width="4"/>
-                <polyline points="0,230 90,210 180,190 270,165 360,190 450,155 540,140 630,125 720,110 820,95" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-dasharray="6 6"/>
-              </svg>
-              <p class="text-xs text-slate-500 mt-1">Xanh dương: doanh thu thực tế • Tím: mục tiêu</p>
-            </article>
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+              <article class="xl:col-span-8 bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-4">Doanh thu & Số lượng booking theo ngày/tháng (Line Chart)</h3>
+                <svg viewBox="0 0 900 260" class="w-full h-64">
+                  <polyline points="0,210 90,180 180,170 270,150 360,165 450,120 540,110 630,95 720,78 810,64 900,52" fill="none" stroke="#2563EB" stroke-width="4"/>
+                  <polyline points="0,225 90,210 180,190 270,175 360,188 450,160 540,145 630,130 720,122 810,110 900,98" fill="none" stroke="#14B8A6" stroke-width="3" stroke-dasharray="6 6"/>
+                </svg>
+                <p class="text-xs text-slate-500">Xanh dương: Doanh thu • Xanh ngọc: Booking volume</p>
+              </article>
 
-            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <h3 class="font-semibold mb-4">Trạng thái booking</h3>
-              <div class="w-44 h-44 mx-auto rounded-full" style="background: conic-gradient(#22C55E 0 62%, #F59E0B 62% 84%, #EF4444 84% 100%);"></div>
-              <div class="mt-4 space-y-2 text-sm">
-                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-success mr-2"></span>Hoàn tất</span><b>62%</b></p>
-                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-warning mr-2"></span>Chờ xác nhận</span><b>22%</b></p>
-                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-danger mr-2"></span>Đã hủy</span><b>16%</b></p>
+              <article class="xl:col-span-4 bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-4">Tỷ lệ trạng thái booking</h3>
+                <div class="w-44 h-44 mx-auto rounded-full" style="background: conic-gradient(#16A34A 0 66%, #D97706 66% 86%, #DC2626 86% 100%);"></div>
+                <div class="mt-4 text-sm space-y-2">
+                  <p class="flex justify-between"><span>Hoàn tất</span><b>66%</b></p>
+                  <p class="flex justify-between"><span>Chờ</span><b>20%</b></p>
+                  <p class="flex justify-between"><span>Hủy</span><b>14%</b></p>
+                </div>
+              </article>
+
+              <article class="xl:col-span-6 bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-4">Doanh thu top đối tác (Stacked Bar)</h3>
+                <div class="space-y-4 text-sm">
+                  <div>
+                    <div class="flex justify-between mb-1"><span>Sunrise Hotel</span><b>₫2.1B</b></div>
+                    <div class="h-3 flex rounded-full overflow-hidden"><div class="bg-brand-600 w-7/12"></div><div class="bg-accent w-3/12"></div><div class="bg-slate-300 w-2/12"></div></div>
+                  </div>
+                  <div><div class="flex justify-between mb-1"><span>Lotus Retreat</span><b>₫1.7B</b></div><div class="h-3 flex rounded-full overflow-hidden"><div class="bg-brand-600 w-6/12"></div><div class="bg-accent w-3/12"></div><div class="bg-slate-300 w-3/12"></div></div></div>
+                  <div><div class="flex justify-between mb-1"><span>Ocean View</span><b>₫1.3B</b></div><div class="h-3 flex rounded-full overflow-hidden"><div class="bg-brand-600 w-5/12"></div><div class="bg-accent w-3/12"></div><div class="bg-slate-300 w-4/12"></div></div></div>
+                </div>
+              </article>
+
+              <article class="xl:col-span-3 bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-4">Tỷ lệ loại đặt phòng</h3>
+                <div class="w-40 h-40 mx-auto rounded-full" style="background: conic-gradient(#3B82F6 0 41%, #14B8A6 41% 74%, #0EA5E9 74% 100%);"></div>
+                <div class="mt-4 text-sm"><p>Theo giờ: 41%</p><p>Qua đêm: 33%</p><p>Theo ngày: 26%</p></div>
+              </article>
+
+              <article class="xl:col-span-3 bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-4">Hiệu quả Voucher (Bar)</h3>
+                <div class="h-44 flex items-end gap-2">
+                  <div class="w-8 bg-brand-100 rounded-t" style="height:35%"></div>
+                  <div class="w-8 bg-brand-100 rounded-t" style="height:42%"></div>
+                  <div class="w-8 bg-brand-500 rounded-t" style="height:65%"></div>
+                  <div class="w-8 bg-brand-600 rounded-t" style="height:83%"></div>
+                  <div class="w-8 bg-accent rounded-t" style="height:74%"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">5 chiến dịch gần nhất</p>
+              </article>
+            </div>
+
+            <div class="grid xl:grid-cols-2 gap-4">
+              <article class="bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-3">5 booking mới nhất</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between"><span>#BK-4021 • Deluxe Room • Hà Nội</span><b class="text-success">Hoàn tất</b></div>
+                  <div class="flex justify-between"><span>#BK-4019 • Studio • Đà Nẵng</span><b class="text-warning">Đang xử lý</b></div>
+                  <div class="flex justify-between"><span>#BK-4018 • Family Suite • Đà Lạt</span><b class="text-danger">Đã hủy</b></div>
+                  <div class="flex justify-between"><span>#BK-4016 • Double Room • Nha Trang</span><b class="text-success">Hoàn tất</b></div>
+                  <div class="flex justify-between"><span>#BK-4012 • Cabin • Sa Pa</span><b class="text-warning">Chờ xác nhận</b></div>
+                </div>
+              </article>
+              <article class="bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+                <h3 class="font-semibold mb-3">5 khiếu nại chưa xử lý</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between"><span>CP-201 • Sai giá phòng</span><b class="text-danger">Khẩn cấp</b></div>
+                  <div class="flex justify-between"><span>CP-197 • Hoàn tiền chậm</span><b class="text-warning">Cao</b></div>
+                  <div class="flex justify-between"><span>CP-192 • Không đúng mô tả</span><b class="text-warning">Cao</b></div>
+                  <div class="flex justify-between"><span>CP-191 • Lỗi thanh toán</span><b class="text-danger">Khẩn cấp</b></div>
+                  <div class="flex justify-between"><span>CP-187 • Trùng booking</span><b class="text-warning">Cao</b></div>
+                </div>
+              </article>
+            </div>
+          </article>
+
+          <article id="booking-table" class="space-y-4">
+            <h2 class="text-xl font-bold">Quản lý Booking & Cơ sở lưu trú (DataTable)</h2>
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-soft space-y-4">
+              <div class="grid md:grid-cols-6 gap-3">
+                <input class="md:col-span-2 border border-slate-200 rounded-lg px-3 py-2" placeholder="Tìm booking / khách hàng" />
+                <input type="date" class="border border-slate-200 rounded-lg px-3 py-2" />
+                <select class="border border-slate-200 rounded-lg px-3 py-2"><option>Trạng thái</option><option>Thành công</option><option>Đang xử lý</option><option>Đã hủy</option></select>
+                <select class="border border-slate-200 rounded-lg px-3 py-2"><option>Loại phòng</option><option>Theo giờ</option><option>Qua đêm</option><option>Theo ngày</option></select>
+                <div class="flex gap-2">
+                  <button class="flex-1 bg-brand-600 text-white rounded-lg px-3 py-2 text-sm">Lọc</button>
+                  <button class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">Đặt lại</button>
+                </div>
               </div>
-            </article>
 
-            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <h3 class="font-semibold mb-4">Số lượng booking theo ngày</h3>
-              <div class="h-64 flex items-end gap-3">
-                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 40%"></div>
-                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 55%"></div>
-                <div class="w-8 bg-brand-500 rounded-t-lg" style="height: 80%"></div>
-                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 62%"></div>
-                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 50%"></div>
-                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 72%"></div>
-                <div class="w-8 bg-brand-600 rounded-t-lg" style="height: 90%"></div>
+              <div class="flex flex-wrap gap-2 justify-end">
+                <button class="border border-slate-200 rounded-lg px-3 py-2 text-sm">Xuất Excel</button>
+                <button class="border border-slate-200 rounded-lg px-3 py-2 text-sm">Xuất PDF</button>
               </div>
-              <p class="text-xs text-slate-500 mt-3">T2 đến CN</p>
-            </article>
 
-            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <h3 class="font-semibold mb-4">Top doanh thu theo đối tác</h3>
-              <div class="space-y-3 text-sm">
-                <div><div class="flex justify-between mb-1"><span>Sunrise Hotel</span><b>₫1.8B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[92%] bg-brand-600 rounded-full"></div></div></div>
-                <div><div class="flex justify-between mb-1"><span>Lotus Retreat</span><b>₫1.5B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[80%] bg-brand-500 rounded-full"></div></div></div>
-                <div><div class="flex justify-between mb-1"><span>Ocean View</span><b>₫1.2B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[68%] bg-brand-500 rounded-full"></div></div></div>
-                <div><div class="flex justify-between mb-1"><span>Skyline Suites</span><b>₫980M</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[55%] bg-brand-500 rounded-full"></div></div></div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="text-left bg-slate-50"><tr><th class="p-3">Mã</th><th class="p-3">Khách hàng</th><th class="p-3">Lưu trú</th><th class="p-3">Ngày</th><th class="p-3">Trạng thái</th><th class="p-3">Hành động</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b"><td class="p-3">BK-4021</td><td class="p-3">Nguyễn An</td><td class="p-3">Sunrise Hotel</td><td class="p-3">2026-04-25</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Thành công</span></td><td class="p-3"><button class="text-brand-600">Xem</button> · <button class="text-slate-700">Sửa</button></td></tr>
+                    <tr class="border-b"><td class="p-3">BK-4019</td><td class="p-3">Lê Hương</td><td class="p-3">Lotus Retreat</td><td class="p-3">2026-04-25</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">Đang xử lý</span></td><td class="p-3"><button class="text-brand-600">Xem</button> · <button class="text-slate-700">Sửa</button></td></tr>
+                    <tr class="border-b"><td class="p-3">BK-4018</td><td class="p-3">Trần Nam</td><td class="p-3">Ocean View</td><td class="p-3">2026-04-24</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700">Đã hủy</span></td><td class="p-3"><button class="text-brand-600">Xem</button> · <button class="text-slate-700">Sửa</button></td></tr>
+                    <tr><td class="p-3">PT-078</td><td class="p-3">Đối tác NewStay</td><td class="p-3">Chờ duyệt hồ sơ</td><td class="p-3">2026-04-24</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">Đang xử lý</span></td><td class="p-3"><button class="text-success">Phê duyệt nhanh</button></td></tr>
+                  </tbody>
+                </table>
               </div>
-            </article>
 
-            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <h3 class="font-semibold mb-4">Cơ cấu loại đặt phòng</h3>
-              <div class="w-44 h-44 mx-auto rounded-full" style="background: conic-gradient(#3B82F6 0 40%, #8B5CF6 40% 73%, #06B6D4 73% 100%);"></div>
-              <div class="mt-4 text-sm space-y-2">
-                <p class="flex justify-between"><span>Theo giờ</span><b>40%</b></p>
-                <p class="flex justify-between"><span>Qua đêm</span><b>33%</b></p>
-                <p class="flex justify-between"><span>Theo ngày</span><b>27%</b></p>
+              <div class="flex justify-between items-center text-sm">
+                <p>Hiển thị 1-4 / 120 kết quả</p>
+                <div class="flex gap-2"><button class="px-3 py-1 border rounded">Trước</button><button class="px-3 py-1 border rounded bg-brand-600 text-white">1</button><button class="px-3 py-1 border rounded">2</button><button class="px-3 py-1 border rounded">Sau</button></div>
               </div>
-            </article>
+            </div>
+          </article>
 
-            <article class="xl:col-span-12 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
-              <div class="flex justify-between items-center mb-4"><h3 class="font-semibold">Thống kê Voucher đã sử dụng</h3><span class="text-xs px-2 py-1 bg-secondary/10 text-secondary rounded-lg">Chiến dịch khuyến mãi</span></div>
-              <svg viewBox="0 0 1000 230" class="w-full h-56">
-                <defs>
-                  <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.35"/>
-                    <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.03"/>
-                  </linearGradient>
-                </defs>
-                <path d="M0 210 L0 190 L110 175 L220 160 L330 170 L440 130 L550 120 L660 110 L770 95 L880 80 L1000 65 L1000 210 Z" fill="url(#areaFill)"/>
-                <polyline points="0,190 110,175 220,160 330,170 440,130 550,120 660,110 770,95 880,80 1000,65" fill="none" stroke="#8B5CF6" stroke-width="4"/>
-              </svg>
-            </article>
-          </div>
+          <article id="permissions" class="space-y-4">
+            <h2 class="text-xl font-bold">Quản lý phân quyền & Cấu hình</h2>
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-soft">
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-3 py-1 rounded-full bg-slate-900 text-white text-sm">Super Admin</span>
+                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">Editor</span>
+                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">Accountant</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-left"><tr><th class="p-3">Module</th><th class="p-3">Xem</th><th class="p-3">Sửa</th><th class="p-3">Xóa</th><th class="p-3">Phê duyệt</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b"><td class="p-3 font-medium">Doanh thu</td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" /></td><td class="p-3"><input type="checkbox" checked /></td></tr>
+                    <tr class="border-b"><td class="p-3 font-medium">Booking</td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" checked /></td></tr>
+                    <tr><td class="p-3 font-medium">Đối tác</td><td class="p-3"><input type="checkbox" checked /></td><td class="p-3"><input type="checkbox" /></td><td class="p-3"><input type="checkbox" /></td><td class="p-3"><input type="checkbox" checked /></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-xs text-slate-500 mt-3">Gợi ý UX: bật xác nhận 2 bước cho quyền Xóa/Phê duyệt để giảm rủi ro thao tác nhầm.</p>
+            </div>
+          </article>
+
+          <article id="finance" class="space-y-4">
+            <h2 class="text-xl font-bold">Doanh thu & Đối soát (Finance)</h2>
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-soft space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-slate-600">Quản lý kỳ đối soát theo tháng, xác nhận thanh toán hàng loạt và cảnh báo lỗi cần can thiệp thủ công.</p>
+                <button class="bg-success text-white px-4 py-2 rounded-lg text-sm">Xác nhận thanh toán hàng loạt</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-left"><tr><th class="p-3">Kỳ đối soát</th><th class="p-3">Tổng tiền khách trả</th><th class="p-3">Phí nền tảng</th><th class="p-3">Thực nhận đối tác</th><th class="p-3">Trạng thái</th><th class="p-3">Thao tác</th></tr></thead>
+                  <tbody>
+                    <tr class="border-b"><td class="p-3">03/2026</td><td class="p-3">₫5.200.000.000</td><td class="p-3">₫520.000.000</td><td class="p-3">₫4.680.000.000</td><td class="p-3"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Sẵn sàng chi trả</span></td><td class="p-3"><button class="text-brand-600">Xem chi tiết</button></td></tr>
+                    <tr class="border-b"><td class="p-3">02/2026</td><td class="p-3">₫4.850.000.000</td><td class="p-3">₫485.000.000</td><td class="p-3">₫4.365.000.000</td><td class="p-3"><span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Đối soát lại</span></td><td class="p-3"><button class="text-brand-600">Xử lý</button></td></tr>
+                    <tr><td class="p-3">01/2026</td><td class="p-3">₫4.400.000.000</td><td class="p-3">₫440.000.000</td><td class="p-3">₫3.960.000.000</td><td class="p-3"><span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Lỗi thanh toán</span></td><td class="p-3"><button class="text-danger font-semibold">Can thiệp thủ công</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
         </section>
       </main>
     </div>
+
+    <script>
+      const sidebar = document.getElementById('sidebar');
+      const collapseBtn = document.getElementById('collapseBtn');
+      collapseBtn?.addEventListener('click', () => {
+        const collapsed = sidebar.classList.toggle('w-20');
+        sidebar.classList.toggle('w-80');
+        document.querySelectorAll('.sidebar-label').forEach((el) => el.classList.toggle('hidden', collapsed));
+        document.querySelectorAll('.sidebar-arrow').forEach((el) => el.classList.toggle('hidden', collapsed));
+      });
+    </script>
   </body>
 </html>
