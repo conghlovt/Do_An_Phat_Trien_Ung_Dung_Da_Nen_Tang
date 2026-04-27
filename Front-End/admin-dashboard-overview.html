@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Tổng quan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#EEF4FF',
+                100: '#DDE8FF',
+                500: '#3B82F6',
+                600: '#2563EB',
+                700: '#1D4ED8'
+              },
+              secondary: '#8B5CF6',
+              success: '#22C55E',
+              warning: '#F59E0B',
+              danger: '#EF4444',
+              slatebg: '#F6F8FC'
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(15, 23, 42, 0.07)'
+            },
+            fontFamily: {
+              sans: ['Inter', 'Roboto', 'ui-sans-serif', 'system-ui']
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="font-sans bg-slatebg text-slate-800">
+    <div class="min-h-screen flex">
+      <!-- Sidebar -->
+      <aside class="w-80 shrink-0 bg-white border-r border-slate-200 p-4 hidden lg:flex lg:flex-col sticky top-0 h-screen overflow-y-auto">
+        <div class="flex items-center justify-between mb-6 px-2">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-secondary"></div>
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-500">Admin Portal</p>
+              <h1 class="font-bold">StayManage</h1>
+            </div>
+          </div>
+          <button class="p-2 rounded-lg hover:bg-slate-100" title="Thu gọn">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        </div>
+
+        <nav class="space-y-1 text-sm">
+          <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-brand-50 text-brand-700 font-semibold" href="#">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Tổng quan
+          </a>
+
+          <details class="group">
+            <summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Quản lý người dùng</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="ml-9 mt-1 space-y-1 text-slate-600">
+              <p class="py-1">Khách hàng</p><p class="py-1">Đối tác</p><p class="py-1">Nhân viên/Admin</p><p class="py-1">Phân quyền</p>
+            </div>
+          </details>
+
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>Quản lý đối tác</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Danh sách</p><p class="py-1">Chờ duyệt</p><p class="py-1">Vi phạm</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4"/></svg>Quản lý lưu trú</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Cơ sở lưu trú</p><p class="py-1">Phòng</p><p class="py-1">Loại phòng</p><p class="py-1">Tiện ích</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>Quản lý booking</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Tất cả</p><p class="py-1">Mới</p><p class="py-1">Đang xử lý</p><p class="py-1">Hoàn tất</p><p class="py-1">Đã hủy</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Thanh toán</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Giao dịch</p><p class="py-1">Hoàn tiền</p><p class="py-1">Lỗi thanh toán</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Doanh thu & Đối soát</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Doanh thu hệ thống</p><p class="py-1">Doanh thu đối tác</p><p class="py-1">Phí nền tảng</p><p class="py-1">Kỳ đối soát</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L12 22l-8.59-8.59a2 2 0 0 1 0-2.82L12 2l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>Voucher & Khuyến mãi</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Voucher nền tảng</p><p class="py-1">Voucher đối tác</p><p class="py-1">Lịch sử sử dụng</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Đánh giá & Khiếu nại</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Đánh giá</p><p class="py-1">Khiếu nại</p><p class="py-1">Hỗ trợ khách hàng</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M12 4h9"/><path d="M12 12h9"/><path d="M3 4h.01M3 12h.01M3 20h.01"/></svg>Nội dung hiển thị</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Banner</p><p class="py-1">Địa điểm nổi bật</p><p class="py-1">Chính sách</p><p class="py-1">FAQ</p></div></details>
+          <details class="group"><summary class="list-none flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-100 cursor-pointer"><span class="flex items-center gap-3"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Thông báo</span><svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary><div class="ml-9 mt-1 space-y-1 text-slate-600"><p class="py-1">Gửi thông báo</p><p class="py-1">Lịch sử thông báo</p></div></details>
+
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Báo cáo thống kê</a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>Nhật ký hệ thống</a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Cấu hình hệ thống</a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 min-w-0">
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 px-4 md:px-8 py-4 sticky top-0 z-10">
+          <div class="flex items-center gap-3 md:gap-5">
+            <button class="lg:hidden p-2 rounded-lg hover:bg-slate-100">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            <div class="flex-1 relative">
+              <input type="text" placeholder="Tìm kiếm booking, đối tác, khách hàng..." class="w-full bg-slate-100 rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-brand-200" />
+              <svg class="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+            </div>
+            <button class="relative p-2 rounded-xl hover:bg-slate-100"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-danger rounded-full"></span></button>
+            <button class="p-2 rounded-xl hover:bg-slate-100 text-sm font-medium">VN ▾</button>
+            <button class="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100">
+              <img src="https://i.pravatar.cc/80?img=12" alt="Admin" class="w-9 h-9 rounded-lg" />
+              <span class="hidden md:block text-sm font-semibold">Admin Tổng</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="p-4 md:p-8 space-y-6">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-2xl font-bold">Tổng quan hệ thống</h2>
+              <p class="text-slate-500 text-sm">Theo dõi nhanh hiệu suất vận hành và doanh thu nền tảng lưu trú.</p>
+            </div>
+            <button class="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-brand-700">Xuất báo cáo</button>
+          </div>
+
+          <!-- Summary cards -->
+          <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng doanh thu</p><p class="mt-2 text-2xl font-bold">₫12.84 tỷ</p><p class="mt-3 text-sm text-success font-semibold">▲ +18.6%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
+            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Tổng số booking</p><p class="mt-2 text-2xl font-bold">24,580</p><p class="mt-3 text-sm text-success font-semibold">▲ +9.2%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
+            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Đối tác đang hoạt động</p><p class="mt-2 text-2xl font-bold">1,245</p><p class="mt-3 text-sm text-warning font-semibold">▼ -1.4%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
+            <article class="bg-white rounded-2xl p-5 shadow-soft border border-slate-100"><p class="text-sm text-slate-500">Voucher đã sử dụng</p><p class="mt-2 text-2xl font-bold">8,964</p><p class="mt-3 text-sm text-success font-semibold">▲ +14.1%</p><p class="text-xs text-slate-500">So với tháng trước</p></article>
+          </div>
+
+          <!-- Dashboard charts -->
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+            <article class="xl:col-span-8 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <div class="flex justify-between items-center mb-4"><h3 class="font-semibold">Doanh thu theo ngày</h3><span class="text-xs px-2 py-1 bg-brand-50 text-brand-700 rounded-lg">30 ngày</span></div>
+              <svg viewBox="0 0 820 260" class="w-full h-64">
+                <polyline points="0,220 90,195 180,180 270,150 360,175 450,130 540,115 630,92 720,88 820,55" fill="none" stroke="#2563EB" stroke-width="4"/>
+                <polyline points="0,230 90,210 180,190 270,165 360,190 450,155 540,140 630,125 720,110 820,95" fill="none" stroke="#8B5CF6" stroke-width="3" stroke-dasharray="6 6"/>
+              </svg>
+              <p class="text-xs text-slate-500 mt-1">Xanh dương: doanh thu thực tế • Tím: mục tiêu</p>
+            </article>
+
+            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <h3 class="font-semibold mb-4">Trạng thái booking</h3>
+              <div class="w-44 h-44 mx-auto rounded-full" style="background: conic-gradient(#22C55E 0 62%, #F59E0B 62% 84%, #EF4444 84% 100%);"></div>
+              <div class="mt-4 space-y-2 text-sm">
+                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-success mr-2"></span>Hoàn tất</span><b>62%</b></p>
+                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-warning mr-2"></span>Chờ xác nhận</span><b>22%</b></p>
+                <p class="flex justify-between"><span><span class="inline-block w-2 h-2 rounded-full bg-danger mr-2"></span>Đã hủy</span><b>16%</b></p>
+              </div>
+            </article>
+
+            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <h3 class="font-semibold mb-4">Số lượng booking theo ngày</h3>
+              <div class="h-64 flex items-end gap-3">
+                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 40%"></div>
+                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 55%"></div>
+                <div class="w-8 bg-brand-500 rounded-t-lg" style="height: 80%"></div>
+                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 62%"></div>
+                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 50%"></div>
+                <div class="w-8 bg-brand-100 rounded-t-lg" style="height: 72%"></div>
+                <div class="w-8 bg-brand-600 rounded-t-lg" style="height: 90%"></div>
+              </div>
+              <p class="text-xs text-slate-500 mt-3">T2 đến CN</p>
+            </article>
+
+            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <h3 class="font-semibold mb-4">Top doanh thu theo đối tác</h3>
+              <div class="space-y-3 text-sm">
+                <div><div class="flex justify-between mb-1"><span>Sunrise Hotel</span><b>₫1.8B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[92%] bg-brand-600 rounded-full"></div></div></div>
+                <div><div class="flex justify-between mb-1"><span>Lotus Retreat</span><b>₫1.5B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[80%] bg-brand-500 rounded-full"></div></div></div>
+                <div><div class="flex justify-between mb-1"><span>Ocean View</span><b>₫1.2B</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[68%] bg-brand-500 rounded-full"></div></div></div>
+                <div><div class="flex justify-between mb-1"><span>Skyline Suites</span><b>₫980M</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 w-[55%] bg-brand-500 rounded-full"></div></div></div>
+              </div>
+            </article>
+
+            <article class="xl:col-span-4 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <h3 class="font-semibold mb-4">Cơ cấu loại đặt phòng</h3>
+              <div class="w-44 h-44 mx-auto rounded-full" style="background: conic-gradient(#3B82F6 0 40%, #8B5CF6 40% 73%, #06B6D4 73% 100%);"></div>
+              <div class="mt-4 text-sm space-y-2">
+                <p class="flex justify-between"><span>Theo giờ</span><b>40%</b></p>
+                <p class="flex justify-between"><span>Qua đêm</span><b>33%</b></p>
+                <p class="flex justify-between"><span>Theo ngày</span><b>27%</b></p>
+              </div>
+            </article>
+
+            <article class="xl:col-span-12 bg-white rounded-2xl p-5 shadow-soft border border-slate-100">
+              <div class="flex justify-between items-center mb-4"><h3 class="font-semibold">Thống kê Voucher đã sử dụng</h3><span class="text-xs px-2 py-1 bg-secondary/10 text-secondary rounded-lg">Chiến dịch khuyến mãi</span></div>
+              <svg viewBox="0 0 1000 230" class="w-full h-56">
+                <defs>
+                  <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.03"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0 210 L0 190 L110 175 L220 160 L330 170 L440 130 L550 120 L660 110 L770 95 L880 80 L1000 65 L1000 210 Z" fill="url(#areaFill)"/>
+                <polyline points="0,190 110,175 220,160 330,170 440,130 550,120 660,110 770,95 880,80 1000,65" fill="none" stroke="#8B5CF6" stroke-width="4"/>
+              </svg>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
