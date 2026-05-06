@@ -57,8 +57,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children, activeTab, set
         { label: 'Phân quyền', value: 'roles' },
       ],
     },
-    { id: 'lodging', label: 'Quản lý lưu trú', icon: Building2 },
-    { id: 'booking', label: 'Quản lý Đặt phòng', icon: CalendarCheck },
+    { id: 'lodging', label: 'Quản lý cơ sở lưu trú', icon: Building2 },
+    { id: 'booking', label: 'Quản lý đặt phòng', icon: CalendarCheck },
     { id: 'voucher', label: 'Chương trình ưu đãi', icon: Ticket },
     { id: 'reviews', label: 'Đánh giá & Phản hồi', icon: Star },
     { id: 'content', label: 'Quản lý nội dung', icon: FileText },
@@ -163,8 +163,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children, activeTab, set
   const getBreadcrumb = () => {
     if (activeTab === 'overview') return 'Tổng quan';
     if (['customers', 'partners', 'staff', 'admins', 'roles'].includes(activeTab)) return 'Quản lý người dùng';
-    if (activeTab === 'lodging') return 'Quản lý lưu trú';
-    if (activeTab === 'booking') return 'Quản lý Đặt phòng';
+    if (activeTab === 'lodging') return 'Quản lý cơ sở lưu trú';
+    if (activeTab === 'booking') return 'Quản lý đặt phòng';
     if (activeTab === 'voucher') return 'Chương trình ưu đãi';
     if (activeTab === 'reviews') return 'Đánh giá & Phản hồi';
     if (activeTab === 'content') return 'Quản lý nội dung';

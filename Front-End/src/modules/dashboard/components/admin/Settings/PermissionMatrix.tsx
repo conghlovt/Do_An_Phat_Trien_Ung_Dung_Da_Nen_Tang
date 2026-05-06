@@ -3,30 +3,31 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert }
 import { Shield, Check, X } from 'lucide-react-native';
 import { adminService } from '../../../services/admin.service';
 import { ROOT_ADMIN_ROLES } from '../../../utils/permissions';
+import { getErrorMessage } from '../../../utils/errorMessage';
 
 const MODULES = [
   { id: 'revenue', name: 'Doanh thu' },
-  { id: 'booking', name: 'Booking' },
-  { id: 'lodging', name: 'Luu tru' },
-  { id: 'users', name: 'Nguoi dung' },
-  { id: 'partners', name: 'Doi tac' },
-  { id: 'finance', name: 'Doi soat' },
+  { id: 'booking', name: 'Đặt phòng' },
+  { id: 'lodging', name: 'Lưu trú' },
+  { id: 'users', name: 'Người dùng' },
+  { id: 'partners', name: 'Đối tác' },
+  { id: 'finance', name: 'Đối soát' },
   { id: 'voucher', name: 'Voucher' },
-  { id: 'reviews', name: 'Danh gia' },
-  { id: 'content', name: 'Noi dung' },
+  { id: 'reviews', name: 'Đánh giá' },
+  { id: 'content', name: 'Nội dung' },
 ];
 
 const ACTIONS = [
   { id: 'view', name: 'Xem' },
-  { id: 'edit', name: 'Sua' },
-  { id: 'delete', name: 'Xoa' },
-  { id: 'approve', name: 'Duyet' },
+  { id: 'edit', name: 'Sửa' },
+  { id: 'delete', name: 'Xóa' },
+  { id: 'approve', name: 'Duyệt' },
 ];
 
 const ROLES = [
-  { id: 'SUPER_ADMIN', name: 'Super Admin' },
-  { id: 'OPERATOR', name: 'Editor/Operator' },
-  { id: 'ACCOUNTANT', name: 'Accountant' },
+  { id: 'SUPER_ADMIN', name: 'Quản trị tối cao' },
+  { id: 'OPERATOR', name: 'Nhân viên vận hành' },
+  { id: 'ACCOUNTANT', name: 'Kế toán' },
 ];
 
 const createEmptyPermissions = () =>
@@ -83,29 +84,29 @@ export const PermissionMatrix = ({ currentUserRole }: { currentUserRole?: string
 
   const handleSave = async () => {
     if (!canManagePermissions) {
-      Alert.alert('Loi', 'Chi Super Admin moi duoc luu cau hinh phan quyen');
+      Alert.alert('Lỗi', 'Chỉ Super Admin mới được lưu cấu hình phân quyền');
       return;
     }
 
     try {
       await adminService.updatePermissions(selectedRole, currentPermissions);
-      Alert.alert('Thanh cong', `Da luu cau hinh quyen cho ${selectedRole}`);
+      Alert.alert('Thành công', `Đã lưu cấu hình quyền cho ${selectedRole}`);
       fetchPermissions();
-    } catch (error: any) {
-      Alert.alert('Loi', error.response?.data?.message || 'Khong the luu phan quyen');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể lưu phân quyền.'));
     }
   };
 
-  if (loading) return <View style={styles.container}><Text style={styles.title}>Dang tai cau hinh quyen...</Text></View>;
+  if (loading) return <View style={styles.container}><Text style={styles.title}>Đang tải cấu hình quyền...</Text></View>;
   if (!canManagePermissions) {
-    return <View style={styles.container}><Text style={styles.title}>Ban khong co quyen cau hinh phan quyen.</Text></View>;
+    return <View style={styles.container}><Text style={styles.title}>Bạn không có quyền cấu hình phân quyền.</Text></View>;
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Shield size={24} color="#3B82F6" />
-        <Text style={styles.title}>Quan ly phan quyen</Text>
+        <Text style={styles.title}>Quản lý phân quyền</Text>
       </View>
 
       <View style={styles.roleTabs}>
@@ -152,7 +153,7 @@ export const PermissionMatrix = ({ currentUserRole }: { currentUserRole?: string
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Luu cau hinh</Text>
+          <Text style={styles.saveBtnText}>Lưu cấu hình</Text>
         </TouchableOpacity>
       </View>
     </View>

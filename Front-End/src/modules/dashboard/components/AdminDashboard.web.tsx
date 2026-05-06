@@ -123,7 +123,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     >
       <View style={styles.pageHeader}>
         <Text style={styles.pageTitle}>
-          {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          {activeTab === 'overview' && 'Tổng quan'}
+          {activeTab === 'lodging' && 'Quản lý cơ sở lưu trú'}
+          {activeTab === 'booking' && 'Quản lý đặt phòng'}
+          {activeTab === 'voucher' && 'Chương trình ưu đãi'}
+          {activeTab === 'reviews' && 'Đánh giá & Phản hồi'}
+          {activeTab === 'content' && 'Quản lý nội dung'}
+          {activeTab === 'users' && 'Quản lý người dùng'}
+          {activeTab === 'customers' && 'Quản lý khách hàng'}
+          {activeTab === 'partners' && 'Quản lý đối tác'}
+          {activeTab === 'staff' && 'Quản lý nhân viên'}
+          {activeTab === 'admins' && 'Quản lý quản trị viên'}
+          {activeTab === 'roles' && 'Phân quyền hệ thống'}
         </Text>
         <Text style={styles.pageSubtitle}>Trạng thái hệ thống và các chỉ số hiệu suất</Text>
       </View>

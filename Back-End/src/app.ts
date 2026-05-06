@@ -1,7 +1,8 @@
 import express, { type Application, type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import { sendResponse } from './utils/response.util';
+import { isAppError, toAppError } from './utils/app-error.util';
+import { sendError, sendResponse } from './utils/response.util';
 
 
 import authRoutes from './routes/auth.routes';
@@ -21,19 +22,31 @@ app.use('/api/admin', adminRoutes);
 
 // Basic Health Check Route
 app.get('/health', (req: Request, res: Response) => {
-  sendResponse(res, 200, 'Server is healthy', { status: 'OK' });
+  sendResponse(res, 200, 'Máy chủ hoạt động bình thường.', { status: 'OK' });
 });
 
 // TODO: Add routes here
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  const code = err.status || 500;
-  const message = err.message || 'Internal Server Error';
-  const data = err.errors || null;
-  
-  sendResponse(res, code, message, data);
+  const appError = toAppError(err);
+
+  console.error('Request failed', {
+    internalCode: appError.internalCode,
+    rawMessage: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+    details: appError.details,
+    path: req.path,
+    method: req.method,
+    userId: (req as any).user?.id,
+    status: appError.httpStatus,
+  });
+
+  if (!isAppError(err)) {
+    return sendError(res, appError);
+  }
+
+  return sendError(res, err);
 });
 
 export default app;

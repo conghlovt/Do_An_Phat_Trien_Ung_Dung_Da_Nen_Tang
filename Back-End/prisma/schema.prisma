@@ -15,6 +15,12 @@ enum Role {
   ACCOUNTANT
 }
 
+enum UserStatus {
+  ACTIVE
+  PENDING
+  BLOCKED
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -40,21 +46,28 @@ enum ContentStatus {
   ARCHIVED
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  username  String
-  role      Role     @default(customer)
-  code      String?
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum VoucherStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
 
-  properties Property[] // Only for partners
-  bookings   Booking[] // Only for customers
-  reviews    Review[]
-  contents   ContentPost[]
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  username     String
+  role         Role          @default(customer)
+  code         String?
+  avatar       String?
+  refreshToken String?
+  status       UserStatus    @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  properties   Property[] // Only for partners
+  bookings     Booking[] // Only for customers
+  reviews      Review[]
+  contents     ContentPost[]
 }
 
 model Property {
@@ -64,10 +77,13 @@ model Property {
   address     String
   city        String
   type        String // Hotel, Homestay, Resort
+  images      String[] // List of image URLs
+  amenities   String[] // Amenities: Wifi, Pool, etc.
   status      PropertyStatus @default(PENDING)
   ownerId     String
   owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   rooms       Room[]
+  bookings    Booking[] // Direct relation for easier query
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -79,25 +95,32 @@ model Room {
   name       String
   type       String // Single, Double, Suite
   price      Float
-  capacity   Int
+  capacity   Int // Max people
+  totalRooms Int       @default(1) // Total rooms of this type
+  available  Int       @default(1) // Number of rooms currently available
   bookings   Booking[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 }
 
 model Booking {
-  id         String        @id @default(uuid())
-  userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roomId     String
-  room       Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  checkIn    DateTime
-  checkOut   DateTime
-  totalPrice Float
-  status     BookingStatus @default(PENDING)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  reviews    Review[]
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String // Link directly to property
+  property    Property      @relation(fields: [propertyId], references: [id])
+  roomId      String
+  room        Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  checkIn     DateTime
+  checkOut    DateTime
+  guests      Int           @default(1)
+  totalPrice  Float
+  voucherCode String? // Applied voucher code
+  status      BookingStatus @default(PENDING)
+  paymentId   String? // Payment transaction ID
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  reviews     Review[]
 }
 
 model Review {
@@ -108,22 +131,24 @@ model Review {
   booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   rating    Int
   comment   String?
+  images    String[] // Photos from guests
+  reply     String? // Response from owner/admin
   status    ReviewStatus @default(PENDING)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 }
 
 model Voucher {
-  id         String   @id @default(uuid())
-  code       String   @unique
+  id         String        @id @default(uuid())
+  code       String        @unique
   discount   Float
   type       String // PERCENTAGE or FIXED
   expiry     DateTime
-  usageLimit Int      @default(100)
-  usedCount  Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  usageLimit Int           @default(100)
+  usedCount  Int           @default(0)
+  status     VoucherStatus @default(ACTIVE)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 model Finance {
@@ -139,9 +164,11 @@ model Finance {
 model ContentPost {
   id        String        @id @default(uuid())
   title     String
-  category  String
-  excerpt   String?
-  body      String
+  category  String // News, Guide, Promotion
+  thumbnail String? // Post thumbnail image
+  excerpt   String? // Short description
+  body      String        @db.Text
+  views     Int           @default(0)
   status    ContentStatus @default(DRAFT)
   authorId  String?
   author    User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)

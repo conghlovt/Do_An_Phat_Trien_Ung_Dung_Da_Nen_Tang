@@ -84,7 +84,7 @@ export const DashboardOverview = () => {
       <View style={styles.gridRow}>
         <MetricCard 
           title="Tổng doanh thu" 
-          value={`$${stats?.totalRevenue || 0}`} 
+          value={`${(stats?.totalRevenue || 0).toLocaleString()} VND`} 
           trend={stats?.trends?.revenue || 0} 
           icon={DollarSign} 
           color="#3B82F6" 

@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from 'express';
 import prisma from '../lib/prisma';
-import { sendResponse } from '../utils/response.util';
+import { sendError, sendResponse } from '../utils/response.util';
+import { USER_MESSAGES } from '../utils/app-error.util';
 import type { AuthRequest } from './auth.middleware';
 
 type PermissionAction = 'view' | 'edit' | 'delete' | 'approve';
@@ -57,7 +58,7 @@ const normalizePermissions = (role: string, savedPermissions: any) => {
 
 export const requireRootAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (!ROOT_ADMIN_ROLES.includes(req.user?.role)) {
-    return sendResponse(res, 403, 'Only Super Admin can configure admin permissions');
+    return sendResponse(res, 403, USER_MESSAGES.ADMIN_PERMISSION_REQUIRED);
   }
 
   return next();
@@ -69,7 +70,8 @@ export const permissionGuard = (
 ) => async (req: AuthRequest, res: Response, next: NextFunction) => {
   const role = req.user?.role;
   if (!role) {
-    return sendResponse(res, 401, 'Access token is required');
+    res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
+    return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_MISSING);
   }
 
   if (ROOT_ADMIN_ROLES.includes(role)) {
@@ -77,7 +79,7 @@ export const permissionGuard = (
   }
 
   if (!CONFIG_ROLES.includes(role)) {
-    return sendResponse(res, 403, 'You do not have permission to perform this action');
+    return sendResponse(res, 403, USER_MESSAGES.AUTH_FORBIDDEN);
   }
 
   const moduleList = Array.isArray(modules) ? modules : [modules];
@@ -89,11 +91,11 @@ export const permissionGuard = (
     const allowed = moduleList.some((moduleId) => actionList.some((actionId) => permissions[moduleId]?.[actionId]));
 
     if (!allowed) {
-      return sendResponse(res, 403, 'You do not have permission to perform this action');
+      return sendResponse(res, 403, USER_MESSAGES.AUTH_FORBIDDEN);
     }
 
     return next();
-  } catch (error: any) {
-    return sendResponse(res, 500, error.message);
+  } catch (error) {
+    return sendError(res, error);
   }
 };

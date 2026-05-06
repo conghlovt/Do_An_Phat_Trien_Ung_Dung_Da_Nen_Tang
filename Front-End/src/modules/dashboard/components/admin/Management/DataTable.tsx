@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 interface Column {
@@ -21,6 +21,12 @@ interface DataTableProps {
     color?: string;
     onPress: (item: any) => void;
   }[];
+  // Server-side props
+  serverSide?: boolean;
+  totalCount?: number;
+  loading?: boolean;
+  page?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export const DataTable: React.FC<DataTableProps> = ({
@@ -31,13 +37,22 @@ export const DataTable: React.FC<DataTableProps> = ({
   onFilterClick,
   onExport,
   actions,
+  serverSide,
+  totalCount,
+  loading,
+  page: externalPage,
+  onPageChange,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 10;
   const hasActions = Boolean(actions?.length);
 
+  const currentPage = serverSide ? (externalPage || 1) : internalPage;
+
   const filteredData = useMemo(() => {
+    if (serverSide) return data; // Data is already filtered by server
+
     const query = searchQuery.trim().toLowerCase();
     if (!query) return data;
 
@@ -52,15 +67,32 @@ export const DataTable: React.FC<DataTableProps> = ({
         .toLowerCase()
         .includes(query),
     );
-  }, [data, searchQuery]);
+  }, [data, searchQuery, serverSide]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalItems = serverSide ? (totalCount || 0) : filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  
+  const paginatedData = useMemo(() => {
+    if (serverSide) return data; // Data is already paginated by server
+    return filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [serverSide, data, filteredData, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (serverSide) {
+      onPageChange?.(newPage);
+    } else {
+      setInternalPage(newPage);
+    }
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1);
-    onSearch(query);
+    if (serverSide) {
+      onSearch(query);
+    } else {
+      setInternalPage(1);
+      onSearch(query);
+    }
   };
 
   return (
@@ -71,7 +103,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           <View style={styles.searchBox}>
             <Search size={18} color="#94A3B8" />
             <TextInput
-              placeholder="Tim kiem..."
+              placeholder="Tìm kiếm..."
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={handleSearch}
@@ -81,12 +113,12 @@ export const DataTable: React.FC<DataTableProps> = ({
 
           <TouchableOpacity style={styles.iconBtn} onPress={onFilterClick}>
             <Filter size={18} color="#94A3B8" />
-            <Text style={styles.iconBtnText}>Bo loc</Text>
+            <Text style={styles.iconBtnText}>Bộ lọc</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.iconBtn} onPress={() => onExport?.('excel')}>
             <Download size={18} color="#94A3B8" />
-            <Text style={styles.iconBtnText}>Xuat Excel</Text>
+            <Text style={styles.iconBtnText}>Xuất Excel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -98,11 +130,15 @@ export const DataTable: React.FC<DataTableProps> = ({
               {col.label}
             </Text>
           ))}
-          {hasActions && <Text style={[styles.columnHeader, { width: 140, textAlign: 'center' }]}>Hanh dong</Text>}
+          {hasActions && <Text style={[styles.columnHeader, { width: 140, textAlign: 'center' }]}>Hành động</Text>}
         </View>
 
         <ScrollView style={styles.tableBody}>
-          {paginatedData.length > 0 ? (
+          {loading ? (
+            <View style={styles.emptyRow}>
+               <ActivityIndicator size="small" color="#3B82F6" />
+            </View>
+          ) : paginatedData.length > 0 ? (
             paginatedData.map((item, index) => (
               <View key={item.id || index} style={styles.tableRow}>
                 {columns.map((col) => (
@@ -124,7 +160,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             ))
           ) : (
             <View style={styles.emptyRow}>
-              <Text style={styles.emptyText}>Khong tim thay du lieu phu hop</Text>
+              <Text style={styles.emptyText}>Không tìm thấy dữ liệu phù hợp</Text>
             </View>
           )}
         </ScrollView>
@@ -132,16 +168,16 @@ export const DataTable: React.FC<DataTableProps> = ({
 
       <View style={styles.footer}>
         <Text style={styles.paginationInfo}>
-          {`Hien thi ${filteredData.length ? (currentPage - 1) * itemsPerPage + 1 : 0} - ${Math.min(
+          {`Hiển thị ${totalItems ? (currentPage - 1) * itemsPerPage + 1 : 0} - ${Math.min(
             currentPage * itemsPerPage,
-            filteredData.length,
-          )} trong ${filteredData.length}`}
+            totalItems,
+          )} trong ${totalItems}`}
         </Text>
         <View style={styles.paginationControls}>
           <TouchableOpacity
-            disabled={currentPage === 1}
-            onPress={() => setCurrentPage((v) => v - 1)}
-            style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+            disabled={currentPage === 1 || loading}
+            onPress={() => handlePageChange(currentPage - 1)}
+            style={[styles.pageBtn, (currentPage === 1 || loading) && styles.pageBtnDisabled]}
           >
             <ChevronLeft size={18} color={currentPage === 1 ? '#334155' : '#94A3B8'} />
           </TouchableOpacity>
@@ -151,9 +187,9 @@ export const DataTable: React.FC<DataTableProps> = ({
           </View>
 
           <TouchableOpacity
-            disabled={currentPage === totalPages || totalPages === 0}
-            onPress={() => setCurrentPage((v) => v + 1)}
-            style={[styles.pageBtn, (currentPage === totalPages || totalPages === 0) && styles.pageBtnDisabled]}
+            disabled={currentPage === totalPages || totalPages === 0 || loading}
+            onPress={() => handlePageChange(currentPage + 1)}
+            style={[styles.pageBtn, (currentPage === totalPages || totalPages === 0 || loading) && styles.pageBtnDisabled]}
           >
             <ChevronRight size={18} color={currentPage === totalPages || totalPages === 0 ? '#334155' : '#94A3B8'} />
           </TouchableOpacity>

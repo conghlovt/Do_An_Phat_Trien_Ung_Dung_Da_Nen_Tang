@@ -31,35 +31,35 @@ export const BookingManagement = ({ permissions = fullAccess }: { permissions?: 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       await adminService.updateBookingStatus(id, status);
-      Alert.alert('Thanh cong', `Da chuyen trang thai sang ${status}`);
+      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status === 'CONFIRMED' ? 'Đã xác nhận' : 'Đã hủy'}`);
       fetchBookings();
     } catch {
-      Alert.alert('Loi', 'Khong the cap nhat trang thai');
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
     }
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await confirmAction('Xac nhan', 'Ban co chac muon xoa booking nay?');
+    const confirmed = await confirmAction('Xác nhận', 'Bạn có chắc muốn xóa đặt phòng này?');
     if (!confirmed) return;
 
     try {
       await adminService.deleteBooking(id);
-      Alert.alert('Thanh cong', 'Da xoa booking');
+      Alert.alert('Thành công', 'Đã xóa đặt phòng');
       fetchBookings();
     } catch {
-      Alert.alert('Loi', 'Khong the xoa booking');
+      Alert.alert('Lỗi', 'Không thể xóa đặt phòng');
     }
   };
 
   const columns = [
-    { key: 'id', label: 'Ma don', render: (val: string) => <Text style={{ color: '#94A3B8', fontSize: 13 }}>#{val.substring(0, 8)}</Text> },
-    { key: 'user', label: 'Khach hang', render: (val: any) => <Text style={{ color: '#FFF', fontWeight: '600' }}>{val?.username || 'Khach vang lai'}</Text> },
-    { key: 'property', label: 'Luu tru', render: (val: any) => <Text style={{ color: '#CBD5E1' }}>{val?.name || 'N/A'}</Text> },
+    { key: 'id', label: 'Mã đơn', render: (val: string) => <Text style={{ color: '#94A3B8', fontSize: 13 }}>#{val.substring(0, 8)}</Text> },
+    { key: 'user', label: 'Khách hàng', render: (val: any) => <Text style={{ color: '#FFF', fontWeight: '600' }}>{val?.username || 'Khách vãng lai'}</Text> },
+    { key: 'property', label: 'Lưu trú', render: (val: any) => <Text style={{ color: '#CBD5E1' }}>{val?.name || 'N/A'}</Text> },
     { key: 'checkIn', label: 'Check-in', render: (val: string) => <Text style={{ color: '#94A3B8' }}>{new Date(val).toLocaleDateString('vi-VN')}</Text> },
-    { key: 'totalPrice', label: 'Tong tien', render: (val: number) => <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>{Number(val || 0).toLocaleString()} VND</Text> },
+    { key: 'totalPrice', label: 'Tổng tiền', render: (val: number) => <Text style={{ color: '#60A5FA', fontWeight: 'bold' }}>{Number(val || 0).toLocaleString()} VND</Text> },
     {
       key: 'status',
-      label: 'Trang thai',
+      label: 'Trạng thái',
       render: (status: string) => {
         let color = '#10B981';
         let bgColor = 'rgba(16, 185, 129, 0.1)';
@@ -74,7 +74,9 @@ export const BookingManagement = ({ permissions = fullAccess }: { permissions?: 
 
         return (
           <View style={[styles.badge, { backgroundColor: bgColor }]}>
-            <Text style={[styles.badgeText, { color }]}>{status}</Text>
+            <Text style={[styles.badgeText, { color }]}>
+              {status === 'CONFIRMED' ? 'Đã xác nhận' : status === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý'}
+            </Text>
           </View>
         );
       },
@@ -84,18 +86,18 @@ export const BookingManagement = ({ permissions = fullAccess }: { permissions?: 
   const actions = [
     ...(permissions.canApprove || permissions.canEdit
       ? [
-          { label: 'Duyet', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'CONFIRMED') },
-          { label: 'Huy', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'CANCELLED') },
+          { label: 'Duyệt', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'CONFIRMED') },
+          { label: 'Hủy', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'CANCELLED') },
         ]
       : []),
-    ...(permissions.canDelete ? [{ label: 'Xoa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
+    ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Dang tai du lieu booking...</Text></View>;
+  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Đang tải dữ liệu đặt phòng...</Text></View>;
 
   return (
     <View style={styles.container}>
-      <DataTable title="Quan ly Booking he thong" columns={columns} data={bookings} onSearch={() => {}} actions={actions} />
+      <DataTable title="Quản lý đặt phòng hệ thống" columns={columns} data={bookings} onSearch={() => {}} actions={actions} />
     </View>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Platform, TouchableOpacity } from 'react-native';
 
 const platformShadow = (boxShadow: string, nativeShadow: object) =>
   Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
@@ -14,7 +14,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.warningCard}>
-          <Text style={styles.icon}>💻</Text>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>💻</Text>
+          </View>
           <Text style={styles.title}>Yêu cầu truy cập trên Web</Text>
           <Text style={styles.message}>
             Bảng điều khiển quản trị chỉ có thể truy cập được thông qua trình duyệt web để đảm bảo bảo mật và cung cấp các công cụ quản lý tốt hơn.
@@ -22,6 +24,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
           <Text style={styles.hint}>
             Vui lòng đăng nhập từ máy tính của bạn để quản lý hệ thống.
           </Text>
+
+          <TouchableOpacity style={styles.backButton} onPress={onLogout}>
+            <Text style={styles.backButtonText}>Quay lại đăng nhập</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -34,20 +40,48 @@ const styles = StyleSheet.create({
   warningCard: {
     backgroundColor: '#FFF',
     padding: 32,
-    borderRadius: 24,
+    borderRadius: 30,
     alignItems: 'center',
-    ...platformShadow('0 4px 12px rgba(0, 0, 0, 0.1)', {
+    width: '100%',
+    maxWidth: 340,
+    ...platformShadow('0 10px 25px rgba(0, 0, 0, 0.08)', {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 5,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.08,
+      shadowRadius: 25,
+      elevation: 10,
     }),
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
   },
-  icon: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#1E293B', marginBottom: 12, textAlign: 'center' },
-  message: { fontSize: 16, color: '#64748B', textAlign: 'center', lineHeight: 24, marginBottom: 20 },
-  hint: { fontSize: 14, color: '#94A3B8', textAlign: 'center', fontStyle: 'italic' },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  icon: { fontSize: 40 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#0F172A', marginBottom: 16, textAlign: 'center' },
+  message: { fontSize: 15, color: '#475569', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  hint: { fontSize: 13, color: '#94A3B8', textAlign: 'center', fontStyle: 'italic', marginBottom: 30 },
+  backButton: {
+    backgroundColor: '#008080',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    ...platformShadow('0 4px 12px rgba(0, 128, 128, 0.2)', {
+      shadowColor: '#008080',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 4,
+    }),
+  },
+  backButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });
+

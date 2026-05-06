@@ -16,6 +16,7 @@ import { useAuth } from '../src/modules/auth/hooks/useAuth';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { getApiErrorMessage } from '../src/modules/core/api/api-error.util';
 
 const BACKGROUND_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=3140&auto=format&fit=crop';
 
@@ -56,8 +57,8 @@ export default function RegisterScreen() {
       await register(data.email, data.password, data.username, data.role);
       router.replace('/login' as any);
 
-    } catch (err: any) {
-      setRegisterError(err.message || 'Registration failed. Please try again.');
+    } catch (err) {
+      setRegisterError(getApiErrorMessage(err, 'Không thể đăng ký. Vui lòng thử lại.'));
     }
   };
 

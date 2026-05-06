@@ -1,7 +1,9 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { tokenStorage } from '../storage/secure-token.storage';
+import { type ApiSuccess } from '../types/api.types';
+import { useAuthStore } from '../../auth/store/auth.store';
 
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
 const API_PATH = process.env.EXPO_PUBLIC_API_PATH || '/api';
@@ -63,6 +65,18 @@ const apiInstance = axios.create({
   },
 });
 
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
+
+const clearClientSession = async () => {
+  try {
+    await useAuthStore.getState().clearAuth();
+  } catch {
+    await tokenStorage.clearTokens();
+  }
+};
+
 // Interceptor to add token to headers
 apiInstance.interceptors.request.use(
   async (config) => {
@@ -82,22 +96,42 @@ apiInstance.interceptors.request.use(
 apiInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh-token')) {
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+    const isRefreshRequest = originalRequest?.url?.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isRefreshRequest) {
       originalRequest._retry = true;
       const refreshToken = await tokenStorage.getRefreshToken();
 
       if (refreshToken) {
-        const response = await axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
-        const accessToken = response.data?.data?.accessToken;
+        try {
+          const response = await axios.post<ApiSuccess<{ accessToken: string; refreshToken?: string }>>(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+          const accessToken = response.data?.data?.accessToken;
+          const nextRefreshToken = response.data?.data?.refreshToken;
 
-        if (accessToken) {
-          await tokenStorage.saveAccessToken(accessToken);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return apiInstance(originalRequest);
+          if (accessToken) {
+            if (nextRefreshToken) {
+              await tokenStorage.saveTokens(accessToken, nextRefreshToken);
+            } else {
+              await tokenStorage.saveAccessToken(accessToken);
+            }
+
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return apiInstance(originalRequest);
+          }
+        } catch (refreshError) {
+          await clearClientSession();
+          return Promise.reject(refreshError);
         }
       }
+
+      await clearClientSession();
     }
+
+    if (error.response?.status === 401 && isRefreshRequest) {
+      await clearClientSession();
+    }
+
     return Promise.reject(error);
   }
 );

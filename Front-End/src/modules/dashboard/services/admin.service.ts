@@ -1,6 +1,13 @@
 import apiInstance from '../../core/api/api.instance';
 
-const params = (query?: string) => (query ? { params: { q: query } } : undefined);
+const params = (q?: string, page?: number, limit?: number, role?: string) => ({
+  params: {
+    ...(q ? { q } : {}),
+    ...(page ? { page } : {}),
+    ...(limit ? { limit } : {}),
+    ...(role ? { role } : {}),
+  }
+});
 
 export const adminService = {
   getStats: async () => {
@@ -13,8 +20,8 @@ export const adminService = {
     return response.data.data;
   },
 
-  getUsers: async (query?: string) => {
-    const response = await apiInstance.get('/admin/users', params(query));
+  getUsers: async (query?: string, page?: number, limit?: number, role?: string) => {
+    const response = await apiInstance.get('/admin/users', params(query, page, limit, role));
     return response.data.data;
   },
 
@@ -33,6 +40,11 @@ export const adminService = {
     return response.data.data;
   },
 
+  updateUserStatus: async (id: string, status: string) => {
+    const response = await apiInstance.put(`/admin/users/${id}/status`, { status });
+    return response.data.data;
+  },
+
   getPermissions: async () => {
     const response = await apiInstance.get('/admin/permissions');
     return response.data.data;
@@ -43,8 +55,8 @@ export const adminService = {
     return response.data.data;
   },
 
-  getVouchers: async (query?: string) => {
-    const response = await apiInstance.get('/admin/vouchers', params(query));
+  getVouchers: async (query?: string, page?: number, limit?: number) => {
+    const response = await apiInstance.get('/admin/vouchers', params(query, page, limit));
     return response.data.data;
   },
 

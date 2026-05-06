@@ -1,16 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { DataTable } from '../Management/DataTable';
 import { AlertCircle, CheckCircle2, DollarSign } from 'lucide-react-native';
-
-const MOCK_FINANCE = [
-  { id: 'RC001', month: 'Tháng 04/2024', total: '$12,400', fee: '$1,240', net: '$11,160', status: 'Chờ thanh toán' },
-  { id: 'RC002', month: 'Tháng 03/2024', total: '$15,800', fee: '$1,580', net: '$14,220', status: 'Đã hoàn tất' },
-  { id: 'RC003', month: 'Tháng 02/2024', total: '$10,200', fee: '$1,020', net: '$9,180', status: 'Lỗi thanh toán' },
-  { id: 'RC004', month: 'Tháng 01/2024', total: '$14,000', fee: '$1,400', net: '$12,600', status: 'Đã hoàn tất' },
-];
+import { adminService } from '../../../services/admin.service';
 
 export const FinanceView = () => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFinance();
+  }, []);
+
+  const fetchFinance = async () => {
+    try {
+      setLoading(true);
+      const records = await adminService.getFinance();
+      // Transform data if needed to match table format
+      const formatted = records.map((r: any) => ({
+        ...r,
+        total: `$${r.totalRevenue.toLocaleString()}`,
+        fee: `$${r.platformFee.toLocaleString()}`,
+        net: `$${r.partnerNet.toLocaleString()}`,
+        status: r.status === 'COMPLETED' ? 'Đã hoàn tất' : r.status === 'PENDING' ? 'Chờ thanh toán' : 'Lỗi thanh toán',
+      }));
+      setData(formatted);
+    } catch (error) {
+      console.error('Fetch finance error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const columns = [
     { key: 'month', label: 'Kỳ đối soát' },
     { key: 'total', label: 'Tổng tiền khách trả' },
@@ -60,10 +80,16 @@ export const FinanceView = () => {
       <DataTable 
         title="Đối soát & Doanh thu"
         columns={columns}
-        data={MOCK_FINANCE}
+        data={data}
         onSearch={(q) => console.log('Searching', q)}
         actions={actions}
       />
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      )}
 
       <View style={styles.batchActions}>
         <TouchableOpacity style={styles.batchBtn}>
@@ -119,5 +145,12 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

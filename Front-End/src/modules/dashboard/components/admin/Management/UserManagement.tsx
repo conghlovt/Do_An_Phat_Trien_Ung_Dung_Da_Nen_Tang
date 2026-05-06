@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { DataTable } from './DataTable';
 import { adminService } from '../../../services/admin.service';
-import { Trash2, ShieldAlert, Plus, X, CheckCircle, User as UserIcon } from 'lucide-react-native';
+import { Trash2, ShieldAlert, Plus, X, CheckCircle, User as UserIcon, Ban, Check } from 'lucide-react-native';
 import { confirmAction } from '../../../utils/confirmAction';
 import { ModuleAccess, ROOT_ADMIN_ROLES } from '../../../utils/permissions';
+import { getErrorMessage } from '../../../utils/errorMessage';
 
 interface UserManagementProps {
   role?: 'customer' | 'partner' | 'admin' | 'staff';
@@ -17,8 +18,10 @@ const protectedRoles = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];
 
 export const UserManagement: React.FC<UserManagementProps> = ({ role, permissions = fullAccess, currentUserRole }) => {
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modals State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -32,11 +35,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
     role: 'OPERATOR'
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (q = searchQuery, p = page) => {
     setLoading(true);
     try {
-      const data = await adminService.getUsers();
-      setUsers(data);
+      // Mapping FE role to BE role filter if needed
+      let roleFilter = role;
+      if (role === 'staff') roleFilter = undefined; // Staff is a mix of roles, let server handle or filter here
+      if (role === 'admin') roleFilter = 'admin';
+
+      const result = await adminService.getUsers(q, p, 10, roleFilter);
+      setUsers(result.users);
+      setTotalCount(result.total);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
@@ -45,23 +54,18 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(searchQuery, page);
+  }, [role, page]);
 
-  useEffect(() => {
-    if (role) {
-      if (role === 'staff') {
-        setFilteredUsers(users.filter((u: any) => u.role === 'OPERATOR' || u.role === 'ACCOUNTANT'));
-      } else if (role === 'admin') {
-        setFilteredUsers(users.filter((u: any) => u.role === 'admin' || u.role === 'SUPER_ADMIN'));
-      } else {
-        const targetRole = role.toUpperCase();
-        setFilteredUsers(users.filter((u: any) => u.role === targetRole || u.role === role));
-      }
-    } else {
-      setFilteredUsers(users);
-    }
-  }, [role, users]);
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    setPage(1);
+    fetchUsers(q, 1);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+  };
 
   const handleCreateUser = async () => {
     if (!permissions.canEdit) {
@@ -80,8 +84,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       setIsCreateModalOpen(false);
       setFormData({ username: '', email: '', password: '', role: 'OPERATOR' });
       fetchUsers();
-    } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể tạo tài khoản');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể tạo tài khoản.'));
     }
   };
 
@@ -106,6 +110,21 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
     }
   };
 
+  const handleUpdateStatus = async (id: string, status: string) => {
+    if (!permissions.canApprove) {
+      Alert.alert('Lỗi', 'Bạn không có quyền phê duyệt/khóa người dùng');
+      return;
+    }
+
+    try {
+      await adminService.updateUserStatus(id, status);
+      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status}`);
+      fetchUsers();
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể cập nhật trạng thái.'));
+    }
+  };
+
   const handleDeleteUser = async (user: any) => {
     if (!permissions.canDelete) {
       Alert.alert('Lỗi', 'Bạn không có quyền xóa người dùng');
@@ -123,8 +142,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       await adminService.deleteUser(user.id);
       Alert.alert('Thành công', 'Đã xóa người dùng');
       fetchUsers();
-    } catch (error: any) {
-      Alert.alert('Lỗi', error.response?.data?.message || error.message || 'Không thể xóa người dùng');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể xóa người dùng.'));
     }
   };
 
@@ -134,9 +153,34 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
     { 
       key: 'role', 
       label: 'Vai trò',
-      render: (role: string) => (
-        <View style={[styles.badge, { backgroundColor: role === 'ADMIN' || role === 'SUPER_ADMIN' ? 'rgba(59, 130, 246, 0.1)' : (role === 'OPERATOR' || role === 'ACCOUNTANT' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(71, 85, 105, 0.1)') }]}>
-          <Text style={[styles.badgeText, { color: role === 'ADMIN' || role === 'SUPER_ADMIN' ? '#60A5FA' : (role === 'OPERATOR' || role === 'ACCOUNTANT' ? '#FBBF24' : '#94A3B8') }]}>{role}</Text>
+      render: (role: string) => {
+        const roleMap: any = {
+          'admin': 'Quản trị viên',
+          'SUPER_ADMIN': 'Quản trị tối cao',
+          'OPERATOR': 'Nhân viên vận hành',
+          'ACCOUNTANT': 'Kế toán',
+          'customer': 'Khách hàng',
+          'partner': 'Đối tác'
+        };
+        return (
+          <View style={[styles.badge, { backgroundColor: role === 'admin' || role === 'SUPER_ADMIN' ? 'rgba(59, 130, 246, 0.1)' : (role === 'OPERATOR' || role === 'ACCOUNTANT' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(71, 85, 105, 0.1)') }]}>
+            <Text style={[styles.badgeText, { color: role === 'admin' || role === 'SUPER_ADMIN' ? '#60A5FA' : (role === 'OPERATOR' || role === 'ACCOUNTANT' ? '#FBBF24' : '#94A3B8') }]}>
+              {roleMap[role] || role}
+            </Text>
+          </View>
+        );
+      }
+    },
+    {
+      key: 'status',
+      label: 'Trạng thái',
+      render: (status: string) => (
+        <View style={[styles.badge, { 
+          backgroundColor: status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.1)' : (status === 'PENDING' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)') 
+        }]}>
+          <Text style={[styles.badgeText, { 
+            color: status === 'ACTIVE' ? '#10B981' : (status === 'PENDING' ? '#F59E0B' : '#EF4444') 
+          }]}>{status === 'ACTIVE' ? 'Hoạt động' : (status === 'PENDING' ? 'Chờ duyệt' : 'Đã khóa')}</Text>
         </View>
       )
     },
@@ -153,9 +197,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
           } },
         ]
       : []),
+    ...(permissions.canApprove 
+      ? [
+          { label: 'Phê duyệt', icon: Check, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'ACTIVE') },
+          { label: 'Khóa tài khoản', icon: Ban, color: '#EF4444', onPress: (item: any) => handleUpdateStatus(item.id, 'BLOCKED') },
+        ] 
+      : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{color: '#FFF'}}>Đang tải dữ liệu...</Text></View>;
 
   return (
     <View style={styles.container}>
@@ -171,9 +220,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       <DataTable 
         title={`Quản lý ${role ? (role === 'customer' ? 'Khách hàng' : role === 'partner' ? 'Đối tác' : role === 'staff' ? 'Nhân viên' : 'Quản trị viên') : 'người dùng'}`}
         columns={columns}
-        data={filteredUsers}
-        onSearch={(q) => console.log('Search', q)}
+        data={users}
+        onSearch={handleSearch}
         actions={actions}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={handlePageChange}
       />
 
       {/* Modal Tạo nhân viên */}
@@ -226,15 +280,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Vai trò</Text>
                 <View style={styles.roleSelector}>
-                  {['OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => (
-                    <TouchableOpacity 
-                      key={r}
-                      style={[styles.roleBtn, formData.role === r && styles.roleBtnActive]}
-                      onPress={() => setFormData({...formData, role: r})}
-                    >
-                      <Text style={[styles.roleBtnText, formData.role === r && styles.roleBtnTextActive]}>{r}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {['OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => {
+                    const roleMap: any = {
+                      'OPERATOR': 'Vận hành',
+                      'ACCOUNTANT': 'Kế toán',
+                      'admin': 'Quản trị',
+                      'SUPER_ADMIN': 'Tối cao'
+                    };
+                    return (
+                      <TouchableOpacity 
+                        key={r}
+                        style={[styles.roleBtn, formData.role === r && styles.roleBtnActive]}
+                        onPress={() => setFormData({...formData, role: r})}
+                      >
+                        <Text style={[styles.roleBtnText, formData.role === r && styles.roleBtnTextActive]}>{roleMap[r] || r}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -266,19 +328,29 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
             </View>
 
             <View style={styles.roleSelectorVertical}>
-              {['customer', 'partner', 'OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => (
-                <TouchableOpacity 
-                  key={r}
-                  style={[styles.roleRow, selectedUser?.role === r && styles.roleRowActive]}
-                  onPress={() => handleUpdateRole(r)}
-                >
-                  <View style={styles.roleRowLeft}>
-                    <View style={[styles.roleDot, { backgroundColor: selectedUser?.role === r ? '#3B82F6' : '#334155' }]} />
-                    <Text style={[styles.roleRowText, selectedUser?.role === r && styles.roleRowTextActive]}>{r}</Text>
-                  </View>
-                  {selectedUser?.role === r && <CheckCircle size={18} color="#3B82F6" />}
-                </TouchableOpacity>
-              ))}
+              {['customer', 'partner', 'OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => {
+                const roleMap: any = {
+                  'customer': 'Khách hàng',
+                  'partner': 'Đối tác',
+                  'OPERATOR': 'Nhân viên vận hành',
+                  'ACCOUNTANT': 'Kế toán',
+                  'admin': 'Quản trị viên',
+                  'SUPER_ADMIN': 'Quản trị tối cao'
+                };
+                return (
+                  <TouchableOpacity 
+                    key={r}
+                    style={[styles.roleRow, selectedUser?.role === r && styles.roleRowActive]}
+                    onPress={() => handleUpdateRole(r)}
+                  >
+                    <View style={styles.roleRowLeft}>
+                      <View style={[styles.roleDot, { backgroundColor: selectedUser?.role === r ? '#3B82F6' : '#334155' }]} />
+                      <Text style={[styles.roleRowText, selectedUser?.role === r && styles.roleRowTextActive]}>{roleMap[r] || r}</Text>
+                    </View>
+                    {selectedUser?.role === r && <CheckCircle size={18} color="#3B82F6" />}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </View>

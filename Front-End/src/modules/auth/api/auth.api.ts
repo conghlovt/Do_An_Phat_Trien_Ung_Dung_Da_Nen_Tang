@@ -1,9 +1,9 @@
 import { type AuthResponse } from '../types/auth.types';
 import apiInstance from '../../core/api/api.instance';
-import { type ApiResponse } from '../../core/types/api.types';
+import { type ApiSuccess } from '../../core/types/api.types';
 
 export const login = async ({ email, password }: any): Promise<AuthResponse> => {
-  const response = await apiInstance.post<ApiResponse<AuthResponse>>('/auth/login', {
+  const response = await apiInstance.post<ApiSuccess<AuthResponse>>('/auth/login', {
     email,
     password,
   });
@@ -16,12 +16,12 @@ export const logout = async (): Promise<void> => {
 
 
 export const register = async (data: any): Promise<AuthResponse> => {
-  const response = await apiInstance.post<ApiResponse<AuthResponse>>('/auth/register', data);
+  const response = await apiInstance.post<ApiSuccess<AuthResponse>>('/auth/register', data);
   return response.data.data;
 };
 
-export const refreshToken = async (token: string): Promise<{ accessToken: string }> => {
-  const response = await apiInstance.post<ApiResponse<{ accessToken: string }>>('/auth/refresh-token', {
+export const refreshToken = async (token: string): Promise<{ accessToken: string; refreshToken?: string }> => {
+  const response = await apiInstance.post<ApiSuccess<{ accessToken: string; refreshToken?: string }>>('/auth/refresh-token', {
     refreshToken: token,
   });
   return response.data.data;
@@ -34,4 +34,3 @@ export const forgotPassword = async (email: string): Promise<void> => {
 export const resetPassword = async (data: any): Promise<void> => {
   await apiInstance.post('/auth/reset-password', data);
 };
-

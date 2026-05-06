@@ -5,6 +5,7 @@ import { Star, Edit, Trash2, CheckCircle, X } from 'lucide-react-native';
 import { adminService } from '../../../services/admin.service';
 import { confirmAction } from '../../../utils/confirmAction';
 import { ModuleAccess } from '../../../utils/permissions';
+import { getErrorMessage } from '../../../utils/errorMessage';
 
 const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true };
 
@@ -12,7 +13,7 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<any>(null);
-  const [formData, setFormData] = useState({ rating: '5', comment: '', status: 'APPROVED' });
+  const [formData, setFormData] = useState({ rating: '5', comment: '', status: 'APPROVED', reply: '' });
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -36,6 +37,7 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
       rating: String(review.rating || 5),
       comment: review.comment || '',
       status: review.status || 'APPROVED',
+      reply: review.reply || '',
     });
   };
 
@@ -46,12 +48,13 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
         rating: Number(formData.rating),
         comment: formData.comment,
         status: formData.status,
+        reply: formData.reply,
       });
-      Alert.alert('Thanh cong', 'Da cap nhat danh gia');
+      Alert.alert('Thành công', 'Đã cập nhật đánh giá');
       setEditingReview(null);
       fetchReviews();
-    } catch (error: any) {
-      Alert.alert('Loi', error.response?.data?.message || 'Khong the cap nhat danh gia');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể cập nhật đánh giá.'));
     }
   };
 
@@ -60,29 +63,29 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
       await adminService.updateReview(review.id, { status: 'APPROVED' });
       fetchReviews();
     } catch {
-      Alert.alert('Loi', 'Khong the duyet danh gia');
+      Alert.alert('Lỗi', 'Không thể duyệt đánh giá');
     }
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await confirmAction('Xac nhan', 'Ban co chac muon xoa danh gia nay?');
+    const confirmed = await confirmAction('Xác nhận', 'Bạn có chắc muốn xóa đánh giá này?');
     if (!confirmed) return;
 
     try {
       await adminService.deleteReview(id);
-      Alert.alert('Thanh cong', 'Da xoa danh gia');
+      Alert.alert('Thành công', 'Đã xóa đánh giá');
       fetchReviews();
     } catch {
-      Alert.alert('Loi', 'Khong the xoa danh gia');
+      Alert.alert('Lỗi', 'Không thể xóa đánh giá');
     }
   };
 
   const columns = [
-    { key: 'guest', label: 'Khach hang' },
-    { key: 'property', label: 'Co so' },
+    { key: 'guest', label: 'Khách hàng' },
+    { key: 'property', label: 'Cơ sở' },
     {
       key: 'rating',
-      label: 'Danh gia',
+      label: 'Đánh giá',
       render: (rating: number) => (
         <View style={{ flexDirection: 'row', gap: 2 }}>
           {[1, 2, 3, 4, 5].map((s) => (
@@ -91,49 +94,64 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
         </View>
       ),
     },
-    { key: 'comment', label: 'Noi dung' },
-    { key: 'status', label: 'Trang thai' },
-    { key: 'date', label: 'Ngay gui', render: (date: string) => <Text style={{ color: '#94A3B8' }}>{new Date(date).toLocaleDateString('vi-VN')}</Text> },
+    { key: 'comment', label: 'Nội dung' },
+    { 
+      key: 'status', 
+      label: 'Trạng thái',
+      render: (status: string) => (
+        <View style={[styles.statusBtn, { backgroundColor: status === 'APPROVED' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', height: 30, paddingVertical: 0 }]}>
+           <Text style={{ color: status === 'APPROVED' ? '#10B981' : '#EF4444', fontSize: 11, fontWeight: '700' }}>
+            {status === 'APPROVED' ? 'Đã duyệt' : status === 'PENDING' ? 'Chờ duyệt' : 'Đã ẩn'}
+           </Text>
+        </View>
+      )
+    },
+    { key: 'date', label: 'Ngày gửi', render: (date: string) => <Text style={{ color: '#94A3B8' }}>{new Date(date).toLocaleDateString('vi-VN')}</Text> },
   ];
 
   const actions = [
-    ...(permissions.canApprove ? [{ label: 'Duyet', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleApprove(item) }] : []),
-    ...(permissions.canEdit ? [{ label: 'Sua', icon: Edit, color: '#3B82F6', onPress: (item: any) => openEditModal(item) }] : []),
-    ...(permissions.canDelete ? [{ label: 'Xoa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
+    ...(permissions.canApprove ? [{ label: 'Duyệt', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleApprove(item) }] : []),
+    ...(permissions.canEdit ? [{ label: 'Sửa', icon: Edit, color: '#3B82F6', onPress: (item: any) => openEditModal(item) }] : []),
+    ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Dang tai danh gia...</Text></View>;
+  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Đang tải đánh giá...</Text></View>;
 
   return (
     <View style={styles.container}>
-      <DataTable title="Quan ly danh gia tu khach hang" columns={columns} data={reviews} onSearch={() => {}} actions={actions} />
+      <DataTable title="Quản lý đánh giá từ khách hàng" columns={columns} data={reviews} onSearch={() => {}} actions={actions} />
 
       <Modal visible={!!editingReview} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sua danh gia</Text>
+              <Text style={styles.modalTitle}>Sửa đánh giá</Text>
               <TouchableOpacity onPress={() => setEditingReview(null)}>
                 <X size={24} color="#94A3B8" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>So sao</Text>
+            <Text style={styles.label}>Số sao</Text>
             <TextInput style={styles.input} keyboardType="numeric" value={formData.rating} onChangeText={(rating) => setFormData({ ...formData, rating })} />
 
-            <Text style={styles.label}>Noi dung phan hoi</Text>
-            <TextInput style={[styles.input, styles.textArea]} multiline value={formData.comment} onChangeText={(comment) => setFormData({ ...formData, comment })} />
+            <Text style={styles.label}>Nội dung đánh giá</Text>
+            <TextInput style={[styles.input, styles.textArea, { minHeight: 80 }]} multiline value={formData.comment} onChangeText={(comment) => setFormData({ ...formData, comment })} />
+
+            <Text style={styles.label}>Phản hồi từ Admin</Text>
+            <TextInput style={[styles.input, styles.textArea, { minHeight: 80 }]} multiline placeholder="Nhập lời cảm ơn hoặc giải đáp..." placeholderTextColor="#475569" value={formData.reply} onChangeText={(reply) => setFormData({ ...formData, reply })} />
 
             <View style={styles.statusRow}>
               {['PENDING', 'APPROVED', 'HIDDEN'].map((status) => (
                 <TouchableOpacity key={status} style={[styles.statusBtn, formData.status === status && styles.statusBtnActive]} onPress={() => setFormData({ ...formData, status })}>
-                  <Text style={[styles.statusBtnText, formData.status === status && styles.statusBtnTextActive]}>{status}</Text>
+                  <Text style={[styles.statusBtnText, formData.status === status && styles.statusBtnTextActive]}>
+                    {status === 'PENDING' ? 'Chờ duyệt' : status === 'APPROVED' ? 'Đã duyệt' : 'Đã ẩn'}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
-              <Text style={styles.submitBtnText}>Luu danh gia</Text>
+              <Text style={styles.submitBtnText}>Lưu đánh giá</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -5,6 +5,7 @@ import { adminService } from '../../../services/admin.service';
 import { Edit, Plus, Trash2, X } from 'lucide-react-native';
 import { confirmAction } from '../../../utils/confirmAction';
 import { ModuleAccess } from '../../../utils/permissions';
+import { getErrorMessage } from '../../../utils/errorMessage';
 
 const emptyForm = {
   code: '',
@@ -19,16 +20,21 @@ const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true
 
 export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
   const [formData, setFormData] = useState(emptyForm);
 
-  const fetchVouchers = async () => {
+  const fetchVouchers = async (q = searchQuery, p = page) => {
     setLoading(true);
     try {
-      const data = await adminService.getVouchers();
-      setVouchers(data || []);
+      const result = await adminService.getVouchers(q, p, 10);
+      setVouchers(result.vouchers || []);
+      setTotalCount(result.total || 0);
     } catch (error) {
       console.error('Failed to fetch vouchers:', error);
     } finally {
@@ -37,8 +43,18 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
   };
 
   useEffect(() => {
-    fetchVouchers();
-  }, []);
+    fetchVouchers(searchQuery, page);
+  }, [page]);
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    setPage(1);
+    fetchVouchers(q, 1);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+  };
 
   const openCreateModal = () => {
     setEditingVoucher(null);
@@ -61,7 +77,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
   const handleSaveVoucher = async () => {
     if (!formData.code || !formData.discount || !formData.expiry) {
-      Alert.alert('Loi', 'Vui long nhap day du ma, muc giam va ngay het han');
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ mã, mức giảm và ngày hết hạn');
       return;
     }
 
@@ -80,51 +96,52 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
       } else {
         await adminService.createVoucher(payload);
       }
-      Alert.alert('Thanh cong', editingVoucher ? 'Da cap nhat voucher' : 'Da tao voucher moi');
+      Alert.alert('Thành công', editingVoucher ? 'Đã cập nhật voucher' : 'Đã tạo voucher mới');
       setIsModalOpen(false);
       fetchVouchers();
-    } catch (error: any) {
-      Alert.alert('Loi', error.response?.data?.message || error.message || 'Khong the luu voucher');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể lưu voucher.'));
     }
   };
 
   const handleDeleteVoucher = async (id: string) => {
-    const confirmed = await confirmAction('Xac nhan', 'Ban co chac muon xoa ma nay?');
+    const confirmed = await confirmAction('Xác nhận', 'Bạn có chắc muốn xóa mã này?');
     if (!confirmed) return;
 
     try {
       await adminService.deleteVoucher(id);
-      Alert.alert('Thanh cong', 'Da xoa voucher');
+      Alert.alert('Thành công', 'Đã xóa voucher');
       fetchVouchers();
     } catch {
-      Alert.alert('Loi', 'Khong the xoa voucher');
+      Alert.alert('Lỗi', 'Không thể xóa voucher');
     }
   };
 
   const columns = [
-    { key: 'code', label: 'Ma Voucher', render: (val: string) => <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{val}</Text> },
-    { key: 'discount', label: 'Muc giam', render: (val: any, row: any) => <Text style={{ color: '#60A5FA' }}>{val}{row.type === 'PERCENTAGE' ? '%' : ' VND'}</Text> },
-    { key: 'type', label: 'Loai' },
-    { key: 'usageLimit', label: 'Gioi han' },
-    { key: 'usedCount', label: 'Da dung' },
-    { key: 'expiry', label: 'Het han', render: (val: string) => <Text style={{ color: '#94A3B8' }}>{new Date(val).toLocaleDateString('vi-VN')}</Text> },
+    { key: 'code', label: 'Mã Voucher', render: (val: string) => <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{val}</Text> },
+    { key: 'discount', label: 'Mức giảm', render: (val: any, row: any) => <Text style={{ color: '#60A5FA' }}>{val}{row.type === 'PERCENTAGE' ? '%' : ' VND'}</Text> },
+    { key: 'type', label: 'Loại' },
+    { key: 'usageLimit', label: 'Giới hạn' },
+    { key: 'usedCount', label: 'Đã dùng' },
+    { key: 'expiry', label: 'Hết hạn', render: (val: string) => <Text style={{ color: '#94A3B8' }}>{new Date(val).toLocaleDateString('vi-VN')}</Text> },
     {
       key: 'status',
-      label: 'Trang thai',
+      label: 'Trạng thái',
       render: (status: string) => (
         <View style={[styles.badge, { backgroundColor: status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-          <Text style={[styles.badgeText, { color: status === 'ACTIVE' ? '#10B981' : '#EF4444' }]}>{status}</Text>
+          <Text style={[styles.badgeText, { color: status === 'ACTIVE' ? '#10B981' : '#EF4444' }]}>
+            {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
+          </Text>
         </View>
       ),
     },
   ];
 
   const actions = [
-    ...(permissions.canEdit ? [{ label: 'Sua', icon: Edit, color: '#3B82F6', onPress: (item: any) => openEditModal(item) }] : []),
-    ...(permissions.canDelete ? [{ label: 'Xoa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDeleteVoucher(item.id) }] : []),
+    ...(permissions.canEdit ? [{ label: 'Sửa', icon: Edit, color: '#3B82F6', onPress: (item: any) => openEditModal(item) }] : []),
+    ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDeleteVoucher(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Dang tai voucher...</Text></View>;
 
   return (
     <View style={styles.container}>
@@ -132,18 +149,29 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
             <Plus size={18} color="#FFF" />
-            <Text style={styles.addBtnText}>Tao Voucher moi</Text>
+            <Text style={styles.addBtnText}>Tạo Voucher mới</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      <DataTable title="Quan ly ma giam gia (Voucher)" columns={columns} data={vouchers} onSearch={() => {}} actions={actions} />
+      <DataTable 
+        title="Quản lý mã giảm giá (Voucher)" 
+        columns={columns} 
+        data={vouchers} 
+        onSearch={handleSearch} 
+        actions={actions} 
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={handlePageChange}
+      />
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingVoucher ? 'Sua Voucher' : 'Tao Voucher moi'}</Text>
+              <Text style={styles.modalTitle}>{editingVoucher ? 'Sửa Voucher' : 'Tạo Voucher mới'}</Text>
               <TouchableOpacity onPress={() => setIsModalOpen(false)}>
                 <X size={24} color="#94A3B8" />
               </TouchableOpacity>
@@ -151,7 +179,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
             <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Ma Voucher</Text>
+                <Text style={styles.label}>Mã Voucher</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="VD: CHAOBANMOI"
@@ -164,7 +192,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Muc giam</Text>
+                  <Text style={styles.label}>Mức giảm</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="VD: 10"
@@ -175,7 +203,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
                   />
                 </View>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.label}>Gioi han</Text>
+                  <Text style={styles.label}>Giới hạn</Text>
                   <TextInput
                     style={styles.input}
                     keyboardType="numeric"
@@ -188,13 +216,15 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
               <View style={styles.typeSelector}>
                 {['PERCENTAGE', 'FIXED'].map((type) => (
                   <TouchableOpacity key={type} style={[styles.typeBtn, formData.type === type && styles.typeBtnActive]} onPress={() => setFormData({ ...formData, type })}>
-                    <Text style={[styles.typeBtnText, formData.type === type && styles.typeBtnTextActive]}>{type}</Text>
+                    <Text style={[styles.typeBtnText, formData.type === type && styles.typeBtnTextActive]}>
+                      {type === 'PERCENTAGE' ? 'Phần trăm (%)' : 'Số tiền cố định'}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Ngay het han (YYYY-MM-DD)</Text>
+                <Text style={styles.label}>Ngày hết hạn (YYYY-MM-DD)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="2026-12-31"
@@ -207,13 +237,15 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
               <View style={styles.typeSelector}>
                 {['ACTIVE', 'INACTIVE'].map((status) => (
                   <TouchableOpacity key={status} style={[styles.typeBtn, formData.status === status && styles.typeBtnActive]} onPress={() => setFormData({ ...formData, status })}>
-                    <Text style={[styles.typeBtnText, formData.status === status && styles.typeBtnTextActive]}>{status}</Text>
+                    <Text style={[styles.typeBtnText, formData.status === status && styles.typeBtnTextActive]}>
+                      {status === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng'}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               <TouchableOpacity style={styles.submitBtn} onPress={handleSaveVoucher}>
-                <Text style={styles.submitBtnText}>Luu Voucher</Text>
+                <Text style={styles.submitBtnText}>Lưu Voucher</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
