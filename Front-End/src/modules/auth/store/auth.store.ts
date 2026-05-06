@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { AuthState, User, AuthResponse } from '../types/auth.types';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { AuthState, AuthResponse } from '../types/auth.types';
+import { tokenStorage } from '../../core/storage/secure-token.storage';
+import { userProfileStorage } from '../../core/storage/sqlite-user.storage';
 
 interface AuthStore extends AuthState {
   setAuth: (data: AuthResponse) => Promise<void>;
@@ -26,15 +26,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
       error: null,
     });
     try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      } else {
-        await SecureStore.setItemAsync('accessToken', data.accessToken);
-        await SecureStore.setItemAsync('refreshToken', data.refreshToken);
-        await SecureStore.setItemAsync('user', JSON.stringify(data.user));
-      }
+      await Promise.all([
+        tokenStorage.saveTokens(data.accessToken, data.refreshToken),
+        userProfileStorage.saveCurrentUser(data.user),
+      ]);
     } catch (e) {
       console.error('Error saving auth state', e);
     }
@@ -48,15 +43,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
       error: null,
     });
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-      } else {
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-        await SecureStore.deleteItemAsync('user');
-      }
+      await Promise.all([
+        tokenStorage.clearTokens(),
+        userProfileStorage.clearCurrentUser(),
+      ]);
     } catch (e) {
       console.error('Error clearing auth state', e);
     }
@@ -73,32 +63,22 @@ export const useAuthStore = create<AuthStore>((set) => ({
   restoreSession: async () => {
     try {
       set({ isLoading: true });
-      let refreshTokenValue;
-      let userStr;
-      let accessToken;
+      const [refreshTokenValue, user, accessToken] = await Promise.all([
+        tokenStorage.getRefreshToken(),
+        userProfileStorage.getCurrentUser(),
+        tokenStorage.getAccessToken(),
+      ]);
 
-      if (Platform.OS === 'web') {
-        refreshTokenValue = localStorage.getItem('refreshToken');
-        userStr = localStorage.getItem('user');
-        accessToken = localStorage.getItem('accessToken');
-      } else {
-        refreshTokenValue = await SecureStore.getItemAsync('refreshToken');
-        userStr = await SecureStore.getItemAsync('user');
-        accessToken = await SecureStore.getItemAsync('accessToken');
-      }
-      
-      if (refreshTokenValue && userStr) {
-        // In a real app, you might want to call refresh API here to get a fresh accessToken
-        // For now, we'll use the one we found or the user will be prompted to login if it fails later
+      if (refreshTokenValue && user) {
         set({
-          user: JSON.parse(userStr),
+          user,
           isAuthenticated: true,
           accessToken: accessToken || null,
         });
       } else {
         set({ isAuthenticated: false, user: null });
       }
-    } catch (e) {
+    } catch {
       set({ isAuthenticated: false, user: null });
     } finally {
       set({ isLoading: false });

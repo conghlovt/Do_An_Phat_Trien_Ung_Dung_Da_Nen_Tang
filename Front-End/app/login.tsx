@@ -18,6 +18,9 @@ import * as z from 'zod';
 
 const BACKGROUND_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=3140&auto=format&fit=crop';
 
+const platformShadow = (boxShadow: string, nativeShadow: object) =>
+  Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
+
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -43,7 +46,7 @@ export default function LoginScreen() {
   const onSubmit = async (data: LoginFormData) => {
     setLoginError('');
     try {
-      const res = await login(data.email, data.password);
+      await login(data.email, data.password);
       router.replace('/dashboard' as any);
 
 
@@ -126,7 +129,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24 }}>
-            <Text style={{ color: '#666', fontSize: 14 }}>Don't have an account? </Text>
+            <Text style={{ color: '#666', fontSize: 14 }}>{"Don't have an account? "}</Text>
             <TouchableOpacity onPress={() => router.push('/register' as any)}>
               <Text style={{ color: '#008080', fontSize: 14, fontWeight: '600' }}>Register</Text>
             </TouchableOpacity>
@@ -147,11 +150,13 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformShadow('0 8px 16px rgba(0, 0, 0, 0.12)', {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
+    }),
   },
   title: { fontSize: 22, fontWeight: 'bold', color: '#002B49', marginBottom: 4, textAlign: 'center' },
   subtitle: { fontSize: 13, color: '#666', marginBottom: 20, textAlign: 'center' },
@@ -187,11 +192,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
     alignItems: 'center',
-    shadowColor: '#008080',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    ...platformShadow('0 3px 6px rgba(0, 128, 128, 0.25)', {
+      shadowColor: '#008080',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 4,
+    }),
   },
   loginButtonDisabled: { opacity: 0.7 },
   loginButtonText: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },

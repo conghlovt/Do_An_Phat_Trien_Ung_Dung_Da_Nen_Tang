@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../../src/modules/auth/hooks/useAuth';
 import { UserDashboard } from '../../src/modules/dashboard/components/UserDashboard';
 import { AdminDashboard } from '../../src/modules/dashboard/components/AdminDashboard';
@@ -16,15 +15,8 @@ export default function DashboardScreen() {
   const handleLogout = async () => {
     try {
       await logout();
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      } else {
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
-      }
       router.replace('/login' as any);
-    } catch (error) {
+    } catch {
       router.replace('/login' as any);
     }
   };
@@ -38,7 +30,7 @@ export default function DashboardScreen() {
     // If user is logged in but trying to access admin dashboard without permission
     // In this specific layout, dashboard.tsx handles both, but we should ensure
     // we don't show admin UI to customers/partners
-  }, [isAuthenticated, isLoading, user]);
+  }, [isAuthenticated, isLoading, router, user]);
 
   if (isLoading) {
     return (
@@ -95,4 +87,3 @@ const styles = StyleSheet.create({
   logoutText: { color: '#EF4444', fontWeight: '700', fontSize: 13 },
   content: { flex: 1 },
 });
-

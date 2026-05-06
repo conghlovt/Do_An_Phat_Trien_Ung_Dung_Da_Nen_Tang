@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
 import { Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
@@ -23,103 +23,139 @@ interface DataTableProps {
   }[];
 }
 
-export const DataTable: React.FC<DataTableProps> = ({ 
-  title, columns, data, onSearch, onFilterClick, onExport, actions 
+export const DataTable: React.FC<DataTableProps> = ({
+  title,
+  columns,
+  data,
+  onSearch,
+  onFilterClick,
+  onExport,
+  actions,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const hasActions = Boolean(actions?.length);
 
-  const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const filteredData = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return data;
+
+    return data.filter((item) =>
+      Object.values(item)
+        .map((value) => {
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'object') return JSON.stringify(value);
+          return String(value);
+        })
+        .join(' ')
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [data, searchQuery]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    onSearch(query);
+  };
 
   return (
     <View style={styles.container}>
-      {/* Table Header Controls */}
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.controls}>
           <View style={styles.searchBox}>
             <Search size={18} color="#94A3B8" />
-            <TextInput 
-              placeholder="Tìm kiếm..." 
+            <TextInput
+              placeholder="Tim kiem..."
               style={styles.searchInput}
-              onChangeText={onSearch}
+              value={searchQuery}
+              onChangeText={handleSearch}
               placeholderTextColor="#475569"
             />
           </View>
-          
+
           <TouchableOpacity style={styles.iconBtn} onPress={onFilterClick}>
             <Filter size={18} color="#94A3B8" />
-            <Text style={styles.iconBtnText}>Bộ lọc</Text>
+            <Text style={styles.iconBtnText}>Bo loc</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.iconBtn} onPress={() => onExport?.('excel')}>
             <Download size={18} color="#94A3B8" />
-            <Text style={styles.iconBtnText}>Xuất Excel</Text>
+            <Text style={styles.iconBtnText}>Xuat Excel</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Table Content */}
       <View style={styles.tableWrapper}>
         <View style={styles.tableHeader}>
           {columns.map((col) => (
-            <Text key={col.key} style={[styles.columnHeader, { flex: 1 }]}>{col.label}</Text>
+            <Text key={col.key} style={[styles.columnHeader, { flex: 1 }]}>
+              {col.label}
+            </Text>
           ))}
-          {actions && <Text style={[styles.columnHeader, { width: 120, textAlign: 'center' }]}>Hành động</Text>}
+          {hasActions && <Text style={[styles.columnHeader, { width: 140, textAlign: 'center' }]}>Hanh dong</Text>}
         </View>
 
         <ScrollView style={styles.tableBody}>
-          {paginatedData.length > 0 ? paginatedData.map((item, index) => (
-            <View key={item.id || index} style={styles.tableRow}>
-              {columns.map((col) => (
-                <View key={col.key} style={[styles.cell, { flex: 1 }]}>
-                  {col.render ? col.render(item[col.key], item) : <Text style={styles.cellText}>{item[col.key] || '---'}</Text>}
-                </View>
-              ))}
-              
-              {actions && (
-                <View style={[styles.cell, { width: 120, flexDirection: 'row', justifyContent: 'center', gap: 12 }]}>
-                  {actions.map((action, idx) => (
-                    <TouchableOpacity key={idx} onPress={() => action.onPress(item)} style={styles.actionBtn}>
-                      <action.icon size={16} color={action.color || '#94A3B8'} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )) : (
+          {paginatedData.length > 0 ? (
+            paginatedData.map((item, index) => (
+              <View key={item.id || index} style={styles.tableRow}>
+                {columns.map((col) => (
+                  <View key={col.key} style={[styles.cell, { flex: 1 }]}>
+                    {col.render ? col.render(item[col.key], item) : <Text style={styles.cellText}>{item[col.key] || '---'}</Text>}
+                  </View>
+                ))}
+
+                {hasActions && (
+                  <View style={[styles.cell, { width: 140, flexDirection: 'row', justifyContent: 'center', gap: 10 }]}>
+                    {actions!.map((action, idx) => (
+                      <TouchableOpacity key={idx} onPress={() => action.onPress(item)} style={styles.actionBtn}>
+                        <action.icon size={16} color={action.color || '#94A3B8'} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))
+          ) : (
             <View style={styles.emptyRow}>
-              <Text style={styles.emptyText}>Không tìm thấy dữ liệu phù hợp</Text>
+              <Text style={styles.emptyText}>Khong tim thay du lieu phu hop</Text>
             </View>
           )}
         </ScrollView>
       </View>
 
-      {/* Pagination */}
       <View style={styles.footer}>
         <Text style={styles.paginationInfo}>
-          Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, data.length)} trong {data.length}
+          {`Hien thi ${filteredData.length ? (currentPage - 1) * itemsPerPage + 1 : 0} - ${Math.min(
+            currentPage * itemsPerPage,
+            filteredData.length,
+          )} trong ${filteredData.length}`}
         </Text>
         <View style={styles.paginationControls}>
-          <TouchableOpacity 
-            disabled={currentPage === 1} 
-            onPress={() => setCurrentPage(v => v - 1)}
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage((v) => v - 1)}
             style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
           >
             <ChevronLeft size={18} color={currentPage === 1 ? '#334155' : '#94A3B8'} />
           </TouchableOpacity>
-          
+
           <View style={styles.pageNumber}>
             <Text style={styles.pageNumberText}>{currentPage}</Text>
           </View>
-          
-          <TouchableOpacity 
-            disabled={currentPage === totalPages || totalPages === 0} 
-            onPress={() => setCurrentPage(v => v + 1)}
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages || totalPages === 0}
+            onPress={() => setCurrentPage((v) => v + 1)}
             style={[styles.pageBtn, (currentPage === totalPages || totalPages === 0) && styles.pageBtnDisabled]}
           >
-            <ChevronRight size={18} color={(currentPage === totalPages || totalPages === 0) ? '#334155' : '#94A3B8'} />
+            <ChevronRight size={18} color={currentPage === totalPages || totalPages === 0 ? '#334155' : '#94A3B8'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -142,6 +178,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
+    gap: 16,
   },
   title: {
     fontSize: 18,
@@ -170,8 +207,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     ...Platform.select({
-      web: { outlineStyle: 'none' } as any
-    })
+      web: { outlineStyle: 'none' } as any,
+    }),
   } as any,
   iconBtn: {
     flexDirection: 'row',
@@ -203,7 +240,7 @@ const styles = StyleSheet.create({
   columnHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -240,7 +277,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#475569',
+    color: '#64748B',
     fontSize: 14,
   },
   footer: {

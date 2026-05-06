@@ -1,21 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import { Shield, Check, X } from 'lucide-react-native';
+import { adminService } from '../../../services/admin.service';
+import { ROOT_ADMIN_ROLES } from '../../../utils/permissions';
 
 const MODULES = [
   { id: 'revenue', name: 'Doanh thu' },
   { id: 'booking', name: 'Booking' },
-  { id: 'lodging', name: 'Cơ sở lưu trú' },
-  { id: 'users', name: 'Người dùng' },
-  { id: 'partners', name: 'Đối tác' },
-  { id: 'finance', name: 'Đối soát & Thanh toán' },
+  { id: 'lodging', name: 'Luu tru' },
+  { id: 'users', name: 'Nguoi dung' },
+  { id: 'partners', name: 'Doi tac' },
+  { id: 'finance', name: 'Doi soat' },
+  { id: 'voucher', name: 'Voucher' },
+  { id: 'reviews', name: 'Danh gia' },
+  { id: 'content', name: 'Noi dung' },
 ];
 
 const ACTIONS = [
   { id: 'view', name: 'Xem' },
-  { id: 'edit', name: 'Sửa' },
-  { id: 'delete', name: 'Xóa' },
-  { id: 'approve', name: 'Phê duyệt' },
+  { id: 'edit', name: 'Sua' },
+  { id: 'delete', name: 'Xoa' },
+  { id: 'approve', name: 'Duyet' },
 ];
 
 const ROLES = [
@@ -24,53 +29,99 @@ const ROLES = [
   { id: 'ACCOUNTANT', name: 'Accountant' },
 ];
 
-export const PermissionMatrix = () => {
+const createEmptyPermissions = () =>
+  MODULES.reduce((acc, module) => {
+    acc[module.id] = ACTIONS.reduce((actionAcc, action) => {
+      actionAcc[action.id] = false;
+      return actionAcc;
+    }, {} as Record<string, boolean>);
+    return acc;
+  }, {} as Record<string, Record<string, boolean>>);
+
+export const PermissionMatrix = ({ currentUserRole }: { currentUserRole?: string }) => {
   const [selectedRole, setSelectedRole] = useState('SUPER_ADMIN');
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({
-    'SUPER_ADMIN-revenue-view': true,
-    'SUPER_ADMIN-revenue-edit': true,
-    'SUPER_ADMIN-revenue-delete': true,
-    'SUPER_ADMIN-revenue-approve': true,
-    // Add more defaults...
-  });
+  const [permissionsByRole, setPermissionsByRole] = useState<Record<string, Record<string, Record<string, boolean>>>>({});
+  const [loading, setLoading] = useState(true);
+
+  const fetchPermissions = async () => {
+    setLoading(true);
+    try {
+      const data = await adminService.getPermissions();
+      const next = (data || []).reduce((acc: any, item: any) => {
+        acc[item.role] = item.permissions || createEmptyPermissions();
+        return acc;
+      }, {});
+      setPermissionsByRole(next);
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
+
+  const currentPermissions = permissionsByRole[selectedRole] || createEmptyPermissions();
+  const canManagePermissions = ROOT_ADMIN_ROLES.includes(currentUserRole || '');
 
   const togglePermission = (moduleId: string, actionId: string) => {
-    const key = `${selectedRole}-${moduleId}-${actionId}`;
-    setPermissions(prev => ({
+    if (!canManagePermissions) return;
+
+    setPermissionsByRole((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [selectedRole]: {
+        ...(prev[selectedRole] || createEmptyPermissions()),
+        [moduleId]: {
+          ...((prev[selectedRole] || createEmptyPermissions())[moduleId] || {}),
+          [actionId]: !currentPermissions[moduleId]?.[actionId],
+        },
+      },
     }));
   };
+
+  const handleSave = async () => {
+    if (!canManagePermissions) {
+      Alert.alert('Loi', 'Chi Super Admin moi duoc luu cau hinh phan quyen');
+      return;
+    }
+
+    try {
+      await adminService.updatePermissions(selectedRole, currentPermissions);
+      Alert.alert('Thanh cong', `Da luu cau hinh quyen cho ${selectedRole}`);
+      fetchPermissions();
+    } catch (error: any) {
+      Alert.alert('Loi', error.response?.data?.message || 'Khong the luu phan quyen');
+    }
+  };
+
+  if (loading) return <View style={styles.container}><Text style={styles.title}>Dang tai cau hinh quyen...</Text></View>;
+  if (!canManagePermissions) {
+    return <View style={styles.container}><Text style={styles.title}>Ban khong co quyen cau hinh phan quyen.</Text></View>;
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Shield size={24} color="#3B82F6" />
-        <Text style={styles.title}>Quản lý phân quyền</Text>
+        <Text style={styles.title}>Quan ly phan quyen</Text>
       </View>
 
-      {/* Role Selection */}
       <View style={styles.roleTabs}>
         {ROLES.map((role) => (
-          <TouchableOpacity 
-            key={role.id}
-            style={[styles.roleTab, selectedRole === role.id && styles.roleTabActive]}
-            onPress={() => setSelectedRole(role.id)}
-          >
-            <Text style={[styles.roleTabText, selectedRole === role.id && styles.roleTabTextActive]}>
-              {role.name}
-            </Text>
+          <TouchableOpacity key={role.id} style={[styles.roleTab, selectedRole === role.id && styles.roleTabActive]} onPress={() => setSelectedRole(role.id)}>
+            <Text style={[styles.roleTabText, selectedRole === role.id && styles.roleTabTextActive]}>{role.name}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Matrix Table */}
       <View style={styles.matrixContainer}>
         <View style={styles.matrixHeader}>
           <View style={[styles.matrixCell, { flex: 2 }]}>
-            <Text style={styles.columnLabel}>Module / Tính năng</Text>
+            <Text style={styles.columnLabel}>Module</Text>
           </View>
-          {ACTIONS.map(action => (
+          {ACTIONS.map((action) => (
             <View key={action.id} style={[styles.matrixCell, { flex: 1 }]}>
               <Text style={styles.columnLabel}>{action.name}</Text>
             </View>
@@ -78,20 +129,16 @@ export const PermissionMatrix = () => {
         </View>
 
         <ScrollView>
-          {MODULES.map(module => (
+          {MODULES.map((module) => (
             <View key={module.id} style={styles.matrixRow}>
               <View style={[styles.matrixCell, { flex: 2 }]}>
                 <Text style={styles.moduleName}>{module.name}</Text>
               </View>
-              
-              {ACTIONS.map(action => {
-                const isActive = permissions[`${selectedRole}-${module.id}-${action.id}`];
+
+              {ACTIONS.map((action) => {
+                const isActive = currentPermissions[module.id]?.[action.id];
                 return (
-                  <TouchableOpacity 
-                    key={action.id} 
-                    style={[styles.matrixCell, { flex: 1 }]}
-                    onPress={() => togglePermission(module.id, action.id)}
-                  >
+                  <TouchableOpacity key={action.id} style={[styles.matrixCell, { flex: 1 }]} onPress={() => togglePermission(module.id, action.id)}>
                     <View style={[styles.checkbox, isActive && styles.checkboxActive]}>
                       {isActive ? <Check size={14} color="#FFF" /> : <X size={14} color="#CBD5E1" />}
                     </View>
@@ -104,8 +151,8 @@ export const PermissionMatrix = () => {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Lưu cấu hình</Text>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+          <Text style={styles.saveBtnText}>Luu cau hinh</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -147,10 +194,15 @@ const styles = StyleSheet.create({
   },
   roleTabActive: {
     backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)' } as any,
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+    }),
   },
   roleTabText: {
     fontSize: 14,

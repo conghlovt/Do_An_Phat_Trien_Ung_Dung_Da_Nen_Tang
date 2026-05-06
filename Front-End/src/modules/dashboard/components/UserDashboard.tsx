@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+
+const platformShadow = (boxShadow: string, nativeShadow: object) =>
+  Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
 
 interface UserDashboardProps {
   user: any;
@@ -9,28 +12,28 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
   const renderPartnerDashboard = () => (
     <View>
       <View style={[styles.card, { backgroundColor: '#065F46' }]}>
-        <Text style={styles.cardTitle}>Partner Statistics</Text>
+        <Text style={styles.cardTitle}>Thống kê đối tác</Text>
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>$4.5k</Text>
-            <Text style={styles.statLabel}>Revenue</Text>
+            <Text style={styles.statLabel}>Doanh thu</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>12</Text>
-            <Text style={styles.statLabel}>Active Listings</Text>
+            <Text style={styles.statLabel}>Cơ sở đang hoạt động</Text>
           </View>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Manage Listings</Text>
+      <Text style={styles.sectionTitle}>Quản lý cơ sở lưu trú</Text>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>Add New Accommodation</Text>
+        <Text style={styles.actionText}>Thêm cơ sở lưu trú mới</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>View Bookings</Text>
+        <Text style={styles.actionText}>Xem danh sách Booking</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>Voucher Management</Text>
+        <Text style={styles.actionText}>Quản lý Voucher</Text>
       </TouchableOpacity>
     </View>
   );
@@ -38,28 +41,28 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
   const renderCustomerDashboard = () => (
     <View>
       <View style={[styles.card, { backgroundColor: '#0369A1' }]}>
-        <Text style={styles.cardTitle}>My Activity</Text>
+        <Text style={styles.cardTitle}>Hoạt động của tôi</Text>
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>5</Text>
-            <Text style={styles.statLabel}>Bookings</Text>
+            <Text style={styles.statLabel}>Lượt đặt phòng</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>3</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
+            <Text style={styles.statLabel}>Đánh giá</Text>
           </View>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Quick Links</Text>
+      <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>Explore Accommodations</Text>
+        <Text style={styles.actionText}>Khám phá chỗ nghỉ</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>My Saved Places</Text>
+        <Text style={styles.actionText}>Địa điểm đã lưu</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.actionItem}>
-        <Text style={styles.actionText}>Transaction History</Text>
+        <Text style={styles.actionText}>Lịch sử giao dịch</Text>
       </TouchableOpacity>
     </View>
   );
@@ -87,7 +90,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   roleBadgeText: { fontSize: 10, fontWeight: '800', color: '#475569', letterSpacing: 1 },
-  card: { borderRadius: 20, padding: 24, marginBottom: 30, elevation: 4 },
+  card: {
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 30,
+    ...platformShadow('0 2px 8px rgba(0, 0, 0, 0.12)', { elevation: 4 }),
+  },
   cardTitle: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600', marginBottom: 16 },
   statsRow: { flexDirection: 'row', gap: 20 },
   statBox: { flex: 1 },
@@ -101,11 +109,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    ...platformShadow('0 2px 5px rgba(0, 0, 0, 0.05)', {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 5,
+      elevation: 2,
+    }),
   },
   actionText: { fontSize: 15, fontWeight: '600', color: '#334155' },
 });

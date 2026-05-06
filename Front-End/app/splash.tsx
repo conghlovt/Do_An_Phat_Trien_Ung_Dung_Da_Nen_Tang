@@ -29,7 +29,7 @@ export default function SplashScreen() {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, isAuthenticated, user]);
+  }, [fadeAnim, isLoading, isAuthenticated, router, user]);
 
   return (
     <ImageBackground source={{ uri: BACKGROUND_IMAGE }} style={styles.container} blurRadius={3}>

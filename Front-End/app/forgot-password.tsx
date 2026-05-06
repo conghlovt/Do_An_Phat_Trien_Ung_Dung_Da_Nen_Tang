@@ -19,6 +19,9 @@ import * as z from 'zod';
 
 const BACKGROUND_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=3140&auto=format&fit=crop';
 
+const platformShadow = (boxShadow: string, nativeShadow: object) =>
+  Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
+
 const forgotSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
@@ -68,10 +71,8 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
     try {
       await resetPassword(data);
-      Alert.alert('Success', 'Password has been reset successfully.', [
-        { text: 'OK', onPress: () => router.replace('/login' as any) },
-      ]);
-
+      Alert.alert('Success', 'Password has been reset successfully.');
+      router.replace('/login' as any);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to reset password');
     } finally {
@@ -217,11 +218,13 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformShadow('0 8px 16px rgba(0, 0, 0, 0.12)', {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
+    }),
   },
   title: { fontSize: 22, fontWeight: 'bold', color: '#002B49', marginBottom: 4, textAlign: 'center' },
   subtitle: { fontSize: 13, color: '#666', marginBottom: 20, textAlign: 'center' },

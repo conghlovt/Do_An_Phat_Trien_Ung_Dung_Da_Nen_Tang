@@ -1,23 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, Users, Calendar, DollarSign } from 'lucide-react-native';
 import { adminService } from '../../../services/admin.service';
 
 const REVENUE_DATA = [
-  { name: 'Mon', revenue: 4000, bookings: 24 },
-  { name: 'Tue', revenue: 3000, bookings: 18 },
-  { name: 'Wed', revenue: 2000, bookings: 12 },
-  { name: 'Thu', revenue: 2780, bookings: 22 },
-  { name: 'Fri', revenue: 1890, bookings: 15 },
-  { name: 'Sat', revenue: 2390, bookings: 19 },
-  { name: 'Sun', revenue: 3490, bookings: 28 },
+  { name: 'T2', revenue: 4000, bookings: 24 },
+  { name: 'T3', revenue: 3000, bookings: 18 },
+  { name: 'T4', revenue: 2000, bookings: 12 },
+  { name: 'T5', revenue: 2780, bookings: 22 },
+  { name: 'T6', revenue: 1890, bookings: 15 },
+  { name: 'T7', revenue: 2390, bookings: 19 },
+  { name: 'CN', revenue: 3490, bookings: 28 },
 ];
 
-const PARTNER_DATA = [
+export const PARTNER_DATA = [
   { name: 'Sheraton', direct: 4000, indirect: 2400 },
   { name: 'Hilton', direct: 3000, indirect: 1398 },
   { name: 'Marriott', direct: 2000, indirect: 9800 },
@@ -30,7 +30,7 @@ const STATUS_DATA = [
   { name: 'Chờ duyệt', value: 120, color: '#F59E0B' },
 ];
 
-const TYPE_DATA = [
+export const TYPE_DATA = [
   { name: 'Theo giờ', value: 150, color: '#3B82F6' },
   { name: 'Qua đêm', value: 250, color: '#6366F1' },
   { name: 'Theo ngày', value: 200, color: '#8B5CF6' },
@@ -71,11 +71,11 @@ export const DashboardOverview = () => {
   }, []);
 
   if (Platform.OS !== 'web') {
-    return <View style={styles.container}><Text style={{color: '#FFF'}}>Dashboard is only available on Web</Text></View>;
+    return <View style={styles.container}><Text style={{color: '#FFF'}}>Bảng điều khiển chỉ khả dụng trên Web</Text></View>;
   }
 
   if (loading) {
-    return <View style={styles.container}><Text style={{color: '#FFF'}}>Loading stats...</Text></View>;
+    return <View style={styles.container}><Text style={{color: '#FFF'}}>Đang tải dữ liệu...</Text></View>;
   }
 
   return (
@@ -180,7 +180,7 @@ export const DashboardOverview = () => {
                 <Text style={styles.activityDetail}>Vừa tham gia hệ thống từ Hà Nội</Text>
               </View>
               <View style={styles.activityStatus}>
-                <Text style={styles.timeText}>{i * 2}m ago</Text>
+                <Text style={styles.timeText}>{i * 2} phút trước</Text>
               </View>
             </View>
           ))}

@@ -2,13 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { DataTable } from './DataTable';
 import { adminService } from '../../../services/admin.service';
-import { Edit, Trash2, ShieldAlert, Plus, X, CheckCircle, User as UserIcon } from 'lucide-react-native';
+import { Trash2, ShieldAlert, Plus, X, CheckCircle, User as UserIcon } from 'lucide-react-native';
+import { confirmAction } from '../../../utils/confirmAction';
+import { ModuleAccess, ROOT_ADMIN_ROLES } from '../../../utils/permissions';
 
 interface UserManagementProps {
   role?: 'customer' | 'partner' | 'admin' | 'staff';
+  permissions?: ModuleAccess;
+  currentUserRole?: string;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
+const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true };
+const protectedRoles = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];
+
+export const UserManagement: React.FC<UserManagementProps> = ({ role, permissions = fullAccess, currentUserRole }) => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +52,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
     if (role) {
       if (role === 'staff') {
         setFilteredUsers(users.filter((u: any) => u.role === 'OPERATOR' || u.role === 'ACCOUNTANT'));
+      } else if (role === 'admin') {
+        setFilteredUsers(users.filter((u: any) => u.role === 'admin' || u.role === 'SUPER_ADMIN'));
       } else {
         const targetRole = role.toUpperCase();
         setFilteredUsers(users.filter((u: any) => u.role === targetRole || u.role === role));
@@ -55,6 +64,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
   }, [role, users]);
 
   const handleCreateUser = async () => {
+    if (!permissions.canEdit) {
+      Alert.alert('Lỗi', 'Bạn không có quyền tạo tài khoản');
+      return;
+    }
+
     if (!formData.username || !formData.email || !formData.password) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
@@ -73,37 +87,45 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
 
   const handleUpdateRole = async (newRole: string) => {
     if (!selectedUser) return;
+    if (!permissions.canEdit) {
+      Alert.alert('Lỗi', 'Bạn không có quyền cập nhật quyền');
+      return;
+    }
+    if (!ROOT_ADMIN_ROLES.includes(currentUserRole || '') && (protectedRoles.includes(selectedUser.role) || protectedRoles.includes(newRole))) {
+      Alert.alert('Lỗi', 'Chỉ Super Admin mới được quản lý tài khoản admin/nhân viên');
+      return;
+    }
+
     try {
       await adminService.updateUser(selectedUser.id, { role: newRole });
       Alert.alert('Thành công', `Đã cập nhật quyền cho ${selectedUser.username}`);
       setIsRoleModalOpen(false);
       fetchUsers();
-    } catch (error) {
+    } catch {
       Alert.alert('Lỗi', 'Không thể cập nhật quyền');
     }
   };
 
   const handleDeleteUser = async (user: any) => {
-    Alert.alert(
-      'Xác nhận xóa',
-      `Bạn có chắc chắn muốn xóa người dùng ${user.username}?`,
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Xóa', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminService.deleteUser(user.id);
-              Alert.alert('Thành công', 'Đã xóa người dùng');
-              fetchUsers();
-            } catch (error: any) {
-              Alert.alert('Lỗi', error.message || 'Không thể xóa người dùng');
-            }
-          }
-        }
-      ]
-    );
+    if (!permissions.canDelete) {
+      Alert.alert('Lỗi', 'Bạn không có quyền xóa người dùng');
+      return;
+    }
+    if (!ROOT_ADMIN_ROLES.includes(currentUserRole || '') && protectedRoles.includes(user.role)) {
+      Alert.alert('Lỗi', 'Chỉ Super Admin mới được xóa tài khoản admin/nhân viên');
+      return;
+    }
+
+    const confirmed = await confirmAction('Xác nhận xóa', `Bạn có chắc chắn muốn xóa người dùng ${user.username}?`);
+    if (!confirmed) return;
+
+    try {
+      await adminService.deleteUser(user.id);
+      Alert.alert('Thành công', 'Đã xóa người dùng');
+      fetchUsers();
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || error.message || 'Không thể xóa người dùng');
+    }
   };
 
   const columns = [
@@ -122,23 +144,29 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
   ];
 
   const actions = [
-    { label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDeleteUser(item) },
-    { label: 'Phân quyền', icon: ShieldAlert, color: '#F59E0B', onPress: (item: any) => {
-      setSelectedUser(item);
-      setIsRoleModalOpen(true);
-    }},
+    ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDeleteUser(item) }] : []),
+    ...(permissions.canEdit
+      ? [
+          { label: 'Phân quyền', icon: ShieldAlert, color: '#F59E0B', onPress: (item: any) => {
+            setSelectedUser(item);
+            setIsRoleModalOpen(true);
+          } },
+        ]
+      : []),
   ];
 
   if (loading) return <View style={styles.container}><Text style={{color: '#FFF'}}>Đang tải dữ liệu...</Text></View>;
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerActions}>
-        <TouchableOpacity style={styles.createBtn} onPress={() => setIsCreateModalOpen(true)}>
-          <Plus size={18} color="#FFF" />
-          <Text style={styles.createBtnText}>Tạo nhân viên mới</Text>
-        </TouchableOpacity>
-      </View>
+      {permissions.canEdit && (
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.createBtn} onPress={() => setIsCreateModalOpen(true)}>
+            <Plus size={18} color="#FFF" />
+            <Text style={styles.createBtnText}>Tạo nhân viên mới</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <DataTable 
         title={`Quản lý ${role ? (role === 'customer' ? 'Khách hàng' : role === 'partner' ? 'Đối tác' : role === 'staff' ? 'Nhân viên' : 'Quản trị viên') : 'người dùng'}`}
@@ -198,7 +226,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Vai trò</Text>
                 <View style={styles.roleSelector}>
-                  {['OPERATOR', 'ACCOUNTANT', 'ADMIN'].map((r) => (
+                  {['OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => (
                     <TouchableOpacity 
                       key={r}
                       style={[styles.roleBtn, formData.role === r && styles.roleBtnActive]}
@@ -238,7 +266,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role }) => {
             </View>
 
             <View style={styles.roleSelectorVertical}>
-              {['CUSTOMER', 'PARTNER', 'OPERATOR', 'ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'].map((r) => (
+              {['customer', 'partner', 'OPERATOR', 'ACCOUNTANT', 'admin', 'SUPER_ADMIN'].map((r) => (
                 <TouchableOpacity 
                   key={r}
                   style={[styles.roleRow, selectedUser?.role === r && styles.roleRowActive]}
@@ -270,11 +298,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12, 
     borderRadius: 12, 
     gap: 10,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 8px rgba(59, 130, 246, 0.3)' } as any,
+      default: {
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+    }),
   },
   createBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
@@ -365,10 +398,15 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
     alignItems: 'center', 
     marginTop: 10,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 8px rgba(59, 130, 246, 0.3)' } as any,
+      default: {
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+    }),
   },
   submitBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
 });

@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Platform } from 'react-native';
+
+const platformShadow = (boxShadow: string, nativeShadow: object) =>
+  Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
 
 interface AdminDashboardProps {
   user: any;
@@ -12,12 +15,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
       <View style={styles.content}>
         <View style={styles.warningCard}>
           <Text style={styles.icon}>💻</Text>
-          <Text style={styles.title}>Web Access Required</Text>
+          <Text style={styles.title}>Yêu cầu truy cập trên Web</Text>
           <Text style={styles.message}>
-            The Admin Dashboard is only accessible via a web browser for security and better management tools.
+            Bảng điều khiển quản trị chỉ có thể truy cập được thông qua trình duyệt web để đảm bảo bảo mật và cung cấp các công cụ quản lý tốt hơn.
           </Text>
           <Text style={styles.hint}>
-            Please log in from your computer to manage the system.
+            Vui lòng đăng nhập từ máy tính của bạn để quản lý hệ thống.
           </Text>
         </View>
       </View>
@@ -33,11 +36,13 @@ const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    ...platformShadow('0 4px 12px rgba(0, 0, 0, 0.1)', {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+    }),
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },

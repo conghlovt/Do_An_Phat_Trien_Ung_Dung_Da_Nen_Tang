@@ -34,7 +34,6 @@ export const useAuth = () => {
     try {
       useAuthStore.getState().setIsLoading(true);
       const res = await registerApi({ email, password, username, role });
-      await setAuth(res);
       return res;
     } catch (err: any) {
       useAuthStore.getState().setError(err.message || 'Registration failed');

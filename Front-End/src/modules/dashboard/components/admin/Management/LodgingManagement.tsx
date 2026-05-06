@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { DataTable } from './DataTable';
 import { adminService } from '../../../services/admin.service';
-import { Eye, CheckCircle, XCircle, Trash2 } from 'lucide-react-native';
+import { CheckCircle, Trash2, XCircle } from 'lucide-react-native';
+import { confirmAction } from '../../../utils/confirmAction';
+import { ModuleAccess } from '../../../utils/permissions';
 
-export const LodgingManagement = () => {
-  const [properties, setProperties] = useState([]);
+const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true };
+
+export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
+  const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchProperties = async () => {
     setLoading(true);
     try {
       const data = await adminService.getProperties();
-      setProperties(data);
+      setProperties(data || []);
     } catch (error) {
       console.error('Failed to fetch properties:', error);
     } finally {
@@ -27,73 +31,70 @@ export const LodgingManagement = () => {
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       await adminService.updatePropertyStatus(id, status);
-      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status}`);
+      Alert.alert('Thanh cong', `Da chuyen trang thai sang ${status}`);
       fetchProperties();
-    } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
+    } catch {
+      Alert.alert('Loi', 'Khong the cap nhat trang thai');
     }
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert('Xác nhận', 'Bạn có chắc muốn xóa cơ sở lưu trú này?', [
-      { text: 'Hủy' },
-      { text: 'Xóa', style: 'destructive', onPress: async () => {
-        try {
-          await adminService.deleteProperty(id);
-          fetchProperties();
-        } catch (error) {
-          Alert.alert('Lỗi', 'Không thể xóa');
-        }
-      }}
-    ]);
+    const confirmed = await confirmAction('Xac nhan', 'Ban co chac muon xoa co so luu tru nay?');
+    if (!confirmed) return;
+
+    try {
+      await adminService.deleteProperty(id);
+      Alert.alert('Thanh cong', 'Da xoa co so luu tru');
+      fetchProperties();
+    } catch {
+      Alert.alert('Loi', 'Khong the xoa co so luu tru');
+    }
   };
 
   const columns = [
-    { key: 'name', label: 'Tên cơ sở', render: (val: string) => <Text style={{color: '#FFF', fontWeight: 'bold'}}>{val}</Text> },
-    { key: 'address', label: 'Địa chỉ', render: (val: string) => <Text style={{color: '#94A3B8', fontSize: 13}} numberOfLines={1}>{val}</Text> },
-    { key: 'type', label: 'Loại', render: (val: string) => <Text style={{color: '#60A5FA'}}>{val}</Text> },
-    { 
-      key: 'status', 
-      label: 'Trạng thái',
+    { key: 'name', label: 'Ten co so', render: (val: string) => <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{val}</Text> },
+    { key: 'address', label: 'Dia chi', render: (val: string) => <Text style={{ color: '#94A3B8', fontSize: 13 }} numberOfLines={1}>{val}</Text> },
+    { key: 'type', label: 'Loai', render: (val: string) => <Text style={{ color: '#60A5FA' }}>{val}</Text> },
+    {
+      key: 'status',
+      label: 'Trang thai',
       render: (status: string) => {
         let color = '#10B981';
         let bgColor = 'rgba(16, 185, 129, 0.1)';
-        
-        if (status === 'REJECTED') {
+
+        if (status === 'INACTIVE') {
           color = '#EF4444';
           bgColor = 'rgba(239, 68, 68, 0.1)';
         } else if (status === 'PENDING') {
           color = '#F59E0B';
           bgColor = 'rgba(245, 158, 11, 0.1)';
         }
-        
+
         return (
           <View style={[styles.badge, { backgroundColor: bgColor }]}>
             <Text style={[styles.badgeText, { color }]}>{status}</Text>
           </View>
         );
-      }
+      },
     },
-    { key: 'owner', label: 'Chủ sở hữu', render: (val: any) => <Text style={{color: '#CBD5E1'}}>{val?.username || 'N/A'}</Text> },
+    { key: 'owner', label: 'Chu so huu', render: (val: any) => <Text style={{ color: '#CBD5E1' }}>{val?.username || 'N/A'}</Text> },
   ];
 
   const actions = [
-    { label: 'Duyệt', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'APPROVED') },
-    { label: 'Từ chối', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'REJECTED') },
-    { label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) },
+    ...(permissions.canApprove || permissions.canEdit
+      ? [
+          { label: 'Kich hoat', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'ACTIVE') },
+          { label: 'Tam ngung', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'INACTIVE') },
+        ]
+      : []),
+    ...(permissions.canDelete ? [{ label: 'Xoa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{color: '#FFF'}}>Đang tải dữ liệu lưu trú...</Text></View>;
+  if (loading) return <View style={styles.container}><Text style={{ color: '#FFF' }}>Dang tai du lieu luu tru...</Text></View>;
 
   return (
     <View style={styles.container}>
-      <DataTable 
-        title="Quản lý cơ sở lưu trú"
-        columns={columns}
-        data={properties}
-        onSearch={(q) => console.log('Searching', q)}
-        actions={actions}
-      />
+      <DataTable title="Quan ly co so luu tru" columns={columns} data={properties} onSearch={() => {}} actions={actions} />
     </View>
   );
 };

@@ -19,6 +19,9 @@ import * as z from 'zod';
 
 const BACKGROUND_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=3140&auto=format&fit=crop';
 
+const platformShadow = (boxShadow: string, nativeShadow: object) =>
+  Platform.OS === 'web' ? ({ boxShadow } as any) : nativeShadow;
+
 const registerSchema = z.object({
   username: z.string().min(2, 'Username must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
@@ -50,8 +53,8 @@ export default function RegisterScreen() {
   const onSubmit = async (data: RegisterFormData) => {
     setRegisterError('');
     try {
-      const res = await register(data.email, data.password, data.username, data.role);
-      router.replace('/dashboard' as any);
+      await register(data.email, data.password, data.username, data.role);
+      router.replace('/login' as any);
 
     } catch (err: any) {
       setRegisterError(err.message || 'Registration failed. Please try again.');
@@ -226,11 +229,13 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformShadow('0 8px 16px rgba(0, 0, 0, 0.12)', {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
+    }),
   },
   title: { fontSize: 22, fontWeight: 'bold', color: '#002B49', marginBottom: 4, textAlign: 'center' },
   subtitle: { fontSize: 13, color: '#666', marginBottom: 16, textAlign: 'center' },
@@ -277,11 +282,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
     alignItems: 'center',
-    shadowColor: '#008080',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    ...platformShadow('0 3px 6px rgba(0, 128, 128, 0.25)', {
+      shadowColor: '#008080',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 4,
+    }),
   },
   registerButtonDisabled: { opacity: 0.7 },
   registerButtonText: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
