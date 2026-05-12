@@ -1,6 +1,6 @@
 import { type Request, type Response } from 'express';
 import { financeService } from '../services/finance.service';
-import { sendError, sendResponse } from '../../login/utils/response.util';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
 
 export const getFinanceRecords = async (_req: Request, res: Response) => {
   try {

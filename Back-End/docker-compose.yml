@@ -1,0 +1,22 @@
+# Docker Compose for StayBuddy Backend Services
+# Usage: docker-compose up -d
+# MinIO Console: http://localhost:9001 (login: minioadmin/minioadmin)
+
+services:
+  # MinIO Object Storage — S3-compatible, self-hosted
+  minio:
+    image: minio/minio:latest
+    container_name: staybuddy-minio
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Web Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+volumes:
+  minio_data:

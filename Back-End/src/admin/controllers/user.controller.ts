@@ -1,6 +1,6 @@
 import { type Request, type Response } from 'express';
 import { userService } from '../services/user.service';
-import { sendError, sendResponse } from '../../login/utils/response.util';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {

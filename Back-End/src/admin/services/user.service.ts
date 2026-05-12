@@ -1,7 +1,7 @@
 import prisma from '../../login/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
-import { AppError } from '../../login/utils/app-error.util';
+import { AppError } from '../../shared/utils/app-error.util';
 
 const ROOT_ADMIN_ROLES = ['SUPER_ADMIN', 'admin'];
 const PROTECTED_ADMIN_ROLES = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];

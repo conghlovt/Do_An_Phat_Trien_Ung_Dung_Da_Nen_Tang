@@ -1,9 +1,9 @@
 import { type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from './lib/prisma';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from './utils/jwt.util';
-import { sendError, sendResponse } from './utils/response.util';
-import { USER_MESSAGES } from './utils/app-error.util';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../shared/utils/jwt.util';
+import { sendError, sendResponse } from '../shared/utils/response.util';
+import { USER_MESSAGES } from '../shared/utils/app-error.util';
 
 export const register = async (req: Request, res: Response) => {
   const { email, password, username, role } = req.body;

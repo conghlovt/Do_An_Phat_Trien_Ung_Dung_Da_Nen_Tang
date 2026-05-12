@@ -50,18 +50,20 @@ export default function LoginScreen() {
       const result = await login(data.email, data.password);
       const role = result.user?.role;
 
+      // Điều hướng luồng Admin
       if (['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'].includes(role)) {
         router.replace('/admin/dashboard' as any);
         return;
       }
 
+      // Điều hướng luồng Partner (Sửa từ '/partner/dashboard' thành '/partner')
       if (role === 'partner') {
         router.replace('/partner/dashboard' as any);
         return;
       }
 
+      // Điều hướng luồng Customer
       router.replace('/customer/dashboard' as any);
-
 
     } catch (err) {
       setLoginError(getApiErrorMessage(err, 'Không thể đăng nhập. Vui lòng kiểm tra lại thông tin.'));
@@ -127,7 +129,6 @@ export default function LoginScreen() {
           <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/login/forgot-password' as any)}>
             <Text style={styles.forgotPasswordText}>Forget Password?</Text>
           </TouchableOpacity>
-
 
           <TouchableOpacity
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}

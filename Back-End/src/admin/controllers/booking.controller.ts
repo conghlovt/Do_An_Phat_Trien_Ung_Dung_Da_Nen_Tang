@@ -1,6 +1,6 @@
 import { type Request, type Response } from 'express';
 import { bookingService } from '../services/booking.service';
-import { sendError, sendResponse } from '../../login/utils/response.util';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
 
 export const getAllBookings = async (req: Request, res: Response) => {
   try {

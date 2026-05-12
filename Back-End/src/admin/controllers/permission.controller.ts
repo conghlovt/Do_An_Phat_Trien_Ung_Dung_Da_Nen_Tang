@@ -1,7 +1,7 @@
 import { type Request, type Response } from 'express';
 import { permissionService } from '../services/permission.service';
-import { sendError, sendResponse } from '../../login/utils/response.util';
-import { USER_MESSAGES } from '../../login/utils/app-error.util';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
+import { USER_MESSAGES } from '../../shared/utils/app-error.util';
 
 export const getRolePermissions = async (_req: Request, res: Response) => {
   try {

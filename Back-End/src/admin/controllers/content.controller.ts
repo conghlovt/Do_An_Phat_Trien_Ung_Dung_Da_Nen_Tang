@@ -1,7 +1,7 @@
 import { type Request, type Response } from 'express';
 import { contentService } from '../services/content.service';
-import { sendError, sendResponse } from '../../login/utils/response.util';
-import { USER_MESSAGES } from '../../login/utils/app-error.util';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
+import { USER_MESSAGES } from '../../shared/utils/app-error.util';
 
 export const getAllContent = async (req: Request, res: Response) => {
   try {

@@ -1,5 +1,5 @@
 import prisma from '../../login/lib/prisma';
-import { AppError } from '../../login/utils/app-error.util';
+import { AppError } from '../../shared/utils/app-error.util';
 
 const PERMISSION_MODULES = ['revenue', 'booking', 'lodging', 'users', 'partners', 'finance', 'voucher', 'reviews', 'content'];
 const PERMISSION_ACTIONS = ['view', 'edit', 'delete', 'approve'];

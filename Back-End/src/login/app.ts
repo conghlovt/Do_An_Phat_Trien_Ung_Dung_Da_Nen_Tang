@@ -1,37 +1,70 @@
 import express, { type Application, type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import { isAppError, toAppError } from './utils/app-error.util';
-import { sendError, sendResponse } from './utils/response.util';
+import helmet from 'helmet';
 
+// --- Utilities ---
+import { isAppError, toAppError } from '../shared/utils/app-error.util';
+import { sendError, sendResponse } from '../shared/utils/response.util';
 
+// --- Admin & Customer Routes ---
 import authRoutes from './login.routes';
 import adminRoutes from '../admin/admin.routes';
 import customerRoutes from '../customer/customer.routes';
-import partnerRoutes from '../partner/partner.routes';
+
+// --- Partner Routes ---
+import { authRoutes as partnerAuthRoutes } from '../partner/routes/auth.routes';
+import { publicHotelRoutes, partnerHotelRoutes } from '../partner/routes/hotel.routes';
+import { partnerRoomRoutes } from '../partner/routes/room.routes';
+import { partnerPricingRoutes } from '../partner/routes/pricing.routes';
+import { uploadRoutes } from '../partner/routes/upload.routes';
+import { amenityRoutes } from '../partner/routes/amenity.routes';
+import { inventoryRoutes } from '../partner/routes/inventory.routes';
 
 const app: Application = express();
 
-// Middleware
+// ============================================================
+// GLOBAL MIDDLEWARE (Tối ưu nhất từ 2 bên)
+// ============================================================
+app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Routes
+// ============================================================
+// ADMIN & CUSTOMER API
+// ============================================================
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
-app.use('/api/partner', partnerRoutes);
 
+// ============================================================
+// PARTNER API (Giữ nguyên prefix /v1 để không xung đột)
+// ============================================================
+app.use('/api/v1/auth', partnerAuthRoutes);
+app.use('/api/v1/hotels', publicHotelRoutes);
+app.use('/api/v1/amenities', amenityRoutes);
+app.use('/api/v1/partner/hotels', partnerHotelRoutes);
+app.use('/api/v1/partner/hotels/:hotelId/room-types', partnerRoomRoutes);
+app.use('/api/v1/partner/hotels/:hotelId/room-types/:roomTypeId/pricing', partnerPricingRoutes);
+app.use('/api/v1/partner/hotels/:hotelId/inventory', inventoryRoutes);
+app.use('/api/v1/files', uploadRoutes);
 
-// Basic Health Check Route
+// ============================================================
+// HEALTH CHECK
+// ============================================================
 app.get('/health', (req: Request, res: Response) => {
-  sendResponse(res, 200, 'Máy chủ hoạt động bình thường.', { status: 'OK' });
+  sendResponse(res, 200, 'Máy chủ hoạt động bình thường.', {
+    status: 'OK',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// TODO: Add routes here
-
-// Error handling middleware
+// ============================================================
+// GLOBAL ERROR HANDLER (Dùng chuẩn của Admin)
+// ============================================================
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const appError = toAppError(err);
 
