@@ -7,9 +7,11 @@ import helmet from 'helmet';
 import { isAppError, toAppError } from '../shared/utils/app-error.util';
 import { sendError, sendResponse } from '../shared/utils/response.util';
 
-// --- Admin & Customer Routes ---
+// --- Admin ---
 import authRoutes from './login.routes';
 import adminRoutes from '../admin/admin.routes';
+
+// --- Customer Routes ---
 import customerRoutes from '../customer/customer.routes';
 
 // --- Partner Routes ---
@@ -33,10 +35,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // ============================================================
-// ADMIN & CUSTOMER API
+// ADMIN
 // ============================================================
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+
+// ============================================================
+// CUSTOMER API
+// ============================================================
 app.use('/api/customer', customerRoutes);
 
 // ============================================================

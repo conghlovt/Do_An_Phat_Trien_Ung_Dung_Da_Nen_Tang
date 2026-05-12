@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../login/middlewares/auth.middleware';
+import hotelRoutes from './routes/hotel.routes';
 
 const router = Router();
 
-router.use(authenticate, authorize(['customer']));
+router.use('/hotels', hotelRoutes);
 
 export default router;
