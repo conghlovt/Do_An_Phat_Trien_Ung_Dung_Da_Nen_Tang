@@ -15,7 +15,7 @@ const getBaseUrl = () => {
 
   // Web / iOS / fallback
   // Nếu backend của bạn đã test OK ở IP này thì dùng IP LAN thật
-  return 'http://192.168.1.100:5000';
+  return 'http://localhost:5000';
 };
 
 const baseURL = getBaseUrl();

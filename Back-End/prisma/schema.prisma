@@ -554,3 +554,41 @@ model RoomInventory {
   @@index([date])
   @@map("room_inventory")
 }
+
+model HotelCard {
+  id      String @id @default(cuid())
+  slug    String @unique
+  name    String
+  rating  Float
+  reviews Int    @default(0)
+
+  city String
+  area String
+
+  // Giữ lại để tương thích UI cũ
+  location String
+  district String
+
+  discount   String?
+  price      String
+  priceValue Int
+  unit       String
+  oldPrice   String?
+  image      String
+  badge      String?
+  tags       String[]
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city])
+  @@index([area])
+  @@index([district])
+  @@index([priceValue])
+  @@index([rating])
+  @@index([isActive])
+  @@map("hotel_cards")
+}

@@ -22,6 +22,7 @@ import { partnerPricingRoutes } from '../partner/routes/pricing.routes';
 import { uploadRoutes } from '../partner/routes/upload.routes';
 import { amenityRoutes } from '../partner/routes/amenity.routes';
 import { inventoryRoutes } from '../partner/routes/inventory.routes';
+import hotelCardRoutes from '../customer/routes/hotelCard.routes';
 
 const app: Application = express();
 
@@ -43,7 +44,8 @@ app.use('/api/admin', adminRoutes);
 // ============================================================
 // CUSTOMER API
 // ============================================================
-app.use('/api/customer', customerRoutes);
+app.use('/api/v1/customer', customerRoutes);
+app.use('/api/v1/hotel-cards', hotelCardRoutes);
 
 // ============================================================
 // PARTNER API (Giữ nguyên prefix /v1 để không xung đột)

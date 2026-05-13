@@ -28,15 +28,15 @@ export const findHotels = async (params: HotelQueryParams) => {
   const take = limit ? Math.min(Number(limit), 50) : 20;
 
   const [hotels, total] = await Promise.all([
-    prisma.hotel.findMany({ where, orderBy, take }),
-    prisma.hotel.count({ where }),
+    prisma.hotelCard.findMany({ where, orderBy, take }),
+    prisma.hotelCard.count({ where }),
   ]);
 
   return { hotels, total };
 };
 
 export const findHotelById = async (id: string) => {
-  const hotel = await prisma.hotel.findUnique({ where: { id } });
+  const hotel = await prisma.hotelCard.findUnique({ where: { id } });
   if (!hotel) {
     throw new AppError(404, 'HOTEL_NOT_FOUND', 'Không tìm thấy khách sạn');
   }
