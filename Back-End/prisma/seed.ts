@@ -120,6 +120,64 @@ async function main() {
   });
   console.log('✔ Đã seed bài viết nội dung');
 
+  // 7. Seed Amenities
+  const amenityData = [
+    // General
+    { name: 'WiFi miễn phí', slug: 'wifi', icon: '📶', category: 'general' },
+    { name: 'Bãi đỗ xe', slug: 'parking', icon: '🅿️', category: 'general' },
+    { name: 'Thang máy', slug: 'elevator', icon: '🛗', category: 'general' },
+    { name: 'Lễ tân 24/7', slug: 'reception-24h', icon: '🏪', category: 'general' },
+    { name: 'Nhận phòng sớm', slug: 'early-checkin', icon: '⏰', category: 'general' },
+    { name: 'Trả phòng muộn', slug: 'late-checkout', icon: '🕐', category: 'general' },
+    { name: 'Cho phép thú cưng', slug: 'pet-friendly', icon: '🐾', category: 'general' },
+    { name: 'Không hút thuốc', slug: 'no-smoking', icon: '🚭', category: 'general' },
+    // Room
+    { name: 'Điều hòa', slug: 'air-conditioning', icon: '❄️', category: 'room' },
+    { name: 'Tivi', slug: 'tv', icon: '📺', category: 'room' },
+    { name: 'Tủ lạnh mini', slug: 'mini-fridge', icon: '🧊', category: 'room' },
+    { name: 'Két an toàn', slug: 'safe-box', icon: '🔐', category: 'room' },
+    { name: 'Bàn làm việc', slug: 'desk', icon: '🖥️', category: 'room' },
+    { name: 'Ấm đun nước', slug: 'kettle', icon: '☕', category: 'room' },
+    { name: 'Máy sấy tóc', slug: 'hair-dryer', icon: '💇', category: 'room' },
+    { name: 'Dép đi trong phòng', slug: 'slippers', icon: '🩴', category: 'room' },
+    // Bathroom
+    { name: 'Vòi sen', slug: 'shower', icon: '🚿', category: 'bathroom' },
+    { name: 'Bồn tắm', slug: 'bathtub', icon: '🛁', category: 'bathroom' },
+    { name: 'Đồ vệ sinh cá nhân', slug: 'toiletries', icon: '🧴', category: 'bathroom' },
+    { name: 'Khăn tắm', slug: 'towels', icon: '🧹', category: 'bathroom' },
+    { name: 'Áo choàng tắm', slug: 'bathrobe', icon: '👘', category: 'bathroom' },
+    // Entertainment
+    { name: 'Hồ bơi', slug: 'pool', icon: '🏊', category: 'entertainment' },
+    { name: 'Phòng gym', slug: 'gym', icon: '🏋️', category: 'entertainment' },
+    { name: 'Spa & Massage', slug: 'spa', icon: '💆', category: 'entertainment' },
+    { name: 'Karaoke', slug: 'karaoke', icon: '🎤', category: 'entertainment' },
+    { name: 'Khu vui chơi trẻ em', slug: 'kids-play', icon: '🧒', category: 'entertainment' },
+    { name: 'Sân vườn', slug: 'garden', icon: '🌳', category: 'entertainment' },
+    // Safety
+    { name: 'Camera an ninh', slug: 'cctv', icon: '📹', category: 'safety' },
+    { name: 'Bảo vệ 24/7', slug: 'security-guard', icon: '👮', category: 'safety' },
+    { name: 'Bình chữa cháy', slug: 'fire-extinguisher', icon: '🧯', category: 'safety' },
+    { name: 'Lối thoát hiểm', slug: 'emergency-exit', icon: '🚪', category: 'safety' },
+    { name: 'Khóa thẻ từ', slug: 'keycard', icon: '🔑', category: 'safety' },
+    // Service
+    { name: 'Bữa sáng', slug: 'breakfast', icon: '🍳', category: 'service' },
+    { name: 'Nhà hàng', slug: 'restaurant', icon: '🍽️', category: 'service' },
+    { name: 'Quầy bar', slug: 'bar', icon: '🍸', category: 'service' },
+    { name: 'Dịch vụ phòng', slug: 'room-service', icon: '🛎️', category: 'service' },
+    { name: 'Giặt ủi', slug: 'laundry', icon: '👔', category: 'service' },
+    { name: 'Đưa đón sân bay', slug: 'airport-shuttle', icon: '🚐', category: 'service' },
+    { name: 'Cho thuê xe', slug: 'car-rental', icon: '🚗', category: 'service' },
+  ];
+
+  for (const amenity of amenityData) {
+    await prisma.amenity.upsert({
+      where: { slug: amenity.slug },
+      update: { name: amenity.name, icon: amenity.icon, category: amenity.category as any },
+      create: { ...amenity, category: amenity.category as any, isActive: true },
+    });
+  }
+  console.log(`✔ Đã seed ${amenityData.length} tiện ích`);
+
   await seedHotelCards();
 
   console.log('--- Hoàn tất Seeding ---');

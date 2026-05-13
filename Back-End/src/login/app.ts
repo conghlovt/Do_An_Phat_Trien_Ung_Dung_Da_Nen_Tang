@@ -22,6 +22,7 @@ import { partnerPricingRoutes } from '../partner/routes/pricing.routes';
 import { uploadRoutes } from '../partner/routes/upload.routes';
 import { amenityRoutes } from '../partner/routes/amenity.routes';
 import { inventoryRoutes } from '../partner/routes/inventory.routes';
+import { partnerBookingRoutes } from '../partner/routes/booking.routes';
 import hotelCardRoutes from '../customer/routes/hotelCard.routes';
 
 const app: Application = express();
@@ -57,6 +58,7 @@ app.use('/api/v1/partner/hotels', partnerHotelRoutes);
 app.use('/api/v1/partner/hotels/:hotelId/room-types', partnerRoomRoutes);
 app.use('/api/v1/partner/hotels/:hotelId/room-types/:roomTypeId/pricing', partnerPricingRoutes);
 app.use('/api/v1/partner/hotels/:hotelId/inventory', inventoryRoutes);
+app.use('/api/v1/partner/bookings', partnerBookingRoutes);
 app.use('/api/v1/files', uploadRoutes);
 
 // ============================================================

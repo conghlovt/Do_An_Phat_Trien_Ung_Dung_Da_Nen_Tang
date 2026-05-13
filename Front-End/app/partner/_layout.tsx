@@ -21,7 +21,7 @@ interface DrawerItem {
 }
 
 const MENU_ITEMS: DrawerItem[] = [
-  { label: 'Trang chủ', icon: Home, path: '/partner' },
+  { label: 'Trang chủ', icon: Home, path: '/partner/dashboard' },
   { label: 'Quản lý phòng', icon: BedDouble, path: '/partner/rooms' },
   { label: 'Đơn đặt phòng', icon: Calendar, path: '/partner/booking' },
   { label: 'Thống kê', icon: BarChart3, path: '/partner/stats' },
@@ -89,7 +89,7 @@ export default function PartnerLayout() {
       <View style={styles.webContainer}>
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <View style={styles.webMain}>
-          <Header onMenuPress={() => setSidebarCollapsed(!sidebarCollapsed)} />
+          <Header />
           <View style={styles.webContent}>
             <Slot />
           </View>

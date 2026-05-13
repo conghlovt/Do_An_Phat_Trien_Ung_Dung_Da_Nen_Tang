@@ -32,6 +32,7 @@ enum UserStatus {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  CHECKED_IN
   CANCELLED
   COMPLETED
 }
@@ -194,10 +195,14 @@ model Booking {
   id          String        @id @default(uuid())
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId  String
-  property    Property      @relation(fields: [propertyId], references: [id])
-  roomId      String
-  room        Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  propertyId  String?
+  property    Property?     @relation(fields: [propertyId], references: [id])
+  roomId      String?
+  room        Room?         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  hotelId     String?       @map("hotel_id")
+  hotel       Hotel?        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomTypeId  String?       @map("room_type_id")
+  roomType    RoomType?     @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
   checkIn     DateTime
   checkOut    DateTime
   guests      Int           @default(1)
@@ -335,6 +340,7 @@ model Hotel {
   videos         HotelVideo[]
   roomTypes      RoomType[]
   hotelAmenities HotelAmenity[]
+  bookings       Booking[]
 
   @@index([ownerId])
   @@index([status])
@@ -449,6 +455,7 @@ model RoomType {
   pricingPolicies   PricingPolicy[]
   inventory         RoomInventory[]
   roomTypeAmenities RoomTypeAmenity[]
+  bookings          Booking[]
 
   @@unique([hotelId, slug])
   @@index([hotelId])

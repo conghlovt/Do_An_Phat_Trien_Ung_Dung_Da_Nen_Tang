@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
 
 const BASE_URL = Platform.OS === 'web'
   ? 'http://localhost:5000/api/v1'
@@ -29,7 +30,7 @@ apiInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor — extract error message from API response
+// Response interceptor — handle errors and token expiration
 apiInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -37,12 +38,36 @@ apiInstance.interceptors.response.use(
     if (error.response?.data?.message) {
       error.message = error.response.data.message;
     }
-    // Handle 401 — token expired
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      // TODO: Implement refresh token logic
+
+    // Handle 401 — token expired → clear tokens and redirect to login
+    if (error.response?.status === 401) {
+      try {
+        // Clear stored tokens
+        if (Platform.OS === 'web') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+        } else {
+          await SecureStore.deleteItemAsync('accessToken');
+          await SecureStore.deleteItemAsync('refreshToken');
+          await SecureStore.deleteItemAsync('user');
+        }
+
+        // Redirect to login page
+        const alertMsg = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        if (Platform.OS === 'web') {
+          alert(alertMsg);
+          // Use window.location for reliable web redirect
+          window.location.href = '/login';
+        } else {
+          // Use expo-router for mobile
+          router.replace('/login' as any);
+        }
+      } catch (cleanupError) {
+        console.warn('Error during auth cleanup:', cleanupError);
+      }
     }
+
     return Promise.reject(error);
   }
 );

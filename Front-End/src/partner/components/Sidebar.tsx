@@ -23,7 +23,7 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const SIDEBAR_EXPANDED = 220;
-const SIDEBAR_COLLAPSED = 64;
+const SIDEBAR_COLLAPSED = 60;
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -58,27 +58,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         styles.container,
         { width: sidebarWidth },
         ...(Platform.OS === 'web'
-          ? [{ transition: 'width 0.2s ease' } as any]
+          ? [{ transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)' } as any]
           : []),
       ]}
     >
       {/* Logo + Toggle */}
-      <View style={styles.logoSection}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoIcon}>
-            <Hotel size={20} color="#FFF" />
-          </View>
-          {!collapsed && (
-            <Text style={styles.logoText}>StayBuddy</Text>
-          )}
-        </View>
-        <TouchableOpacity onPress={onToggle} style={styles.toggleBtn}>
-          {collapsed ? (
-            <ChevronRight size={16} color="#94A3B8" />
-          ) : (
-            <ChevronLeft size={16} color="#94A3B8" />
-          )}
-        </TouchableOpacity>
+      <View style={[styles.logoSection, collapsed && styles.logoSectionCollapsed]}>
+        {collapsed ? (
+          // Collapsed: chỉ hiển thị nút toggle
+          <TouchableOpacity onPress={onToggle} style={styles.toggleBtnCollapsed}>
+            <ChevronRight size={16} color="#0D9488" />
+          </TouchableOpacity>
+        ) : (
+          // Expanded: logo + nút thu gọn
+          <>
+            <View style={styles.logoRow}>
+              <View style={styles.logoIcon}>
+                <Hotel size={18} color="#FFF" />
+              </View>
+              <Text style={styles.logoText}>StayBuddy</Text>
+            </View>
+            <TouchableOpacity onPress={onToggle} style={styles.toggleBtn}>
+              <ChevronLeft size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* User Badge */}
@@ -107,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         </View>
       )}
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, collapsed && styles.dividerCollapsed]} />
 
       {/* Menu Items */}
       <ScrollView style={styles.menuSection} showsVerticalScrollIndicator={false}>
@@ -125,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
               onPress={() => router.push(item.path as any)}
               activeOpacity={0.7}
             >
-              {active && <View style={styles.activeIndicator} />}
+              {active && <View style={[styles.activeIndicator, collapsed && styles.activeIndicatorCollapsed]} />}
               <View style={[styles.menuIconBox, active && styles.menuIconBoxActive]}>
                 <IconComponent
                   size={18}
@@ -148,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
 
       {/* Bottom — Logout */}
       <View style={styles.bottomSection}>
-        <View style={styles.divider} />
+        <View style={[styles.divider, collapsed && styles.dividerCollapsed]} />
         <TouchableOpacity
           style={[styles.logoutBtn, collapsed && styles.logoutBtnCollapsed]}
           onPress={handleLogout}
@@ -170,8 +174,9 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'web' ? 0 : 50,
     borderRightWidth: 1,
     borderRightColor: '#E2E8F0',
+    overflow: 'hidden' as any,
     ...Platform.select({
-      web: { height: '100vh' as any, overflow: 'hidden' as any },
+      web: { height: '100vh' as any },
       default: { flex: 1 },
     }),
   },
@@ -185,14 +190,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
+  logoSectionCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+  },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   logoIcon: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     backgroundColor: '#0D9488',
     alignItems: 'center',
@@ -209,6 +218,14 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 6,
     backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleBtnCollapsed: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F0FDFA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -247,6 +264,9 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 12,
   },
+  dividerCollapsed: {
+    marginHorizontal: 8,
+  },
 
   // Menu
   menuSection: { flex: 1, paddingHorizontal: 8 },
@@ -262,6 +282,7 @@ const styles = StyleSheet.create({
   menuItemCollapsed: {
     justifyContent: 'center',
     paddingHorizontal: 0,
+    paddingVertical: 10,
   },
   menuItemActive: {
     backgroundColor: '#F0FDFA',
@@ -274,6 +295,11 @@ const styles = StyleSheet.create({
     width: 3,
     backgroundColor: '#0D9488',
     borderRadius: 2,
+  },
+  activeIndicatorCollapsed: {
+    left: 2,
+    top: 10,
+    bottom: 10,
   },
   menuIconBox: {
     width: 32,
@@ -310,6 +336,7 @@ const styles = StyleSheet.create({
   logoutBtnCollapsed: {
     justifyContent: 'center',
     paddingHorizontal: 0,
+    gap: 0,
   },
   logoutText: { color: '#EF4444', fontSize: 13, fontWeight: '600' },
 });
