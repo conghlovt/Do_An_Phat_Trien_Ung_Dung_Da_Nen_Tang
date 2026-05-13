@@ -1,0 +1,10 @@
+# 1. BẮT BUỘC chặn thư viện (vì nó quá nặng và tự sinh được)
+node_modules/
+
+# 2. Chặn thư mục code đã biên dịch
+dist/
+build/
+
+# 3. File rác của trình soạn thảo và hệ điều hành
+.vscode/
+.DS_Store

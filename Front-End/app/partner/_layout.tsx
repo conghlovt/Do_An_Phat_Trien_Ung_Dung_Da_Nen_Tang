@@ -9,7 +9,7 @@ import { Header } from '../../src/partner/components/Header';
 import { useAuth } from '../../src/login/hooks/useAuth';
 import {
   Home, BedDouble, BarChart3, Settings, LogOut,
-  Hotel, Menu, X,
+  Hotel, Menu, X, Calendar,
 } from 'lucide-react-native';
 
 const DRAWER_W = 280;
@@ -22,7 +22,8 @@ interface DrawerItem {
 
 const MENU_ITEMS: DrawerItem[] = [
   { label: 'Trang chủ', icon: Home, path: '/partner' },
-  { label: 'Quản lý loại phòng', icon: BedDouble, path: '/partner/rooms' },
+  { label: 'Quản lý phòng', icon: BedDouble, path: '/partner/rooms' },
+  { label: 'Đơn đặt phòng', icon: Calendar, path: '/partner/booking' },
   { label: 'Thống kê', icon: BarChart3, path: '/partner/stats' },
   { label: 'Thiết lập', icon: Settings, path: '/partner/settings' },
 ];
