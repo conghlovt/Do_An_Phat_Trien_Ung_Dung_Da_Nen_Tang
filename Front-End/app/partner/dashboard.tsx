@@ -45,21 +45,26 @@ export default function PartnerHomePage() {
 
   if (isLoading && !currentHotel) return <LoadingSpinner />;
 
+
   if (!currentHotel && hotels.length === 0) {
     return (
       <View style={styles.container}>
         {Platform.OS !== 'web' && <Header title="Trang chủ" />}
-        <EmptyState
-          icon="🏨"
-          title="Chưa có khách sạn nào"
-          subtitle="Tạo khách sạn đầu tiên để bắt đầu"
-        />
-        <TouchableOpacity
-          style={styles.createBtn}
-          onPress={() => router.push('/partner/hotel-edit' as any)}
-        >
-          <Text style={styles.createBtnText}>+ Tạo khách sạn mới</Text>
-        </TouchableOpacity>
+
+        <View style={styles.emptyWrapper}>
+          <EmptyState
+            icon="🏨"
+            title="Chưa có khách sạn nào"
+            subtitle="Tạo khách sạn đầu tiên để bắt đầu"
+          />
+
+          <TouchableOpacity
+            style={styles.centerCreateBtn}
+            onPress={() => router.push('/partner/hotel-edit' as any)}
+          >
+            <Text style={styles.centerCreateText}>+ Tạo khách sạn mới</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -409,4 +414,25 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   createBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+
+  emptyWrapper: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  ...(Platform.OS === 'web' ? { minHeight: '70vh' as any } : {}),
+},
+
+  centerCreateBtn: {
+    marginTop: 20,
+    backgroundColor: '#0D9488',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+  },
+
+  centerCreateText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

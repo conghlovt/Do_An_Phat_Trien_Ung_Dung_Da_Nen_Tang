@@ -28,13 +28,14 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   text: { marginTop: 12, fontSize: 14, color: '#64748B' },
+
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
     minHeight: 300,
   },
+
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#334155', textAlign: 'center' },
   emptySubtitle: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 6 },

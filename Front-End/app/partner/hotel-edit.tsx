@@ -90,6 +90,11 @@ export default function HotelEditPage() {
   const [pendingImages, setPendingImages] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [checkInHour, setCheckInHour] = useState('14');
+  const [checkInMinute, setCheckInMinute] = useState('00');
+
+  const [checkOutHour, setCheckOutHour] = useState('12');
+  const [checkOutMinute, setCheckOutMinute] = useState('00');
 
   // ---- Load Amenities ----
   useEffect(() => {
@@ -116,6 +121,18 @@ export default function HotelEditPage() {
 
   useEffect(() => {
     if (isEdit && currentHotel) {
+
+      const [h1 = '14', m1 = '00'] = (currentHotel.checkInTime || '14:00').split(':');
+
+      const [h2 = '12', m2 = '00'] =
+        (currentHotel.checkOutTime || '12:00').split(':');
+
+      setCheckInHour(h1);
+      setCheckInMinute(m1);
+
+      setCheckOutHour(h2);
+      setCheckOutMinute(m2);
+
       setForm({
         name: currentHotel.name || '',
         description: currentHotel.description || '',
@@ -125,7 +142,10 @@ export default function HotelEditPage() {
         checkOutTime: currentHotel.checkOutTime || '12:00',
         addressLine: currentHotel.address?.addressLine || '',
         provinceCode: null,
-        provinceName: currentHotel.address?.province || currentHotel.address?.city || '',
+        provinceName:
+          currentHotel.address?.province ||
+          currentHotel.address?.city ||
+          '',
         districtCode: null,
         districtName: currentHotel.address?.district || '',
         wardCode: null,
@@ -134,10 +154,16 @@ export default function HotelEditPage() {
 
       // Pre-select existing amenities
       if (currentHotel.hotelAmenities?.length) {
-        const ids = new Set(currentHotel.hotelAmenities.map(ha => ha.amenity.id));
+        const ids = new Set(
+          currentHotel.hotelAmenities.map(
+            (ha) => ha.amenity.id
+          )
+        );
+
         setSelectedAmenityIds(ids);
       }
     }
+
   }, [isEdit, currentHotel]);
 
   // ---- Group amenities by category ----
@@ -296,7 +322,7 @@ export default function HotelEditPage() {
           <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
             <ArrowLeft size={20} color="#1E293B" />
           </TouchableOpacity>
-          <Text style={s.mobileBackTitle}>{isEdit ? 'Chỉnh sửa khách sạn' : 'Tạo khách sạn mới'}</Text>
+          <Text style={s.mobileBackTitle}>{isEdit ? 'Chỉnh sửa phòng' : 'Tạo phòng mới'}</Text>
         </View>
       ) : null}
       <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
@@ -305,9 +331,9 @@ export default function HotelEditPage() {
           <View style={s.pageHeader}>
             <View style={s.pageTitleRow}>
               <Hotel size={22} color="#0F172A" />
-              <Text style={s.pageTitle}>{isEdit ? 'Chỉnh sửa khách sạn' : 'Tạo khách sạn mới'}</Text>
+              <Text style={s.pageTitle}>{isEdit ? 'Chỉnh sửa phòng' : 'Tạo phòng mới'}</Text>
             </View>
-            <Text style={s.pageSubtitle}>Điền đầy đủ thông tin để khách sạn được duyệt nhanh hơn</Text>
+            <Text style={s.pageSubtitle}>Điền đầy đủ thông tin phòng để được duyệt nhanh hơn</Text>
           </View>
         )}
 
@@ -362,31 +388,120 @@ export default function HotelEditPage() {
               />
             </View>
           </View>
-
           <View style={s.row}>
+            {/* CHECK IN */}
             <View style={[s.field, { flex: 1 }]}>
               <Text style={s.label}>Giờ nhận phòng</Text>
-              <TextInput
-                style={s.input}
-                value={form.checkInTime}
-                onChangeText={(v) => updateField('checkInTime', v)}
-                placeholder="14:00"
-                placeholderTextColor="#94A3B8"
-              />
+
+              <View style={s.timeRow}>
+                <TextInput
+                  style={s.timeInput}
+                  value={checkInHour}
+                  onChangeText={(v) => {
+                    if (isNaN(Number(v))) return;
+
+                    setCheckInHour(v);
+
+                    let hour = Number(v);
+
+                    if (hour > 23) hour = 23;
+                    if (hour < 0) hour = 0;
+
+                    updateField(
+                      'checkInTime',
+                      `${hour.toString().padStart(2, '0')}:${checkInMinute}`
+                    );
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  placeholder="HH"
+                />
+
+                <Text style={s.timeColon}>:</Text>
+
+                <TextInput
+                  style={s.timeInput}
+                  value={checkInMinute}
+                  onChangeText={(v) => {
+                    if (isNaN(Number(v))) return;
+
+                    setCheckInMinute(v);
+
+                    let minute = Number(v);
+
+                    if (minute > 59) minute = 59;
+                    if (minute < 0) minute = 0;
+
+                    updateField(
+                      'checkInTime',
+                      `${checkInHour}:${minute.toString().padStart(2, '0')}`
+                    );
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  placeholder="MM"
+                />
+              </View>
             </View>
+
+
+
+            {/* CHECK OUT */}
             <View style={[s.field, { flex: 1 }]}>
               <Text style={s.label}>Giờ trả phòng</Text>
-              <TextInput
-                style={s.input}
-                value={form.checkOutTime}
-                onChangeText={(v) => updateField('checkOutTime', v)}
-                placeholder="12:00"
-                placeholderTextColor="#94A3B8"
-              />
+
+              <View style={s.timeRow}>
+                <TextInput
+                  style={s.timeInput}
+                  value={checkOutHour}
+                  onChangeText={(v) => {
+                    if (isNaN(Number(v))) return;
+
+                    setCheckOutHour(v);
+
+                    let hour = Number(v);
+
+                    if (hour > 23) hour = 23;
+                    if (hour < 0) hour = 0;
+
+                    updateField(
+                      'checkOutTime',
+                      `${hour.toString().padStart(2, '0')}:${checkOutMinute}`
+                    );
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  placeholder="HH"
+                />
+
+                <Text style={s.timeColon}>:</Text>
+
+                <TextInput
+                  style={s.timeInput}
+                  value={checkOutMinute}
+                  onChangeText={(v) => {
+                    if (isNaN(Number(v))) return;
+
+                    setCheckOutMinute(v);
+
+                    let minute = Number(v);
+
+                    if (minute > 59) minute = 59;
+                    if (minute < 0) minute = 0;
+
+                    updateField(
+                      'checkOutTime',
+                      `${checkOutHour}:${minute.toString().padStart(2, '0')}`
+                    );
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  placeholder="MM"
+                />
+              </View>
             </View>
           </View>
         </View>
-
         {/* === Địa chỉ === */}
         <View style={s.formSection}>
           <View style={s.sectionTitleRow}>
@@ -720,4 +835,28 @@ const s = StyleSheet.create({
   },
   submitBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   busyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  timeInput: {
+    width: 60,
+    height: 44,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  timeColon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
 });
