@@ -1,25 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import SettingsItem from '@/src/customer/components/mobile/SettingsItem';
-import { useThemeContext } from '@/src/customer/utils/ThemeContext';
-import { useAuth } from '@/src/customer/hooks/useAuth';
+import SettingsItem from '@/src/customer/features/profile/components/SettingsItem';
+import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import { useAuth } from '@/src/customer/features/auth/hooks/useAuth';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDarkMode, setIsDarkMode, currentTheme } = useThemeContext();
   const { isAuthenticated, user, logout } = useAuth();
+  const { width } = useWindowDimensions();
   const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   const getInitials = () => {
     if (!user) return '?';
@@ -34,14 +38,21 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       {/* Trang trí góc trên phải */}
-      <View
-        style={[styles.topRightDecoration, { backgroundColor: currentTheme.decor }]}
-      />
+      {!isWebLayout && (
+        <View
+          style={[styles.topRightDecoration, { backgroundColor: currentTheme.decor }]}
+        />
+      )}
 
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={isWebLayout}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: isWebLayout ? 28 : insets.top },
+          isWebLayout && styles.webScrollContent,
+        ]}
       >
+        <View style={isWebLayout && styles.webContent}>
         {/* Header: avatar */}
         <View style={styles.header}>
           {isAuthenticated && user ? (
@@ -161,6 +172,7 @@ export default function ProfileScreen() {
             />
           </View>
         </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -169,6 +181,18 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  webScrollContent: {
+    paddingHorizontal: 32,
+    paddingBottom: 52,
+  },
+  webContent: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
   },
   topRightDecoration: {
     position: 'absolute',

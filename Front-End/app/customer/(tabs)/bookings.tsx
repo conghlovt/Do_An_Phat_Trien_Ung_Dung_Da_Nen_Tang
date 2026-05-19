@@ -1,30 +1,35 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, Image, ScrollView,
+  Platform, View, Text, StyleSheet, Pressable, Image, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useThemeContext } from '@/src/customer/utils/ThemeContext';
+import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
 
 export default function BookingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { currentTheme } = useThemeContext();
+  const { width } = useWindowDimensions();
   const [showNotification, setShowNotification] = useState(true);
+  const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: currentTheme.background }]}>
+    <View style={[styles.container, { paddingTop: isWebLayout ? 0 : insets.top, backgroundColor: currentTheme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: currentTheme.card, borderBottomColor: currentTheme.border }]}>
+      {!isWebLayout && (
+        <View style={[styles.header, { backgroundColor: currentTheme.card, borderBottomColor: currentTheme.border }]}>
         <View style={styles.headerSpacer} />
         <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Phòng đã đặt</Text>
         <Pressable style={styles.headerBtn}>
           <Search size={22} color={currentTheme.textSecondary} />
         </Pressable>
-      </View>
+        </View>
+      )}
 
-      <ScrollView>
+      <ScrollView contentContainerStyle={isWebLayout && styles.webScrollContent}>
+        <View style={isWebLayout && styles.webContent}>
         {/* Notification Banner */}
         {showNotification && (
           <View style={[styles.notification, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
@@ -50,10 +55,11 @@ export default function BookingsScreen() {
           <Text style={[styles.emptySubtitle, { color: currentTheme.textSecondary }]}>Bắt đầu khám phá ngay.</Text>
           <Pressable
             style={styles.exploreBtn}
-            onPress={() => router.push('/')}
+            onPress={() => router.replace('/customer/dashboard' as any)}
           >
             <Text style={styles.exploreBtnText}>Khám phá phòng ngay</Text>
           </Pressable>
+        </View>
         </View>
       </ScrollView>
     </View>
@@ -72,6 +78,12 @@ const styles = StyleSheet.create({
   headerSpacer: { width: 32 },
   headerTitle: { fontSize: 17, fontWeight: '700' },
   headerBtn: { padding: 4 },
+  webScrollContent: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 52 },
+  webContent: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+  },
   notification: {
     flexDirection: 'row', alignItems: 'center',
     margin: 16, padding: 16, borderRadius: 12, borderWidth: 1,

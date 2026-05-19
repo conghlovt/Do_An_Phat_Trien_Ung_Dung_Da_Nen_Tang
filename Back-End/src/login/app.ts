@@ -45,8 +45,8 @@ app.use('/api/admin', adminRoutes);
 // ============================================================
 // CUSTOMER API
 // ============================================================
-app.use('/api/v1/customer', customerRoutes);
-app.use('/api/v1/hotel-cards', hotelCardRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/hotel-cards', hotelCardRoutes);
 
 // ============================================================
 // PARTNER API (Giữ nguyên prefix /v1 để không xung đột)

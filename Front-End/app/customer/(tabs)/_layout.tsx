@@ -1,17 +1,17 @@
 import { Tabs } from 'expo-router';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Home, Compass, CalendarCheck, Gift, User } from 'lucide-react-native';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ClipboardList, Compass, Gift, Home, User } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeContext } from '@/src/customer/utils/ThemeContext';
+import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
 
 const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
+const PRIMARY_DARK = '#6dbb99';
 
 const TAB_ITEMS = [
   { name: 'dashboard', label: 'Trang chủ', Icon: Home },
-  { name: 'discover', label: 'Đề xuất', Icon: Compass },
-  { name: 'bookings', label: 'Phòng đã đặt', Icon: CalendarCheck },
+  { name: 'discover', label: 'Khám phá', Icon: Compass },
+  { name: 'bookings', label: 'Phòng đã đặt', Icon: ClipboardList },
   { name: 'offers', label: 'Ưu đãi', Icon: Gift },
   { name: 'profile', label: 'Tài khoản', Icon: User },
 ] as const;
@@ -19,15 +19,24 @@ const TAB_ITEMS = [
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { currentTheme } = useThemeContext();
+  const { width } = useWindowDimensions();
+  const isWebLayout = Platform.OS === 'web' && width >= 768;
+
+  if (isWebLayout) return null;
 
   return (
-    <View style={[styles.tabBar, { 
-      paddingBottom: Math.max(insets.bottom, 12),
-      backgroundColor: currentTheme.card,
-      borderTopColor: currentTheme.border,
-    }]}>
+    <View style={[
+      styles.tabBar,
+      {
+        paddingBottom: Math.max(insets.bottom, 12),
+        backgroundColor: currentTheme.card,
+        borderTopColor: currentTheme.border,
+      },
+    ]}>
       {state.routes.map((route, index) => {
-        const tab = TAB_ITEMS[index];
+        const tab = TAB_ITEMS.find((item) => item.name === route.name) ?? TAB_ITEMS[index];
+        if (!tab) return null;
+
         const isActive = state.index === index;
         const { Icon, label } = tab;
 
@@ -54,7 +63,10 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function TabLayout() {
   return (
-    <Tabs tabBar={(props) => <CustomTabBar {...props} />} screenOptions={{ headerShown: false }}>
+    <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
       <Tabs.Screen name="dashboard" />
       <Tabs.Screen name="discover" />
       <Tabs.Screen name="bookings" />

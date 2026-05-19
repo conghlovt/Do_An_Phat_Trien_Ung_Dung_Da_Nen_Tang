@@ -20,9 +20,26 @@ export interface Hotel {
 
 export interface HotelQueryParams {
   tag?: string;
-  sort?: 'rating' | 'price-asc' | 'price-desc';
+  sort?: 'relevant' | 'rating' | 'price-asc' | 'price-desc';
   minPrice?: string;
   maxPrice?: string;
   district?: string;
   limit?: string;
+}
+
+export interface LocationWard {
+  name: string;
+  count: number;
+}
+
+export interface LocationDistrict {
+  name: string;
+  count: number;
+  wards: LocationWard[];
+}
+
+export interface LocationProvince {
+  name: string;
+  count: number;
+  districts: LocationDistrict[];
 }

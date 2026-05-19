@@ -1,0 +1,28 @@
+import {} from 'express';
+import { permissionService } from '../services/permission.service';
+import { sendError, sendResponse } from '../../shared/utils/response.util';
+import { USER_MESSAGES } from '../../shared/utils/app-error.util';
+export const getRolePermissions = async (_req, res) => {
+    try {
+        const permissions = await permissionService.getRolePermissions();
+        return sendResponse(res, 200, 'Lấy cấu hình phân quyền thành công.', permissions);
+    }
+    catch (error) {
+        return sendError(res, error);
+    }
+};
+export const updateRolePermissions = async (req, res) => {
+    try {
+        const role = String(req.params.role);
+        const { permissions } = req.body;
+        if (!permissions || typeof permissions !== 'object') {
+            return sendResponse(res, 400, USER_MESSAGES.PERMISSION_PAYLOAD_REQUIRED);
+        }
+        const updated = await permissionService.updateRolePermissions(role, permissions);
+        return sendResponse(res, 200, 'Lưu cấu hình phân quyền thành công.', updated);
+    }
+    catch (error) {
+        return sendError(res, error);
+    }
+};
+//# sourceMappingURL=permission.controller.js.map

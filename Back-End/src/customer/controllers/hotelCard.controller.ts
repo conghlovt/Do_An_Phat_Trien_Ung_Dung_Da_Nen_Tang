@@ -1,16 +1,9 @@
 import type { Request, Response } from 'express';
-import prisma  from '../../login/lib/prisma';
+import * as hotelCardService from '../services/hotelCard.service';
 
 export const getHotelCards = async (req: Request, res: Response) => {
   try {
-    const hotelCards = await prisma.hotelCard.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        sortOrder: 'asc',
-      },
-    });
+    const hotelCards = await hotelCardService.findHotelCards();
 
     return res.status(200).json(hotelCards);
   } catch (error) {
@@ -25,15 +18,7 @@ export const getHotelCardsByCity = async (req: Request, res: Response) => {
   try {
     const { city } = req.params as { city: string };
 
-    const hotelCards = await prisma.hotelCard.findMany({
-      where: {
-        ...(city && { city }),
-        isActive: true,
-      },
-      orderBy: {
-        sortOrder: 'asc',
-      },
-    });
+    const hotelCards = await hotelCardService.findHotelCardsByCity(city);
 
     return res.status(200).json(hotelCards);
   } catch (error) {

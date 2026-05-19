@@ -1,0 +1,41 @@
+export interface Hotel {
+    id: string;
+    name: string;
+    rating: number;
+    reviews: number;
+    location: string;
+    district: string;
+    discount: string;
+    price: string;
+    priceValue: number;
+    unit: string;
+    oldPrice: string;
+    image: string;
+    badge: string;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface HotelQueryParams {
+    tag?: string;
+    sort?: 'relevant' | 'rating' | 'price-asc' | 'price-desc';
+    minPrice?: string;
+    maxPrice?: string;
+    district?: string;
+    limit?: string;
+}
+export interface LocationWard {
+    name: string;
+    count: number;
+}
+export interface LocationDistrict {
+    name: string;
+    count: number;
+    wards: LocationWard[];
+}
+export interface LocationProvince {
+    name: string;
+    count: number;
+    districts: LocationDistrict[];
+}
+//# sourceMappingURL=hotel.model.d.ts.map

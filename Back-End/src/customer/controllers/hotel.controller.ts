@@ -5,7 +5,7 @@ import * as availabilityService from '../services/availability.service';
 import type { HotelQueryParams } from '../models/hotel.model';
 import type { AvailabilityQueryParams } from '../models/room.model';
 
-// GET /api/v1/hotels
+// GET /api/customer/hotels
 export const getHotels = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { hotels, total } = await hotelService.findHotels(req.query as HotelQueryParams);
@@ -15,12 +15,22 @@ export const getHotels = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-// GET /api/v1/hotels/office/info
+// GET /api/customer/hotels/office/info
 export const getOfficeInfo = (_req: Request, res: Response): void => {
   res.json({ data: hotelService.getOfficeInfo() });
 };
 
-// GET /api/v1/hotels/:id
+// GET /api/customer/hotels/locations
+export const getHotelLocations = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const locations = await hotelService.findHotelLocations();
+    res.json({ data: locations });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/customer/hotels/:id
 export const getHotelById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const hotel = await hotelService.findHotelById(req.params.id as string);
@@ -30,7 +40,7 @@ export const getHotelById = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-// GET /api/v1/hotels/:id/rooms
+// GET /api/customer/hotels/:id/rooms
 export const getHotelRooms = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const rooms = await roomService.findRoomsByHotelId(req.params.id as string);
@@ -40,7 +50,7 @@ export const getHotelRooms = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-// GET /api/v1/hotels/:id/availability
+// GET /api/customer/hotels/:id/availability
 export const getHotelAvailability = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const slots = await availabilityService.findAvailabilityByHotelId(

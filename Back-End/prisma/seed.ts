@@ -575,6 +575,7 @@ const seedHotelCards = async () => {
   console.log(`✅ Seeded ${allHotelCards.length} hotel cards thành công.`);
 };
 
+
 main()
   .catch((e) => {
     console.error(e);

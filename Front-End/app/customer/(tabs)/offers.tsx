@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, Pressable, ScrollView,
+  Platform, View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Ticket, CreditCard, Stamp, Gift, CircleDollarSign,
   Megaphone, Calendar, ChevronRight,
 } from 'lucide-react-native';
-import { useThemeContext } from '@/src/customer/utils/ThemeContext';
-import { useAuth } from '@/src/customer/hooks/useAuth';
+import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import { useAuth } from '@/src/customer/features/auth/hooks/useAuth';
 import { useRouter } from 'expo-router';
 
 const PRIMARY = '#85c2a4';
@@ -18,16 +18,18 @@ export default function OffersScreen() {
   const insets = useSafeAreaInsets();
   const { currentTheme, isDarkMode } = useThemeContext();
   const { isAuthenticated } = useAuth();
+  const { width } = useWindowDimensions();
+  const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   return (
-    <>
     <ScrollView
       style={[styles.container, { backgroundColor: currentTheme.background }]}
-      contentContainerStyle={{ paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.scrollContent, isWebLayout && styles.webScrollContent]}
+      showsVerticalScrollIndicator={isWebLayout}
     >
+      <View style={isWebLayout && styles.webContent}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16, backgroundColor: currentTheme.card }]}>
+      <View style={[styles.header, isWebLayout && styles.webHeader, { paddingTop: isWebLayout ? 0 : insets.top + 16, backgroundColor: currentTheme.card }]}>
         <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Ưu đãi độc quyền</Text>
       </View>
 
@@ -35,7 +37,7 @@ export default function OffersScreen() {
       <View style={styles.topCards}>
         {[
           { Icon: Ticket, label: 'Ưu đãi' },
-          { Icon: CreditCard, label: 'Joy Xu' },
+          { Icon: CreditCard, label: 'SH Xu' },
           { Icon: Stamp, label: 'Tem' },
         ].map(({ Icon, label }) => (
           <Pressable key={label} style={[styles.topCard, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
@@ -89,14 +91,26 @@ export default function OffersScreen() {
           </Pressable>
         ))}
       </View>
+      </View>
     </ScrollView>
-    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scrollContent: { paddingBottom: 24 },
+  webScrollContent: { paddingHorizontal: 32, paddingTop: 28, paddingBottom: 52 },
+  webContent: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+  },
   header: { paddingHorizontal: 16, paddingBottom: 16 },
+  webHeader: {
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
   headerTitle: { fontSize: 24, fontWeight: '700' },
   topCards: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 24 },
   topCard: {

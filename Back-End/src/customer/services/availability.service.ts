@@ -1,8 +1,9 @@
 import type { AvailabilitySlot, AvailabilityQueryParams } from '../models/room.model';
 import { findHotelById } from './hotels.service';
 
-const HOTEL_OPEN_H = 8;
-const HOTEL_CLOSE_H = 22;
+const LATEST_CHECKIN_H = 23;
+const LATEST_CHECKIN_M = 30;
+const MAX_HOURLY_HOURS = 10;
 
 export const findAvailabilityByHotelId = async (
   hotelId: string,
@@ -25,7 +26,7 @@ export const findAvailabilityByHotelId = async (
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isToday  = date === todayStr;
 
-  let firstValidH = HOTEL_OPEN_H;
+  let firstValidH = 0;
   let firstValidM = 0;
 
   if (isToday) {
@@ -40,15 +41,15 @@ export const findAvailabilityByHotelId = async (
 
   const slots: AvailabilitySlot[] = [];
 
-  for (let h = HOTEL_OPEN_H; h <= HOTEL_CLOSE_H; h++) {
+  for (let h = 0; h <= LATEST_CHECKIN_H; h++) {
     for (const m of [0, 30]) {
-      if (h === HOTEL_CLOSE_H && m > 0) break;
+      if (h === LATEST_CHECKIN_H && m > LATEST_CHECKIN_M) break;
 
       const isPast      = isToday && (h < firstValidH || (h === firstValidH && m < firstValidM));
       const checkinMins = h * 60 + m;
       const maxHours    = Math.max(0, Math.min(
-        Math.floor((HOTEL_CLOSE_H * 60 - checkinMins) / 60),
-        Math.floor((24 * 60        - checkinMins) / 60),
+        MAX_HOURLY_HOURS,
+        Math.floor((24 * 60 - checkinMins) / 60),
       ));
 
       slots.push({

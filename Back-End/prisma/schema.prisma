@@ -116,6 +116,12 @@ enum AmenityCategory {
   service
 }
 
+enum CustomerNotificationType {
+  booking
+  offers
+  others
+}
+
 // ============================================================
 // MERGED USER MODEL
 // ============================================================
@@ -149,6 +155,10 @@ model User {
   hotelImages    HotelImage[]
   hotelVideos    HotelVideo[]
   roomMedia      RoomMedia[]
+
+  // Relations (Schema 3)
+  customerMessages      CustomerMessage[]
+  customerNotifications CustomerNotification[]
 
   @@index([role, status])
   @@map("users")
@@ -562,20 +572,20 @@ model RoomInventory {
   @@map("room_inventory")
 }
 
+// ============================================================
+// MODELS FROM SCHEMA 3
+// ============================================================
+
 model HotelCard {
-  id      String @id @default(cuid())
-  slug    String @unique
-  name    String
-  rating  Float
-  reviews Int    @default(0)
-
-  city String
-  area String
-
-  // Giữ lại để tương thích UI cũ
-  location String
-  district String
-
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  rating     Float
+  reviews    Int      @default(0)
+  city       String
+  area       String
+  location   String
+  district   String
   discount   String?
   price      String
   priceValue Int
@@ -584,12 +594,10 @@ model HotelCard {
   image      String
   badge      String?
   tags       String[]
-
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([city])
   @@index([area])
@@ -598,4 +606,42 @@ model HotelCard {
   @@index([rating])
   @@index([isActive])
   @@map("hotel_cards")
+}
+
+model CustomerMessage {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  userId    String   @map("user_id")
+  hotelName String   @map("hotel_name")
+  preview   String
+  time      String
+  isRead    Boolean  @default(false) @map("is_read")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("customer_messages")
+}
+
+model CustomerNotification {
+  id          String                   @id @default(uuid())
+  code        String                   @unique
+  userId      String                   @map("user_id")
+  type        CustomerNotificationType
+  title       String
+  description String
+  time        String
+  isRead      Boolean                  @default(false) @map("is_read")
+  sortOrder   Int                      @default(0) @map("sort_order")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, isRead])
+  @@map("customer_notifications")
 }
