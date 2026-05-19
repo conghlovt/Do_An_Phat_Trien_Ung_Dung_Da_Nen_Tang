@@ -15,14 +15,7 @@ import adminRoutes from '../admin/admin.routes';
 import customerRoutes from '../customer/customer.routes';
 
 // --- Partner Routes ---
-import { authRoutes as partnerAuthRoutes } from '../partner/routes/auth.routes';
-import { publicHotelRoutes, partnerHotelRoutes } from '../partner/routes/hotel.routes';
-import { partnerRoomRoutes } from '../partner/routes/room.routes';
-import { partnerPricingRoutes } from '../partner/routes/pricing.routes';
-import { uploadRoutes } from '../partner/routes/upload.routes';
-import { amenityRoutes } from '../partner/routes/amenity.routes';
-import { inventoryRoutes } from '../partner/routes/inventory.routes';
-import { partnerBookingRoutes } from '../partner/routes/booking.routes';
+import partnerRoutes from '../partner/partner.routes';
 import hotelCardRoutes from '../customer/routes/hotelCard.routes';
 
 const app: Application = express();
@@ -51,15 +44,9 @@ app.use('/api/hotel-cards', hotelCardRoutes);
 // ============================================================
 // PARTNER API (Giữ nguyên prefix /v1 để không xung đột)
 // ============================================================
-app.use('/api/v1/auth', partnerAuthRoutes);
-app.use('/api/v1/hotels', publicHotelRoutes);
-app.use('/api/v1/amenities', amenityRoutes);
-app.use('/api/v1/partner/hotels', partnerHotelRoutes);
-app.use('/api/v1/partner/hotels/:hotelId/room-types', partnerRoomRoutes);
-app.use('/api/v1/partner/hotels/:hotelId/room-types/:roomTypeId/pricing', partnerPricingRoutes);
-app.use('/api/v1/partner/hotels/:hotelId/inventory', inventoryRoutes);
-app.use('/api/v1/partner/bookings', partnerBookingRoutes);
-app.use('/api/v1/files', uploadRoutes);
+app.use('/api/v1', partnerRoutes.publicRouter);
+app.use('/api/v1/files', partnerRoutes.fileRouter);
+app.use('/api/v1/partner', partnerRoutes.partnerRouter);
 
 // ============================================================
 // HEALTH CHECK

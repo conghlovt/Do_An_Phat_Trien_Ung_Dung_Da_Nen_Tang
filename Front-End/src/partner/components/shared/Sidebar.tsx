@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { useAuth } from '../../login/hooks/useAuth';
+import { useAuth } from '../../../login/hooks/useAuth';
 import {
   Home, BedDouble, BarChart3, Settings, LogOut, Hotel,
   ChevronLeft, ChevronRight, Calendar,
@@ -10,16 +10,16 @@ import {
 interface MenuItem {
   label: string;
   icon: React.ElementType;
+  /** SPA: screen key | Route mode: /partner/xxx */
   path: string;
 }
 
-// Đã cập nhật path của "Trang chủ" thành /partner/dashboard
 const MENU_ITEMS: MenuItem[] = [
-  { label: 'Trang chủ', icon: Home, path: '/partner/dashboard' },
-  { label: 'Quản lý phòng', icon: BedDouble, path: '/partner/rooms' },
-  { label: 'Đơn đặt phòng', icon: Calendar, path: '/partner/booking' },
-  { label: 'Thống kê', icon: BarChart3, path: '/partner/stats' },
-  { label: 'Thiết lập', icon: Settings, path: '/partner/settings' },
+  { label: 'Trang chủ',      icon: Home,     path: 'overview' },
+  { label: 'Quản lý phòng',  icon: BedDouble, path: 'rooms' },
+  { label: 'Đơn đặt phòng', icon: Calendar,  path: 'booking' },
+  { label: 'Thống kê',       icon: BarChart3, path: 'stats' },
+  { label: 'Thiết lập',      icon: Settings,  path: 'settings' },
 ];
 
 const SIDEBAR_EXPANDED = 220;
@@ -28,26 +28,45 @@ const SIDEBAR_COLLAPSED = 60;
 interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
+  /** SPA mode: current active screen key */
+  activeScreen?: string;
+  /** SPA mode: callback to change screen */
+  onNavigate?: (screen: string) => void;
+  /** SPA mode: logout callback */
+  onLogout?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  collapsed = false, onToggle,
+  activeScreen, onNavigate, onLogout: onLogoutProp,
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
+  const isSPAMode = !!onNavigate;
+
   const handleLogout = async () => {
+    if (onLogoutProp) { onLogoutProp(); return; }
     await logout();
     router.replace('/login' as any);
   };
 
-  // Logic kiểm tra active đã được sửa chuẩn
   const isActive = (path: string) => {
-    // Nếu là trang chủ dashboard
-    if (path === '/partner/dashboard') {
-      return pathname === '/partner/dashboard' || pathname === '/partner';
-    }
-    // Với các trang khác, kiểm tra xem URL có chứa đường dẫn gốc không (vd: /partner/rooms/add)
-    return pathname.startsWith(path);
+    if (isSPAMode) return activeScreen === path;
+    if (path === 'overview') return pathname === '/partner/dashboard' || pathname === '/partner';
+    return pathname.startsWith('/partner/' + path);
+  };
+
+  const handleNav = (path: string) => {
+    if (isSPAMode) { onNavigate!(path); return; }
+    // fallback: map key → route
+    const routeMap: Record<string, string> = {
+      overview: '/partner/dashboard', rooms: '/partner/management/rooms',
+      booking: '/partner/management/booking', stats: '/partner/management/stats',
+      settings: '/partner/settings',
+    };
+    router.push((routeMap[path] || path) as any);
   };
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
@@ -126,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                 collapsed && styles.menuItemCollapsed,
                 active && styles.menuItemActive,
               ]}
-              onPress={() => router.push(item.path as any)}
+              onPress={() => handleNav(item.path)}
               activeOpacity={0.7}
             >
               {active && <View style={[styles.activeIndicator, collapsed && styles.activeIndicatorCollapsed]} />}

@@ -1,44 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl, TextInput, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRooms } from '../../src/partner/hooks/useRooms';
-import { Header } from '../../src/partner/components/Header';
-import { StatusBadge } from '../../src/partner/components/StatusBadge';
-import { LoadingSpinner, EmptyState } from '../../src/partner/components/LoadingSpinner';
-import { ImageUploader } from '../../src/partner/components/ImageUploader';
-import { ConfirmModal } from '../../src/partner/components/ConfirmModal';
-import { roomApi } from '../../src/partner/api/room.api';
-import type { RoomType, RoomUnit, RoomMedia } from '../../src/partner/types/room.types';
-import {
-  ArrowLeft, Pencil, Trash2, Users, BedDouble,
-  Maximize, DoorOpen, ImagePlus, Plus, X,
-} from 'lucide-react-native';
+import { StatusBadge } from '../shared/StatusBadge';
+import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
+import { ImageUploader } from '../shared/ImageUploader';
+import { ConfirmModal } from '../shared/ConfirmModal';
+import { partnerService } from '../../services/partner.service';
+import type { RoomType, RoomUnit } from '../../services/partner.service';
+import { ArrowLeft, Pencil, Trash2, Users, BedDouble, Maximize, DoorOpen, ImagePlus, Plus, X } from 'lucide-react-native';
 
 const isMobile = Platform.OS !== 'web';
 
-export default function RoomDetailPage() {
-  const { hotelId, roomTypeId } = useLocalSearchParams<{ hotelId: string; roomTypeId: string }>();
+interface Props {
+  hotelId: string;
+  roomTypeId: string;
+  onBack?: () => void;
+}
+
+export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
   const router = useRouter();
-  
-  const { roomTypes, fetchRoomTypes, deleteRoomType } = useRooms(hotelId || '');
+
   const [roomType, setRoomType] = useState<RoomType | null>(null);
-  
   const [units, setUnits] = useState<RoomUnit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // Modal states
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [newUnit, setNewUnit] = useState({ roomNumber: '', floor: '', notes: '' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const loadData = async () => {
     try {
-      const typeData = await roomApi.getRoomType(hotelId, roomTypeId);
+      const typeData = await partnerService.getRoomType(hotelId, roomTypeId);
       setRoomType(typeData);
-      
-      const unitsData = await roomApi.listUnits(hotelId, roomTypeId);
+      const unitsData = await partnerService.getRoomUnits(hotelId, roomTypeId);
       setUnits(unitsData);
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message);
@@ -48,22 +43,14 @@ export default function RoomDetailPage() {
     }
   };
 
-  useEffect(() => {
-    if (hotelId && roomTypeId) {
-      loadData();
-    }
-  }, [hotelId, roomTypeId]);
+  useEffect(() => { if (hotelId && roomTypeId) loadData(); }, [hotelId, roomTypeId]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
 
   const handleAddUnit = async () => {
     try {
       if (!newUnit.roomNumber) return;
-      await roomApi.createUnit(hotelId, roomTypeId, {
+      await partnerService.createRoomUnit(hotelId, roomTypeId, {
         roomNumber: newUnit.roomNumber,
         floor: newUnit.floor ? parseInt(newUnit.floor) : undefined,
         notes: newUnit.notes,
@@ -79,7 +66,7 @@ export default function RoomDetailPage() {
 
   const handleDeleteUnit = async (unitId: string) => {
     try {
-      await roomApi.deleteUnit(hotelId, roomTypeId, unitId);
+      await partnerService.deleteRoomUnit(hotelId, roomTypeId, unitId);
       await loadData();
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message);
@@ -90,7 +77,7 @@ export default function RoomDetailPage() {
   const handleUploadMedia = async (files: any[]) => {
     try {
       setIsUploading(true);
-      await roomApi.uploadMedia(hotelId, roomTypeId, files);
+      await partnerService.uploadRoomMedia(hotelId, roomTypeId, files);
       await loadData();
     } catch (err: any) {
       if (Platform.OS === 'web') alert('Lỗi tải ảnh: ' + err.message);
@@ -102,7 +89,7 @@ export default function RoomDetailPage() {
 
   const handleDeleteMedia = async (mediaId: string) => {
     try {
-      await roomApi.deleteMedia(hotelId, roomTypeId, mediaId);
+      await partnerService.deleteRoomMedia(hotelId, roomTypeId, mediaId);
       await loadData();
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message);
@@ -112,8 +99,8 @@ export default function RoomDetailPage() {
 
   const handleDeleteRoomType = async () => {
     try {
-      await deleteRoomType(roomTypeId);
-      router.back();
+      await partnerService.deleteRoomType(hotelId, roomTypeId);
+      onBack?.();
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message);
       else Alert.alert('Lỗi', err.message);
@@ -127,7 +114,7 @@ export default function RoomDetailPage() {
     <View style={styles.container}>
       {isMobile ? (
         <View style={styles.mobileBackHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+          <TouchableOpacity onPress={() => onBack?.()} style={{ padding: 4 }}>
             <ArrowLeft size={20} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.mobileBackTitle} numberOfLines={1}>{roomType.name}</Text>
@@ -142,9 +129,8 @@ export default function RoomDetailPage() {
         </View>
       ) : (
         <View style={styles.pageHeader}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={16} color="#64748B" />
-            <Text style={styles.backText}>Quay lại</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => onBack?.()}>
+            <ArrowLeft size={18} color="#64748B" /><Text style={styles.backText}>Quay lại</Text>
           </TouchableOpacity>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.editBtn} onPress={() => {}}>
@@ -159,68 +145,43 @@ export default function RoomDetailPage() {
         </View>
       )}
 
-      <ScrollView 
-        style={styles.scroll} 
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#008080']} />}
-      >
-        {/* Basic Info */}
+      <ScrollView style={styles.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#008080']} />}>
         <View style={styles.section}>
           <View style={styles.titleRow}>
             <Text style={styles.roomName}>{roomType.name}</Text>
             <StatusBadge status={roomType.status} />
           </View>
           {roomType.description ? <Text style={styles.description}>{roomType.description}</Text> : null}
-          
           <View style={styles.metaGrid}>
             <View style={styles.metaItem}>
-              <View style={styles.metaIconRow}>
-                <Users size={14} color="#94A3B8" />
-                <Text style={styles.metaLabel}>Sức chứa</Text>
-              </View>
+              <View style={styles.metaIconRow}><Users size={14} color="#94A3B8" /><Text style={styles.metaLabel}>Sức chứa</Text></View>
               <Text style={styles.metaValue}>{roomType.maxGuests} người</Text>
             </View>
             <View style={styles.metaItem}>
-              <View style={styles.metaIconRow}>
-                <BedDouble size={14} color="#94A3B8" />
-                <Text style={styles.metaLabel}>Giường</Text>
-              </View>
+              <View style={styles.metaIconRow}><BedDouble size={14} color="#94A3B8" /><Text style={styles.metaLabel}>Giường</Text></View>
               <Text style={styles.metaValue}>{roomType.bedType || 'N/A'}</Text>
             </View>
             <View style={styles.metaItem}>
-              <View style={styles.metaIconRow}>
-                <Maximize size={14} color="#94A3B8" />
-                <Text style={styles.metaLabel}>Diện tích</Text>
-              </View>
+              <View style={styles.metaIconRow}><Maximize size={14} color="#94A3B8" /><Text style={styles.metaLabel}>Diện tích</Text></View>
               <Text style={styles.metaValue}>{roomType.roomSizeSqm ? `${roomType.roomSizeSqm}m²` : 'N/A'}</Text>
             </View>
             <View style={styles.metaItem}>
-              <View style={styles.metaIconRow}>
-                <DoorOpen size={14} color="#94A3B8" />
-                <Text style={styles.metaLabel}>Phòng trống / Tổng</Text>
-              </View>
+              <View style={styles.metaIconRow}><DoorOpen size={14} color="#94A3B8" /><Text style={styles.metaLabel}>Trống / Tổng</Text></View>
               <Text style={styles.metaValue}>{units.filter(u => u.status === 'available').length} / {roomType.totalUnits}</Text>
             </View>
           </View>
         </View>
 
-        {/* Media Section */}
         <View style={styles.section}>
           <View style={styles.titleRow}>
-            <View style={styles.sectionTitleRow}>
-              <ImagePlus size={16} color="#1E293B" />
-              <Text style={styles.sectionTitle}>Hình ảnh & Video</Text>
-            </View>
+            <View style={styles.sectionTitleRow}><ImagePlus size={16} color="#1E293B" /><Text style={styles.sectionTitle}>Hình ảnh & Video</Text></View>
           </View>
           <ImageUploader onUpload={handleUploadMedia} isUploading={isUploading} multiple={true} />
-          
           {roomType.media && roomType.media.length > 0 ? (
             <View style={styles.mediaGrid}>
               {roomType.media.map((item) => (
                 <View key={item.id} style={styles.mediaItem}>
-                  {/* Using standard View/Text for placeholder if image component fails, you could use Image here */}
-                  <View style={styles.mediaPlaceholder}>
-                     <Text style={styles.mediaPlaceholderText}>Hình {item.sortOrder}</Text>
-                  </View>
+                  <View style={styles.mediaPlaceholder}><Text style={styles.mediaPlaceholderText}>Hình {item.sortOrder}</Text></View>
                   <TouchableOpacity style={styles.deleteMediaBtn} onPress={() => handleDeleteMedia(item.id)}>
                     <X size={12} color="#FFF" />
                   </TouchableOpacity>
@@ -233,7 +194,6 @@ export default function RoomDetailPage() {
           )}
         </View>
 
-        {/* Units Section */}
         <View style={styles.section}>
           <View style={styles.titleRow}>
             <View style={styles.sectionTitleRow}>
@@ -241,44 +201,21 @@ export default function RoomDetailPage() {
               <Text style={styles.sectionTitle}>Danh sách phòng ({units.length}/{roomType.totalUnits})</Text>
             </View>
             <TouchableOpacity style={styles.addUnitBtn} onPress={() => setShowAddUnit(!showAddUnit)}>
-              {showAddUnit ? (
-                <Text style={styles.addUnitText}>Đóng form</Text>
-              ) : (
+              {showAddUnit ? <Text style={styles.addUnitText}>Đóng form</Text> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Plus size={12} color="#0F766E" />
-                  <Text style={styles.addUnitText}>Thêm phòng</Text>
+                  <Plus size={12} color="#0F766E" /><Text style={styles.addUnitText}>Thêm phòng</Text>
                 </View>
               )}
             </TouchableOpacity>
           </View>
-
           {showAddUnit && (
             <View style={styles.addUnitForm}>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Số phòng (VD: 101)" 
-                value={newUnit.roomNumber} 
-                onChangeText={v => setNewUnit({...newUnit, roomNumber: v})} 
-              />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Tầng (Tùy chọn)" 
-                keyboardType="numeric" 
-                value={newUnit.floor} 
-                onChangeText={v => setNewUnit({...newUnit, floor: v})} 
-              />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Ghi chú (Tùy chọn)" 
-                value={newUnit.notes} 
-                onChangeText={v => setNewUnit({...newUnit, notes: v})} 
-              />
-              <TouchableOpacity style={styles.saveUnitBtn} onPress={handleAddUnit}>
-                <Text style={styles.saveUnitText}>Lưu phòng</Text>
-              </TouchableOpacity>
+              <TextInput style={styles.input} placeholder="Số phòng (VD: 101)" value={newUnit.roomNumber} onChangeText={v => setNewUnit({...newUnit, roomNumber: v})} />
+              <TextInput style={styles.input} placeholder="Tầng (Tùy chọn)" keyboardType="numeric" value={newUnit.floor} onChangeText={v => setNewUnit({...newUnit, floor: v})} />
+              <TextInput style={styles.input} placeholder="Ghi chú (Tùy chọn)" value={newUnit.notes} onChangeText={v => setNewUnit({...newUnit, notes: v})} />
+              <TouchableOpacity style={styles.saveUnitBtn} onPress={handleAddUnit}><Text style={styles.saveUnitText}>Lưu phòng</Text></TouchableOpacity>
             </View>
           )}
-
           {units.length > 0 ? (
             <View style={styles.unitsList}>
               {units.map((unit) => (
@@ -298,12 +235,9 @@ export default function RoomDetailPage() {
               ))}
             </View>
           ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>Chưa có phòng nào được tạo.</Text>
-            </View>
+            <View style={styles.emptyCard}><Text style={styles.emptyText}>Chưa có phòng nào được tạo.</Text></View>
           )}
         </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -320,30 +254,12 @@ export default function RoomDetailPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: isMobile ? '#FFF' : '#F8FAFC' },
-  mobileBackHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
+  mobileBackHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   mobileBackTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', flex: 1 },
   mobileHeaderActions: { flexDirection: 'row', gap: 8 },
   mobileActionBtn: { padding: 8, backgroundColor: '#F1F5F9', borderRadius: 8 },
   mobileDeleteActionBtn: { padding: 8, backgroundColor: '#FEF2F2', borderRadius: 8 },
-  pageHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingVertical: 16, 
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1, 
-    borderBottomColor: '#E2E8F0' 
-  },
+  pageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 4 },
   backText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
   headerRight: { flexDirection: 'row', gap: 10 },
@@ -352,28 +268,13 @@ const styles = StyleSheet.create({
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#FEE2E2', borderRadius: 8 },
   deleteBtnText: { color: '#DC2626', fontSize: 13, fontWeight: '600' },
   scroll: { flex: 1 },
-  section: { 
-    marginHorizontal: isMobile ? 16 : 20, 
-    marginTop: isMobile ? 16 : 20, 
-    backgroundColor: '#FFF', 
-    borderRadius: isMobile ? 16 : 14, 
-    padding: isMobile ? 16 : 20, 
-    borderWidth: isMobile ? 0 : 1, 
-    borderColor: '#E2E8F0',
-    ...(isMobile ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 } : {}),
-  },
+  section: { marginHorizontal: isMobile ? 16 : 20, marginTop: isMobile ? 16 : 20, backgroundColor: '#FFF', borderRadius: isMobile ? 16 : 14, padding: isMobile ? 16 : 20, borderWidth: isMobile ? 0 : 1, borderColor: '#E2E8F0', ...(isMobile ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 } : {}) },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   roomName: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
   description: { fontSize: 14, color: '#64748B', marginBottom: 16, lineHeight: 22 },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-  metaItem: { 
-    backgroundColor: '#F8FAFC', 
-    borderRadius: 10, 
-    padding: 12, 
-    width: '48%',
-    ...Platform.select({ web: { width: 'calc(50% - 6px)' as any }, default: {} })
-  },
+  metaItem: { backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, width: '48%', ...Platform.select({ web: { width: 'calc(50% - 6px)' as any }, default: {} }) },
   metaIconRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   metaLabel: { fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', fontWeight: '600' },
   metaValue: { fontSize: 14, fontWeight: '700', color: '#1E293B' },

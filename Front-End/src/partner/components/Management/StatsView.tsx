@@ -1,11 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
-import { Header } from '../../src/partner/components/Header';
 import { BarChart3, Banknote, Star, DoorOpen, ClipboardList } from 'lucide-react-native';
 
 const isMobile = Platform.OS !== 'web';
 
-export default function StatsPage() {
+export function StatsView() {
   return (
     <View style={s.container}>
       <ScrollView style={s.scroll}>

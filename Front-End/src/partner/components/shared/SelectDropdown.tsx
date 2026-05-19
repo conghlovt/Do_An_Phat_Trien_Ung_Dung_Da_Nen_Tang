@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal,
   FlatList, TextInput, ActivityIndicator, Platform,
@@ -25,9 +25,14 @@ interface SelectDropdownProps {
   loading?: boolean;
   required?: boolean;
   searchable?: boolean;
+  error?: string;
 }
 
-export const SelectDropdown: React.FC<SelectDropdownProps> = ({
+export interface SelectDropdownRef {
+  focus: () => void;
+}
+
+export const SelectDropdown = forwardRef<SelectDropdownRef, SelectDropdownProps>(({
   label,
   placeholder = 'Chọn...',
   options,
@@ -37,7 +42,8 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
   loading = false,
   required = false,
   searchable = true,
-}) => {
+  error,
+}, ref) => {
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -59,10 +65,21 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
     setSearch('');
   };
 
+  const triggerRef = React.useRef<any>(null);
+
   const openDropdown = () => {
     if (disabled || loading) return;
     setVisible(true);
   };
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      // Just focus the trigger element if possible (for web accessibility/outline), but do not open the modal
+      if (triggerRef.current && typeof triggerRef.current.focus === 'function') {
+        triggerRef.current.focus();
+      }
+    }
+  }));
 
   return (
     <View style={styles.container}>
@@ -73,10 +90,12 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
       )}
 
       <TouchableOpacity
+        ref={triggerRef}
         style={[
           styles.trigger,
           disabled && styles.triggerDisabled,
           loading && styles.triggerDisabled,
+          error ? styles.triggerError : null,
         ]}
         onPress={openDropdown}
         activeOpacity={0.7}
@@ -99,6 +118,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
           </>
         )}
       </TouchableOpacity>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {/* Modal Dropdown */}
       <Modal
@@ -169,7 +189,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
       </Modal>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -222,6 +242,15 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     color: '#94A3B8',
+  },
+  triggerError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
   },
 
   // Modal

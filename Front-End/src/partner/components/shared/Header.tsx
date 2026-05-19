@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { useAuth } from '../../login/hooks/useAuth';
+import { useAuth } from '../../../login/hooks/useAuth';
 import { Menu } from 'lucide-react-native';
 
 interface HeaderProps {

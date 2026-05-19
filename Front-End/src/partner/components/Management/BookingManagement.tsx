@@ -16,9 +16,9 @@ import {
   ClipboardList, Clock, CheckCircle, LogIn, Trophy, XCircle,
   User, Phone, BedDouble, Calendar, Banknote,
 } from 'lucide-react-native';
-import { bookingApi } from '../../src/partner/api/booking.api';
-import type { Booking, BookingStatus } from '../../src/partner/types/booking.type';
-import { LoadingSpinner, EmptyState } from '../../src/partner/components/LoadingSpinner';
+import { partnerService } from '../../services/partner.service';
+import type { Booking, BookingStatus } from '../../services/partner.service';
+import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -226,7 +226,7 @@ function renderActions(
 // MAIN SCREEN
 // ============================================================
 
-export default function PartnerBookingsPage() {
+export function BookingManagement() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<'ALL' | BookingStatus>('ALL');
   const [loading, setLoading] = useState(false);
@@ -237,7 +237,7 @@ export default function PartnerBookingsPage() {
   const loadBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await bookingApi.getBookings(filter === 'ALL' ? undefined : filter);
+      const data = await partnerService.getBookings(filter === 'ALL' ? undefined : filter);
       setBookings(data);
     } catch (error: any) {
       Alert.alert('Lỗi', error.message || 'Không thể tải đơn đặt phòng');
@@ -252,7 +252,7 @@ export default function PartnerBookingsPage() {
 
   const handleAction = async (id: string, status: BookingStatus) => {
     try {
-      await bookingApi.updateBookingStatus(id, status);
+      await partnerService.updateBookingStatus(id, status);
       await loadBookings();
     } catch (error: any) {
       Alert.alert('Lỗi', error.message || 'Cập nhật trạng thái thất bại');
