@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Platform, RefreshControl, Dimensions, useWindowDimensions,
 } from 'react-native';
-import type { ScreenName, ScreenParams } from '../PartnerDashboard';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { partnerService } from '../../services/partner.service';
 import type { RoomType } from '../../services/partner.service';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -26,12 +26,24 @@ const TAB_CONFIG: { key: BookingTab; label: string; icon: React.ElementType }[] 
 
 function formatDate(d: Date): string { return d.toISOString().split('T')[0]!; }
 function addDays(d: Date, n: number): Date { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
-function formatShortDate(dateStr: string): { day: string; weekday: string; isToday: boolean } {
+function formatShortDate(dateStr: string, isHourly: boolean): { main: string; sub: string; isCurrent: boolean } {
   const d = new Date(dateStr);
-  const today = new Date();
-  const isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const now = new Date();
+  if (isHourly) {
+    const isCurrentHour = d.getHours() === now.getHours() && d.getDate() === now.getDate();
+    return {
+      main: String(d.getHours()).padStart(2, '0') + ':00',
+      sub: String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'),
+      isCurrent: isCurrentHour
+    };
+  }
+  const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
   const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-  return { day: String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'), weekday: weekdays[d.getDay()]!, isToday };
+  return { 
+    main: String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'), 
+    sub: weekdays[d.getDay()]!, 
+    isCurrent: isToday 
+  };
 }
 function formatPrice(price: number): string {
   if (price >= 1000000) return (price / 1000000).toFixed(1) + 'tr';
@@ -39,12 +51,11 @@ function formatPrice(price: number): string {
   return price.toLocaleString('vi-VN') + 'đ';
 }
 
-interface Props {
-  onNavigate?: (screen: ScreenName, params?: ScreenParams) => void;
-}
-
-export function RoomManagement({ onNavigate }: Props) {
-  const [hotelId, setHotelId] = useState('');
+export function RoomManagement() {
+  const router = useRouter();
+  const { hotelId: initialHotelId } = useLocalSearchParams();
+  const [hotelId, setHotelId] = useState(initialHotelId as string || '');
+  const [hotelStatus, setHotelStatus] = useState<string>('');
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,18 +72,31 @@ export function RoomManagement({ onNavigate }: Props) {
 
   const dateRange = useMemo(() => {
     const dates: string[] = [];
-    for (let i = 0; i < DAYS_COUNT; i++) dates.push(formatDate(addDays(startDate, i)));
+    if (activeTab === 'hourly') {
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      for (let i = 0; i < DAYS_COUNT; i++) {
+        const h = new Date(now.getTime() + i * 3600000);
+        dates.push(h.toISOString());
+      }
+    } else {
+      for (let i = 0; i < DAYS_COUNT; i++) dates.push(formatDate(addDays(startDate, i)));
+    }
     return dates;
-  }, [startDate]);
+  }, [startDate, activeTab]);
 
   const endDateStr = formatDate(addDays(startDate, DAYS_COUNT - 1));
 
   // Load hotel ID
   useEffect(() => {
     partnerService.getHotels().then(({ items }) => {
-      if (items.length > 0) setHotelId(items[0].id);
+      const targetHotel = items.find(h => h.id === initialHotelId) || items[0];
+      if (targetHotel) {
+        setHotelId(targetHotel.id);
+        setHotelStatus(targetHotel.status);
+      }
     });
-  }, []);
+  }, [initialHotelId]);
 
   // Load room types
   useEffect(() => {
@@ -116,6 +140,10 @@ export function RoomManagement({ onNavigate }: Props) {
     setStartDate(prev => addDays(prev, direction === 'next' ? 7 : -7));
   };
 
+  const handleCreateRoom = () => {
+    router.push(`/partner/room/new-room?hotelId=${hotelId}` as any);
+  };
+
   if (roomsLoading && roomTypes.length === 0) return <LoadingSpinner />;
 
   const displayData = calendarData.length > 0
@@ -130,7 +158,7 @@ export function RoomManagement({ onNavigate }: Props) {
           <Text style={s.mobilePageTitle}>Quản lý loại phòng</Text>
           <View style={s.mobilePageHeaderRow}>
             <Text style={s.mobilePageSub}>{roomTypes.length} loại phòng</Text>
-            <TouchableOpacity style={s.addBtn} onPress={() => onNavigate?.('room-form', { hotelId })}>
+            <TouchableOpacity style={s.addBtn} onPress={handleCreateRoom}>
               <Plus size={14} color="#FFF" />
               <Text style={s.addBtnText}>Thêm mới</Text>
             </TouchableOpacity>
@@ -142,7 +170,7 @@ export function RoomManagement({ onNavigate }: Props) {
             <View style={s.pageTitleRow}><BedDouble size={20} color="#0F172A" /><Text style={s.pageTitle}>Quản lý loại phòng</Text></View>
             <Text style={s.pageSub}>{roomTypes.length} loại phòng</Text>
           </View>
-          <TouchableOpacity style={s.addBtn} onPress={() => onNavigate?.('room-form', { hotelId })}>
+          <TouchableOpacity style={s.addBtn} onPress={handleCreateRoom}>
             <Plus size={16} color="#FFF" /><Text style={s.addBtnText}>Thêm loại phòng</Text>
           </TouchableOpacity>
         </View>
@@ -164,7 +192,11 @@ export function RoomManagement({ onNavigate }: Props) {
           <TouchableOpacity style={s.dateNavBtn} onPress={() => navigateWeek('prev')}><ChevronLeft size={18} color="#64748B" /></TouchableOpacity>
           <View style={s.dateNavCenter}>
             <Calendar size={14} color="#1E293B" />
-            <Text style={s.dateNavText}>{formatShortDate(dateRange[0]!).day} — {formatShortDate(dateRange[dateRange.length - 1]!).day}</Text>
+            <Text style={s.dateNavText}>
+              {activeTab === 'hourly' 
+                ? `${formatShortDate(dateRange[0]!, true).main} — ${formatShortDate(dateRange[dateRange.length - 1]!, true).main}`
+                : `${formatShortDate(dateRange[0]!, false).main} — ${formatShortDate(dateRange[dateRange.length - 1]!, false).main}`}
+            </Text>
           </View>
           <TouchableOpacity style={s.dateNavBtn} onPress={() => navigateWeek('next')}><ChevronRight size={18} color="#64748B" /></TouchableOpacity>
         </View>
@@ -181,11 +213,11 @@ export function RoomManagement({ onNavigate }: Props) {
               <View style={s.calendarHeaderRow}>
                 <View style={s.roomNameCol}><Text style={s.roomNameHeader}>Loại phòng</Text></View>
                 {dateRange.map((dateStr) => {
-                  const { day, weekday, isToday } = formatShortDate(dateStr);
+                  const { main, sub, isCurrent } = formatShortDate(dateStr, activeTab === 'hourly');
                   return (
-                    <View key={dateStr} style={[s.dateCol, isToday && s.dateColToday]}>
-                      <Text style={[s.dateWeekday, isToday && s.dateWeekdayToday]}>{weekday}</Text>
-                      <Text style={[s.dateDay, isToday && s.dateDayToday]}>{day}</Text>
+                    <View key={dateStr} style={[s.dateCol, isCurrent && s.dateColToday]}>
+                      <Text style={[s.dateWeekday, isCurrent && s.dateWeekdayToday]}>{sub}</Text>
+                      <Text style={[s.dateDay, isCurrent && s.dateDayToday]}>{main}</Text>
                     </View>
                   );
                 })}
@@ -196,7 +228,7 @@ export function RoomManagement({ onNavigate }: Props) {
                 <View key={rt.id} style={s.calendarRow}>
                   <TouchableOpacity
                     style={s.roomNameCol}
-                    onPress={() => onNavigate?.('room-detail', { hotelId, roomTypeId: rt.id })}
+                    onPress={() => router.push(`/partner/room/${rt.id}?hotelId=${hotelId}` as any)}
                   >
                     <Text style={s.roomTypeName} numberOfLines={2}>{rt.name}</Text>
                     <View style={s.roomMeta}>
@@ -207,13 +239,14 @@ export function RoomManagement({ onNavigate }: Props) {
                   </TouchableOpacity>
 
                   {dateRange.map((dateStr) => {
-                    const inv = rt.inventory?.[dateStr];
+                    const invDateKey = activeTab === 'hourly' ? formatDate(new Date(dateStr)) : dateStr;
+                    const inv = rt.inventory?.[invDateKey];
                     const price = rt.pricing?.[activeTab] || 0;
-                    const { isToday } = formatShortDate(dateStr);
+                    const { isCurrent } = formatShortDate(dateStr, activeTab === 'hourly');
 
                     if (inv?.isClosed) {
                       return (
-                        <View key={dateStr} style={[s.dateCell, s.dateCellClosed, isToday && s.dateCellToday]}>
+                        <View key={dateStr} style={[s.dateCell, s.dateCellClosed, isCurrent && s.dateCellToday]}>
                           <Lock size={14} color="#EF4444" />
                           <Text style={s.closedText}>Đóng</Text>
                         </View>
@@ -225,8 +258,8 @@ export function RoomManagement({ onNavigate }: Props) {
                     const isFull = available <= 0;
 
                     return (
-                      <View key={dateStr} style={[s.dateCell, isFull ? s.dateCellFull : available <= 2 ? s.dateCellWarning : s.dateCellAvailable, isToday && s.dateCellToday]}>
-                        <Text style={[s.cellStatus, isFull ? s.cellStatusFull : s.cellStatusAvailable]}>{isFull ? 'Hết' : `Còn ${available}`}</Text>
+                      <View key={dateStr} style={[s.dateCell, isFull ? s.dateCellFull : available <= 2 ? s.dateCellWarning : s.dateCellAvailable, isCurrent && s.dateCellToday]}>
+                        <Text style={[s.cellStatus, isFull ? s.cellStatusFull : s.cellStatusAvailable]}>{isFull ? 'Hết' : 'Còn phòng'}</Text>
                         {booked > 0 && <Text style={s.cellBooked}>{booked} đặt</Text>}
                         {price > 0 && <Text style={s.cellPrice}>{formatPrice(price)}</Text>}
                       </View>

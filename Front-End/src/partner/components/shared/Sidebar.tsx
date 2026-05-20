@@ -15,11 +15,11 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { label: 'Trang chủ',      icon: Home,     path: 'overview' },
-  { label: 'Quản lý phòng',  icon: BedDouble, path: 'rooms' },
-  { label: 'Đơn đặt phòng', icon: Calendar,  path: 'booking' },
-  { label: 'Thống kê',       icon: BarChart3, path: 'stats' },
-  { label: 'Thiết lập',      icon: Settings,  path: 'settings' },
+  { label: 'Trang chủ',      icon: Home,     path: '/partner/dashboard' },
+  { label: 'Quản lý phòng',  icon: BedDouble, path: '/partner/rooms' },
+  { label: 'Đơn đặt phòng', icon: Calendar,  path: '/partner/booking' },
+  { label: 'Thống kê',       icon: BarChart3, path: '/partner/stats' },
+  { label: 'Thiết lập',      icon: Settings,  path: '/partner/settings' },
 ];
 
 const SIDEBAR_EXPANDED = 220;
@@ -28,23 +28,18 @@ const SIDEBAR_COLLAPSED = 60;
 interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
-  /** SPA mode: current active screen key */
-  activeScreen?: string;
-  /** SPA mode: callback to change screen */
-  onNavigate?: (screen: string) => void;
-  /** SPA mode: logout callback */
   onLogout?: () => void;
+  onNavComplete?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   collapsed = false, onToggle,
-  activeScreen, onNavigate, onLogout: onLogoutProp,
+  onLogout: onLogoutProp,
+  onNavComplete,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
-
-  const isSPAMode = !!onNavigate;
 
   const handleLogout = async () => {
     if (onLogoutProp) { onLogoutProp(); return; }
@@ -53,20 +48,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const isActive = (path: string) => {
-    if (isSPAMode) return activeScreen === path;
-    if (path === 'overview') return pathname === '/partner/dashboard' || pathname === '/partner';
-    return pathname.startsWith('/partner/' + path);
+    if (path === '/partner/dashboard') return pathname === '/partner/dashboard' || pathname === '/partner';
+    return pathname.startsWith(path);
   };
 
   const handleNav = (path: string) => {
-    if (isSPAMode) { onNavigate!(path); return; }
-    // fallback: map key → route
-    const routeMap: Record<string, string> = {
-      overview: '/partner/dashboard', rooms: '/partner/management/rooms',
-      booking: '/partner/management/booking', stats: '/partner/management/stats',
-      settings: '/partner/settings',
-    };
-    router.push((routeMap[path] || path) as any);
+    router.push(path as any);
+    if (onNavComplete) onNavComplete();
   };
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;

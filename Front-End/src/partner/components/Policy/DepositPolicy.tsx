@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { partnerService } from '../../services/partner.service';
 import type { Hotel } from '../../services/partner.service';
 import { ArrowLeft, Wallet, Check, Save, Info } from 'lucide-react-native';
+import { SuccessModal } from '../shared/SuccessModal';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -21,7 +22,7 @@ export function DepositPolicy({ onBack }: Props) {
   const [selectedPercent, setSelectedPercent] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     partnerService.getHotels().then(({ items }) => {
@@ -34,20 +35,22 @@ export function DepositPolicy({ onBack }: Props) {
   }, [hotelId]);
 
   useEffect(() => {
-    if (currentHotel) setSelectedPercent(currentHotel.depositPercent ?? 0);
+    if (currentHotel) {
+      // Prisma Decimal might come as string or number
+      setSelectedPercent(Number(currentHotel.depositPercent || 0));
+    }
   }, [currentHotel]);
 
   const handleSave = async () => {
     try {
       setErrorMsg('');
-      setSuccessMsg('');
       setIsSaving(true);
       await partnerService.updateHotel(hotelId, { depositPercent: selectedPercent });
-      setSuccessMsg('Đã cập nhật chính sách đặt cọc thành công!');
+      setShowSuccess(true);
       setTimeout(() => {
-        setSuccessMsg('');
+        setShowSuccess(false);
         onBack?.();
-      }, 1500);
+      }, 2000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Có lỗi xảy ra');
     } finally {
@@ -81,11 +84,12 @@ export function DepositPolicy({ onBack }: Props) {
             <Text style={s.errorText}>{errorMsg}</Text>
           </View>
         ) : null}
-        {successMsg ? (
-          <View style={s.successBox}>
-            <Text style={s.successText}>{successMsg}</Text>
-          </View>
-        ) : null}
+
+        <SuccessModal 
+          visible={showSuccess} 
+          message="Đã cập nhật chính sách đặt cọc thành công!" 
+          onClose={() => setShowSuccess(false)} 
+        />
 
         <View style={s.currentValueCard}>
           <Text style={s.currentLabel}>Mức đặt cọc hiện tại</Text>

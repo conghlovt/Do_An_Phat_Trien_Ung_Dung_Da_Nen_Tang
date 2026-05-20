@@ -7,7 +7,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   Platform,
   Dimensions,
   useWindowDimensions,
@@ -19,6 +18,7 @@ import {
 import { partnerService } from '../../services/partner.service';
 import type { Booking, BookingStatus } from '../../services/partner.service';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
+import { MessageModal, MessageType } from '../shared/MessageModal';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -201,6 +201,13 @@ function renderActions(
           Icon={LogIn}
           onPress={() => onAction(id, 'CHECKED_IN')}
         />
+        <ActionButton
+          label="Hủy đơn"
+          color="#EF4444"
+          bgColor="#FEF2F2"
+          Icon={XCircle}
+          onPress={() => onAction(id, 'CANCELLED')}
+        />
       </View>
     );
   }
@@ -231,8 +238,12 @@ export function BookingManagement() {
   const [filter, setFilter] = useState<'ALL' | BookingStatus>('ALL');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [msgModal, setMsgModal] = useState<{ visible: boolean; type: MessageType; message: string }>({ visible: false, type: 'error', message: '' });
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 600;
+
+  const showMsg = (type: MessageType, message: string) => setMsgModal({ visible: true, type, message });
+  const closeMsgModal = () => setMsgModal(prev => ({ ...prev, visible: false }));
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -240,7 +251,7 @@ export function BookingManagement() {
       const data = await partnerService.getBookings(filter === 'ALL' ? undefined : filter);
       setBookings(data);
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể tải đơn đặt phòng');
+      showMsg('error', error.message || 'Không thể tải đơn đặt phòng');
     } finally {
       setLoading(false);
     }
@@ -253,9 +264,16 @@ export function BookingManagement() {
   const handleAction = async (id: string, status: BookingStatus) => {
     try {
       await partnerService.updateBookingStatus(id, status);
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'Đã xác nhận đơn đặt phòng',
+        CHECKED_IN: 'Đã nhận phòng thành công',
+        COMPLETED: 'Đơn đã hoàn thành',
+        CANCELLED: 'Đã hủy đơn đặt phòng',
+      };
+      showMsg('success', statusLabels[status] || 'Cập nhật thành công');
       await loadBookings();
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Cập nhật trạng thái thất bại');
+      showMsg('error', error.message || 'Cập nhật trạng thái thất bại');
     }
   };
 
@@ -345,6 +363,12 @@ export function BookingManagement() {
             subtitle="Các đơn đặt phòng mới sẽ hiển thị tại đây"
           />
         }
+      />
+      <MessageModal
+        visible={msgModal.visible}
+        type={msgModal.type}
+        message={msgModal.message}
+        onClose={closeMsgModal}
       />
     </View>
   );

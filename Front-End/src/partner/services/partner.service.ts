@@ -1,9 +1,4 @@
-// src/partner/services/partner.service.ts
-// Gộp toàn bộ API calls của partner vào 1 file (giống admin.service.ts)
-
 import apiInstance from '../../login/shared/api/api.instance';
-
-// ─── Types (inline, không cần import ngoài) ──────────────────────────────────
 
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED';
 
@@ -60,7 +55,7 @@ export interface CreateHotelInput {
   cancellationPolicy?: string; cancellationHours?: number; depositPercent?: number;
   address: Omit<HotelAddress, 'id' | 'fullAddress'>; amenityIds?: string[];
 }
-export type UpdateHotelInput = Partial<CreateHotelInput>;
+export type UpdateHotelInput = Partial<CreateHotelInput> & { status?: string };
 export interface HotelQueryParams {
   page?: number; limit?: number; status?: string; keyword?: string;
   sort?: string; order?: 'asc' | 'desc';
@@ -79,9 +74,20 @@ export interface RoomType {
 export interface RoomUnit {
   id: string; roomTypeId: string; roomNumber: string; floor?: number; status: string; notes?: string;
 }
+export interface PricingPolicyInput {
+  bookingType: 'hourly' | 'overnight' | 'daily';
+  basePrice: number;
+  minHours?: number;
+  maxHours?: number;
+  extraHourPrice?: number;
+  overnightCheckinFrom?: string;
+  overnightCheckoutBefore?: string;
+}
+
 export interface CreateRoomTypeInput {
   name: string; description?: string; maxGuests: number; bedType?: string;
   roomSizeSqm?: number; totalUnits: number; amenityIds?: string[];
+  pricingPolicies?: PricingPolicyInput[];
 }
 export type UpdateRoomTypeInput = Partial<CreateRoomTypeInput> & { status?: string };
 export interface CreateRoomUnitInput { roomNumber: string; floor?: number; notes?: string; }

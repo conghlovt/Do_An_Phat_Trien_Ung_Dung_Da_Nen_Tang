@@ -1,15 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import type { ScreenName } from '../PartnerDashboard';
 import { useAuth } from '../../../login/hooks/useAuth';
 import { ChevronRight, ShieldCheck, Wallet, User, Mail, BadgeCheck, Settings as SettingsIcon } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 const isMobile = Platform.OS !== 'web';
 
-interface Props { onNavigate?: (screen: ScreenName) => void; }
-
-export function PartnerSettings({ onNavigate }: Props) {
+export function PartnerSettings() {
   const { user } = useAuth();
+  const router = useRouter();
 
   return (
     <View style={s.container}>
@@ -51,7 +50,7 @@ export function PartnerSettings({ onNavigate }: Props) {
           <View style={s.card}>
             <TouchableOpacity
               style={s.settingRow}
-              onPress={() => onNavigate?.('cancellation-policy')}
+              onPress={() => router.push('/partner/policy/cancellation' as any)}
             >
               <View style={s.settingLeft}>
                 <ShieldCheck size={16} color="#334155" />
@@ -62,7 +61,7 @@ export function PartnerSettings({ onNavigate }: Props) {
             <View style={s.divider} />
             <TouchableOpacity
               style={s.settingRow}
-              onPress={() => onNavigate?.('deposit-policy')}
+              onPress={() => router.push('/partner/policy/deposit' as any)}
             >
               <View style={s.settingLeft}>
                 <Wallet size={16} color="#334155" />

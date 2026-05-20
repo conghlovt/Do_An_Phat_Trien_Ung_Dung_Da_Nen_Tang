@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert, Image, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Modal } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Image } from 'expo-image';
 import { useLocation } from '../../hooks/useLocation';
-import { SelectDropdown, SelectOption, SelectDropdownRef } from '../shared/SelectDropdown';
+import { SelectDropdown, SelectOption } from '../shared/SelectDropdown';
 import { ImageUploader } from '../shared/ImageUploader';
+import { AmenityIcon } from '../shared/AmenityIcon';
 import { partnerService } from '../../services/partner.service';
 import type { Hotel, Amenity } from '../../services/partner.service';
 import { ClipboardList, MapPin, ImageIcon, Hotel as HotelIcon, Pencil, ArrowLeft, CheckSquare, Square, Sparkles, Trash2 } from 'lucide-react-native';
@@ -28,14 +34,32 @@ const CATEGORY_LABELS: Record<string, string> = {
   entertainment: 'Giải trí', safety: 'An ninh', service: 'Dịch vụ',
 };
 
+const hotelSchema = z.object({
+  name: z.string().min(1, 'Vui lòng nhập tên khách sạn'),
+  description: z.string().optional(),
+  propertyType: z.string(),
+  starRating: z.number().min(1).max(5),
+  checkInTime: z.string(),
+  checkOutTime: z.string(),
+  addressLine: z.string().min(5, 'Địa chỉ phải có ít nhất 5 ký tự'),
+  provinceCode: z.number({ message: 'Vui lòng chọn Tỉnh/Thành phố' }),
+  districtCode: z.number({ message: 'Vui lòng chọn Quận/Huyện' }),
+  wardCode: z.number({ message: 'Vui lòng chọn Phường/Xã' }),
+  provinceName: z.string(),
+  districtName: z.string(),
+  wardName: z.string(),
+});
+
+type HotelFormData = z.infer<typeof hotelSchema>;
+
 interface Props {
-  /** Existing hotel id to edit; undefined = create new */
   hotelId?: string;
   onBack?: () => void;
 }
 
 export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   const isEdit = !!editHotelId;
+  const router = useRouter();
 
   const [currentHotel, setCurrentHotel] = useState<Hotel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,19 +67,10 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  
+  const [imagesError, setImagesError] = useState('');
+
   const [imageToDelete, setImageToDelete] = useState<string | null>(null);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
-
-  const nameRef = useRef<TextInput>(null);
-  const addressLineRef = useRef<TextInput>(null);
-  const provinceRef = useRef<SelectDropdownRef>(null);
-  const districtRef = useRef<SelectDropdownRef>(null);
-  const wardRef = useRef<SelectDropdownRef>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  const clearError = (key: string) => setErrors(prev => ({ ...prev, [key]: '' }));
 
   const { provinces, districts, wards, loadingProvinces, loadingDistricts, loadingWards, fetchDistricts, fetchWards, resetDistricts, resetWards } = useLocation();
 
@@ -64,19 +79,28 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   const [loadingAmenities, setLoadingAmenities] = useState(false);
   const [pendingImages, setPendingImages] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
-    name: '', description: '', propertyType: 'hotel' as string, starRating: 3,
-    checkInTime: '14:00', checkOutTime: '12:00', addressLine: '',
-    provinceCode: null as number | null, provinceName: '',
-    districtCode: null as number | null, districtName: '',
-    wardCode: null as number | null, wardName: '',
+  const { control, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<HotelFormData>({
+    resolver: zodResolver(hotelSchema),
+    defaultValues: {
+      name: '', description: '', propertyType: 'hotel', starRating: 3,
+      checkInTime: '14:00', checkOutTime: '12:00', addressLine: '',
+    }
   });
+
+  const watchProvinceCode = watch('provinceCode');
+  const watchProvinceName = watch('provinceName');
+  const watchDistrictCode = watch('districtCode');
+  const watchDistrictName = watch('districtName');
+  const watchWardCode = watch('wardCode');
+  const watchWardName = watch('wardName');
+  const watchCheckIn = watch('checkInTime');
+  const watchCheckOut = watch('checkOutTime');
+
   const [checkInHour, setCheckInHour] = useState('14');
   const [checkInMinute, setCheckInMinute] = useState('00');
   const [checkOutHour, setCheckOutHour] = useState('12');
   const [checkOutMinute, setCheckOutMinute] = useState('00');
 
-  // Load amenities
   useEffect(() => {
     setLoadingAmenities(true);
     partnerService.getAmenities()
@@ -85,7 +109,6 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
       .finally(() => setLoadingAmenities(false));
   }, []);
 
-  // Load hotel for edit
   useEffect(() => {
     if (isEdit && editHotelId) {
       setIsLoading(true);
@@ -93,7 +116,6 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
     }
   }, [isEdit, editHotelId]);
 
-  // Populate form when hotel loaded
   useEffect(() => {
     if (isEdit && currentHotel) {
       const [h1 = '14', m1 = '00'] = (currentHotel.checkInTime || '14:00').split(':');
@@ -101,11 +123,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
       setCheckInHour(h1); setCheckInMinute(m1);
       setCheckOutHour(h2); setCheckOutMinute(m2);
       
-      const provName = currentHotel.address?.province || currentHotel.address?.city || '';
-      const distName = currentHotel.address?.district || '';
-      const wardName = currentHotel.address?.ward || '';
-      
-      setForm({
+      reset({
         name: currentHotel.name || '',
         description: currentHotel.description || '',
         propertyType: currentHotel.propertyType || 'hotel',
@@ -113,45 +131,45 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
         checkInTime: currentHotel.checkInTime || '14:00',
         checkOutTime: currentHotel.checkOutTime || '12:00',
         addressLine: currentHotel.address?.addressLine || '',
-        provinceCode: null, provinceName: provName,
-        districtCode: null, districtName: distName,
-        wardCode: null, wardName: wardName,
+        provinceName: currentHotel.address?.province || currentHotel.address?.city || '',
+        districtName: currentHotel.address?.district || '',
+        wardName: currentHotel.address?.ward || '',
       });
       if (currentHotel.hotelAmenities?.length) {
         setSelectedAmenityIds(new Set(currentHotel.hotelAmenities.map(ha => ha.amenity.id)));
       }
     }
-  }, [isEdit, currentHotel]);
+  }, [isEdit, currentHotel, reset]);
 
   // Auto-map loaded address strings to codes
   useEffect(() => {
-    if (isEdit && currentHotel && provinces.length > 0 && form.provinceCode === null && form.provinceName) {
-      const p = provinces.find(x => x.name === form.provinceName || form.provinceName.includes(x.name) || x.name.includes(form.provinceName));
+    if (isEdit && currentHotel && provinces.length > 0 && !watchProvinceCode && watchProvinceName) {
+      const p = provinces.find(x => x.name === watchProvinceName || watchProvinceName.includes(x.name) || x.name.includes(watchProvinceName));
       if (p) {
-        setForm(prev => ({ ...prev, provinceCode: p.code, provinceName: p.name }));
+        setValue('provinceCode', p.code); setValue('provinceName', p.name);
         fetchDistricts(p.code);
       }
     }
-  }, [isEdit, currentHotel, provinces, form.provinceCode, form.provinceName]);
+  }, [isEdit, currentHotel, provinces, watchProvinceCode, watchProvinceName, setValue]);
 
   useEffect(() => {
-    if (isEdit && currentHotel && districts.length > 0 && form.districtCode === null && form.districtName) {
-      const d = districts.find(x => x.name === form.districtName || form.districtName.includes(x.name) || x.name.includes(form.districtName));
+    if (isEdit && currentHotel && districts.length > 0 && !watchDistrictCode && watchDistrictName) {
+      const d = districts.find(x => x.name === watchDistrictName || watchDistrictName.includes(x.name) || x.name.includes(watchDistrictName));
       if (d) {
-        setForm(prev => ({ ...prev, districtCode: d.code, districtName: d.name }));
+        setValue('districtCode', d.code); setValue('districtName', d.name);
         fetchWards(d.code);
       }
     }
-  }, [isEdit, currentHotel, districts, form.districtCode, form.districtName]);
+  }, [isEdit, currentHotel, districts, watchDistrictCode, watchDistrictName, setValue]);
 
   useEffect(() => {
-    if (isEdit && currentHotel && wards.length > 0 && form.wardCode === null && form.wardName) {
-      const w = wards.find(x => x.name === form.wardName || form.wardName.includes(x.name) || x.name.includes(form.wardName));
+    if (isEdit && currentHotel && wards.length > 0 && !watchWardCode && watchWardName) {
+      const w = wards.find(x => x.name === watchWardName || watchWardName.includes(x.name) || x.name.includes(watchWardName));
       if (w) {
-        setForm(prev => ({ ...prev, wardCode: w.code, wardName: w.name }));
+        setValue('wardCode', w.code); setValue('wardName', w.name);
       }
     }
-  }, [isEdit, currentHotel, wards, form.wardCode, form.wardName]);
+  }, [isEdit, currentHotel, wards, watchWardCode, watchWardName, setValue]);
 
   const groupedAmenities = useMemo(() => {
     const groups: Record<string, Amenity[]> = {};
@@ -163,30 +181,27 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   const districtOptions = useMemo<SelectOption[]>(() => districts.map(d => ({ label: d.name, value: d.code })), [districts]);
   const wardOptions = useMemo<SelectOption[]>(() => wards.map(w => ({ label: w.name, value: w.code })), [wards]);
 
-  const updateField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
-
   const handleProvinceChange = (opt: SelectOption) => {
-    updateField('provinceCode', opt.value); updateField('provinceName', opt.label);
-    updateField('districtCode', null); updateField('districtName', '');
-    updateField('wardCode', null); updateField('wardName', '');
-    clearError('provinceCode');
+    setValue('provinceCode', opt.value as number); setValue('provinceName', opt.label);
+    setValue('districtCode', undefined as any); setValue('districtName', '');
+    setValue('wardCode', undefined as any); setValue('wardName', '');
     resetDistricts(); fetchDistricts(opt.value as number);
   };
   const handleDistrictChange = (opt: SelectOption) => {
-    updateField('districtCode', opt.value); updateField('districtName', opt.label);
-    updateField('wardCode', null); updateField('wardName', '');
-    clearError('districtCode');
+    setValue('districtCode', opt.value as number); setValue('districtName', opt.label);
+    setValue('wardCode', undefined as any); setValue('wardName', '');
     resetWards(); fetchWards(opt.value as number);
   };
-  const handleWardChange = (opt: SelectOption) => { updateField('wardCode', opt.value); updateField('wardName', opt.label); clearError('wardCode'); };
+  const handleWardChange = (opt: SelectOption) => { 
+    setValue('wardCode', opt.value as number); setValue('wardName', opt.label); 
+  };
+  
   const toggleAmenity = (id: string) => setSelectedAmenityIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const handlePickImages = async (files: any[]) => {
     setPendingImages(prev => [...prev, ...files]);
-    clearError('images');
+    setImagesError('');
   };
   const removePendingImage = (index: number) => setPendingImages(prev => prev.filter((_, i) => i !== index));
-
-  const showAlert = (msg: string) => setErrorMsg(msg);
 
   const confirmDeleteImage = async () => {
     if (!imageToDelete || !currentHotel?.id) return;
@@ -196,67 +211,46 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
       setCurrentHotel(prev => prev ? { ...prev, images: prev.images.filter(img => img.id !== imageToDelete) } : prev);
       setImageToDelete(null);
     } catch (err: any) {
-      showAlert(err.message || 'Có lỗi xảy ra khi xóa ảnh');
+      setErrorMsg(err.message || 'Có lỗi xảy ra khi xóa ảnh');
     } finally {
       setIsDeletingImage(false);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleGoBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      router.replace('/partner/dashboard' as any);
+    }
+  };
+
+  const onSubmit = async (data: HotelFormData) => {
     setErrorMsg('');
     setSuccessMsg('');
-    setErrors({});
-    
-    let hasError = false;
-    let newErrors: Record<string, string> = {};
-
-    if (!form.name.trim()) { newErrors.name = 'Vui lòng nhập tên khách sạn'; hasError = true; }
-    if (!form.addressLine.trim() || form.addressLine.trim().length < 5) { newErrors.addressLine = 'Địa chỉ phải có ít nhất 5 ký tự'; hasError = true; }
-    if (!form.provinceCode) { newErrors.provinceCode = 'Vui lòng chọn Tỉnh/Thành phố'; hasError = true; }
-    if (!form.districtCode) { newErrors.districtCode = 'Vui lòng chọn Quận/Huyện'; hasError = true; }
-    if (!form.wardCode) { newErrors.wardCode = 'Vui lòng chọn Phường/Xã'; hasError = true; }
+    setImagesError('');
     
     const totalImages = (currentHotel?.images?.length || 0) + pendingImages.length;
-    if (totalImages < 3) { newErrors.images = 'Vui lòng chọn ít nhất 3 hình ảnh'; hasError = true; }
-
-    if (hasError) {
-      setErrors(newErrors);
-      if (newErrors.name) { 
-        nameRef.current?.focus(); 
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      } else if (newErrors.addressLine) { 
-        addressLineRef.current?.focus(); 
-        scrollViewRef.current?.scrollTo({ y: 150, animated: true });
-      } else if (newErrors.provinceCode) { 
-        provinceRef.current?.focus(); 
-        scrollViewRef.current?.scrollTo({ y: 250, animated: true });
-      } else if (newErrors.districtCode) { 
-        districtRef.current?.focus(); 
-        scrollViewRef.current?.scrollTo({ y: 300, animated: true });
-      } else if (newErrors.wardCode) { 
-        wardRef.current?.focus(); 
-        scrollViewRef.current?.scrollTo({ y: 300, animated: true });
-      } else if (newErrors.images) {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }
+    if (totalImages < 3) {
+      setImagesError('Vui lòng chọn ít nhất 3 hình ảnh');
       return;
     }
 
     try {
       setIsSaving(true);
       const payload = {
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        propertyType: form.propertyType,
-        starRating: form.starRating,
-        checkInTime: form.checkInTime,
-        checkOutTime: form.checkOutTime,
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
+        propertyType: data.propertyType,
+        starRating: data.starRating,
+        checkInTime: data.checkInTime,
+        checkOutTime: data.checkOutTime,
         address: {
-          addressLine: form.addressLine.trim(),
-          ward: form.wardName || undefined,
-          district: form.districtName,
-          city: form.provinceName,
-          province: form.provinceName,
+          addressLine: data.addressLine.trim(),
+          ward: data.wardName || undefined,
+          district: data.districtName,
+          city: data.provinceName,
+          province: data.provinceName,
           country: 'Vietnam',
         },
         amenityIds: Array.from(selectedAmenityIds),
@@ -274,18 +268,17 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
           setIsUploading(true);
           await partnerService.uploadHotelImages(hotelResult.id, pendingImages);
         } catch {
-          showAlert('Khách sạn đã được lưu nhưng upload ảnh thất bại. Bạn có thể thêm ảnh sau.');
+          setErrorMsg('Khách sạn đã được lưu nhưng upload ảnh thất bại. Bạn có thể thêm ảnh sau.');
         } finally {
           setIsUploading(false);
         }
       }
       setSuccessMsg(isEdit ? 'Cập nhật khách sạn thành công!' : 'Tạo khách sạn thành công!');
       setTimeout(() => {
-        setSuccessMsg('');
-        onBack?.();
+        handleGoBack();
       }, 1500);
     } catch (err: any) {
-      showAlert(err.message || 'Có lỗi xảy ra khi lưu khách sạn');
+      setErrorMsg(err.message || 'Có lỗi xảy ra khi lưu khách sạn');
     } finally {
       setIsSaving(false);
     }
@@ -293,15 +286,17 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
 
   const busy = isSaving || isUploading;
 
+  if (isLoading) return <ActivityIndicator size="large" color="#0D9488" style={{ marginTop: 50 }} />;
+
   return (
     <View style={s.container}>
       {isMobile ? (
         <View style={s.mobileBackHeader}>
-          <TouchableOpacity onPress={() => onBack?.()} style={{ padding: 4 }}><ArrowLeft size={20} color="#1E293B" /></TouchableOpacity>
+          <TouchableOpacity onPress={handleGoBack} style={{ padding: 4 }}><ArrowLeft size={20} color="#1E293B" /></TouchableOpacity>
           <Text style={s.mobileBackTitle}>{isEdit ? 'Chỉnh sửa khách sạn' : 'Tạo khách sạn mới'}</Text>
         </View>
       ) : null}
-      <ScrollView ref={scrollViewRef} style={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
         {!isMobile && (
           <View style={s.pageHeader}>
             <View style={s.pageTitleRow}>
@@ -312,53 +307,64 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
           </View>
         )}
 
-        {/* Error/Success Messages at top (only for API errors/success now) */}
-        {errorMsg ? (
-          <View style={s.errorBox}>
-            <Text style={s.errorText}>{errorMsg}</Text>
-          </View>
-        ) : null}
-        {successMsg ? (
-          <View style={s.successBox}>
-            <Text style={s.successText}>{successMsg}</Text>
-          </View>
-        ) : null}
+        {errorMsg ? <View style={s.errorBox}><Text style={s.errorText}>{errorMsg}</Text></View> : null}
+        {successMsg ? <View style={s.successBox}><Text style={s.successText}>{successMsg}</Text></View> : null}
 
         {/* Thông tin cơ bản */}
         <View style={s.formSection}>
           <View style={s.sectionTitleRow}><ClipboardList size={18} color="#1E293B" /><Text style={s.sectionTitle}>Thông tin cơ bản</Text></View>
+          
           <View style={s.field}>
             <Text style={s.label}>Tên khách sạn <Text style={s.required}>*</Text></Text>
-            <TextInput ref={nameRef} style={[s.input, errors.name ? s.inputError : null]} value={form.name} onChangeText={v => { updateField('name', v); clearError('name'); }} placeholder="Nhập tên khách sạn" placeholderTextColor="#94A3B8" />
-            {errors.name ? <Text style={s.fieldErrorText}>{errors.name}</Text> : null}
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onChange, value } }) => (
+                <TextInput style={[s.input, errors.name && s.inputError]} value={value} onChangeText={onChange} placeholder="Nhập tên khách sạn" placeholderTextColor="#94A3B8" />
+              )}
+            />
+            {errors.name && <Text style={s.fieldErrorText}>{errors.name.message}</Text>}
           </View>
+          
           <View style={s.field}>
             <Text style={s.label}>Mô tả</Text>
-            <TextInput style={[s.input, s.textarea]} value={form.description} onChangeText={v => updateField('description', v)} placeholder="Mô tả về khách sạn..." placeholderTextColor="#94A3B8" multiline numberOfLines={4} />
+            <Controller
+              control={control}
+              name="description"
+              render={({ field: { onChange, value } }) => (
+                <TextInput style={[s.input, s.textarea]} value={value} onChangeText={onChange} placeholder="Mô tả về khách sạn..." placeholderTextColor="#94A3B8" multiline numberOfLines={4} />
+              )}
+            />
           </View>
+          
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <SelectDropdown label="Loại hình" options={PROPERTY_TYPES} value={form.propertyType} onChange={opt => updateField('propertyType', opt.value)} searchable={false} />
+              <Controller control={control} name="propertyType" render={({ field: { onChange, value } }) => (
+                <SelectDropdown label="Loại hình" options={PROPERTY_TYPES} value={value} onChange={opt => onChange(opt.value)} searchable={false} />
+              )} />
             </View>
             <View style={{ flex: 1 }}>
-              <SelectDropdown label="Số sao" options={STAR_OPTIONS} value={form.starRating} onChange={opt => updateField('starRating', opt.value)} searchable={false} />
+              <Controller control={control} name="starRating" render={({ field: { onChange, value } }) => (
+                <SelectDropdown label="Số sao" options={STAR_OPTIONS} value={value} onChange={opt => onChange(opt.value)} searchable={false} />
+              )} />
             </View>
           </View>
+          
           <View style={s.row}>
             <View style={[s.field, { flex: 1 }]}>
               <Text style={s.label}>Giờ nhận phòng</Text>
               <View style={s.timeRow}>
-                <TextInput style={s.timeInput} value={checkInHour} onChangeText={v => { if (isNaN(Number(v))) return; setCheckInHour(v); let h = Number(v); if (h > 23) h = 23; if (h < 0) h = 0; updateField('checkInTime', `${h.toString().padStart(2,'0')}:${checkInMinute}`); }} keyboardType="numeric" maxLength={2} placeholder="HH" />
+                <TextInput style={s.timeInput} value={checkInHour} onChangeText={v => { if (isNaN(Number(v))) return; setCheckInHour(v); let h = Number(v); if (h > 23) h = 23; if (h < 0) h = 0; setValue('checkInTime', `${h.toString().padStart(2,'0')}:${checkInMinute}`); }} keyboardType="numeric" maxLength={2} placeholder="HH" />
                 <Text style={s.timeColon}>:</Text>
-                <TextInput style={s.timeInput} value={checkInMinute} onChangeText={v => { if (isNaN(Number(v))) return; setCheckInMinute(v); let m = Number(v); if (m > 59) m = 59; if (m < 0) m = 0; updateField('checkInTime', `${checkInHour}:${m.toString().padStart(2,'0')}`); }} keyboardType="numeric" maxLength={2} placeholder="MM" />
+                <TextInput style={s.timeInput} value={checkInMinute} onChangeText={v => { if (isNaN(Number(v))) return; setCheckInMinute(v); let m = Number(v); if (m > 59) m = 59; if (m < 0) m = 0; setValue('checkInTime', `${checkInHour}:${m.toString().padStart(2,'0')}`); }} keyboardType="numeric" maxLength={2} placeholder="MM" />
               </View>
             </View>
             <View style={[s.field, { flex: 1 }]}>
               <Text style={s.label}>Giờ trả phòng</Text>
               <View style={s.timeRow}>
-                <TextInput style={s.timeInput} value={checkOutHour} onChangeText={v => { if (isNaN(Number(v))) return; setCheckOutHour(v); let h = Number(v); if (h > 23) h = 23; if (h < 0) h = 0; updateField('checkOutTime', `${h.toString().padStart(2,'0')}:${checkOutMinute}`); }} keyboardType="numeric" maxLength={2} placeholder="HH" />
+                <TextInput style={s.timeInput} value={checkOutHour} onChangeText={v => { if (isNaN(Number(v))) return; setCheckOutHour(v); let h = Number(v); if (h > 23) h = 23; if (h < 0) h = 0; setValue('checkOutTime', `${h.toString().padStart(2,'0')}:${checkOutMinute}`); }} keyboardType="numeric" maxLength={2} placeholder="HH" />
                 <Text style={s.timeColon}>:</Text>
-                <TextInput style={s.timeInput} value={checkOutMinute} onChangeText={v => { if (isNaN(Number(v))) return; setCheckOutMinute(v); let m = Number(v); if (m > 59) m = 59; if (m < 0) m = 0; updateField('checkOutTime', `${checkOutHour}:${m.toString().padStart(2,'0')}`); }} keyboardType="numeric" maxLength={2} placeholder="MM" />
+                <TextInput style={s.timeInput} value={checkOutMinute} onChangeText={v => { if (isNaN(Number(v))) return; setCheckOutMinute(v); let m = Number(v); if (m > 59) m = 59; if (m < 0) m = 0; setValue('checkOutTime', `${checkOutHour}:${m.toString().padStart(2,'0')}`); }} keyboardType="numeric" maxLength={2} placeholder="MM" />
               </View>
             </View>
           </View>
@@ -369,16 +375,30 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
           <View style={s.sectionTitleRow}><MapPin size={18} color="#1E293B" /><Text style={s.sectionTitle}>Địa chỉ</Text></View>
           <View style={s.field}>
             <Text style={s.label}>Địa chỉ chi tiết <Text style={s.required}>*</Text></Text>
-            <TextInput ref={addressLineRef} style={[s.input, errors.addressLine ? s.inputError : null]} value={form.addressLine} onChangeText={v => { updateField('addressLine', v); clearError('addressLine'); }} placeholder="Số nhà, tên đường..." placeholderTextColor="#94A3B8" />
-            {errors.addressLine ? <Text style={s.fieldErrorText}>{errors.addressLine}</Text> : null}
+            <Controller
+              control={control}
+              name="addressLine"
+              render={({ field: { onChange, value } }) => (
+                <TextInput style={[s.input, errors.addressLine && s.inputError]} value={value} onChangeText={onChange} placeholder="Số nhà, tên đường..." placeholderTextColor="#94A3B8" />
+              )}
+            />
+            {errors.addressLine && <Text style={s.fieldErrorText}>{errors.addressLine.message}</Text>}
           </View>
-          <SelectDropdown ref={provinceRef} label="Tỉnh / Thành phố" required placeholder="Chọn Tỉnh/Thành phố..." options={provinceOptions} value={form.provinceCode} onChange={handleProvinceChange} loading={loadingProvinces} error={errors.provinceCode} />
+          
+          <Controller control={control} name="provinceCode" render={({ field: { value } }) => (
+            <SelectDropdown label="Tỉnh / Thành phố" required placeholder="Chọn Tỉnh/Thành phố..." options={provinceOptions} value={value} onChange={handleProvinceChange} loading={loadingProvinces} error={errors.provinceCode?.message} />
+          )} />
+          
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <SelectDropdown ref={districtRef} label="Quận / Huyện" required placeholder="Chọn Quận/Huyện..." options={districtOptions} value={form.districtCode} onChange={handleDistrictChange} loading={loadingDistricts} disabled={!form.provinceCode} error={errors.districtCode} />
+              <Controller control={control} name="districtCode" render={({ field: { value } }) => (
+                <SelectDropdown label="Quận / Huyện" required placeholder="Chọn Quận/Huyện..." options={districtOptions} value={value} onChange={handleDistrictChange} loading={loadingDistricts} disabled={!watchProvinceCode} error={errors.districtCode?.message} />
+              )} />
             </View>
             <View style={{ flex: 1 }}>
-              <SelectDropdown ref={wardRef} label="Phường / Xã" required placeholder="Chọn Phường/Xã..." options={wardOptions} value={form.wardCode} onChange={handleWardChange} loading={loadingWards} disabled={!form.districtCode} error={errors.wardCode} />
+              <Controller control={control} name="wardCode" render={({ field: { value } }) => (
+                <SelectDropdown label="Phường / Xã" required placeholder="Chọn Phường/Xã..." options={wardOptions} value={value} onChange={handleWardChange} loading={loadingWards} disabled={!watchDistrictCode} error={errors.wardCode?.message} />
+              )} />
             </View>
           </View>
         </View>
@@ -401,8 +421,8 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
                     const isSelected = selectedAmenityIds.has(amenity.id);
                     return (
                       <TouchableOpacity key={amenity.id} style={[s.amenityItem, isSelected && s.amenityItemSelected]} onPress={() => toggleAmenity(amenity.id)}>
-                        {isSelected ? <CheckSquare size={16} color="#008080" /> : <Square size={16} color="#94A3B8" />}
-                        <Text style={[s.amenityLabel, isSelected && s.amenityLabelSelected]}>{amenity.icon || '•'} {amenity.name}</Text>
+                        <AmenityIcon name={amenity.name} size={18} color={isSelected ? '#0F766E' : '#64748B'} />
+                        <Text style={[s.amenityLabel, isSelected && s.amenityLabelSelected]}>{amenity.name}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -422,7 +442,8 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {currentHotel.images.map(img => (
                   <View key={img.id} style={s.pendingImageWrapper}>
-                    <Image source={{ uri: img.imageUrl }} style={s.galleryImage} />
+                    {/* Using expo-image here as required by the teacher */}
+                    <Image source={{ uri: img.imageUrl }} style={s.galleryImage} contentFit="cover" cachePolicy="memory-disk" />
                     <TouchableOpacity style={s.removeBtn} onPress={() => setImageToDelete(img.id)}>
                       <Text style={s.removeBtnText}>✕</Text>
                     </TouchableOpacity>
@@ -440,7 +461,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
                   const uri = file.uri || (typeof file === 'string' ? file : URL.createObjectURL(file));
                   return (
                     <View key={index} style={s.pendingImageWrapper}>
-                      <Image source={{ uri }} style={s.pendingImage} />
+                      <Image source={{ uri }} style={s.pendingImage} contentFit="cover" />
                       <TouchableOpacity style={s.removeBtn} onPress={() => removePendingImage(index)}>
                         <Text style={s.removeBtnText}>✕</Text>
                       </TouchableOpacity>
@@ -450,15 +471,15 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
               </ScrollView>
             </View>
           )}
-          {errors.images ? <Text style={s.fieldErrorText}>{errors.images}</Text> : null}
+          {imagesError ? <Text style={s.fieldErrorText}>{imagesError}</Text> : null}
         </View>
 
         {/* Actions */}
         <View style={s.actions}>
-          <TouchableOpacity style={s.cancelBtn} onPress={() => onBack?.()} disabled={busy}>
+          <TouchableOpacity style={s.cancelBtn} onPress={handleGoBack} disabled={busy}>
             <Text style={s.cancelBtnText}>Hủy</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.submitBtn, busy && { opacity: 0.6 }]} onPress={handleSubmit} disabled={busy}>
+          <TouchableOpacity style={[s.submitBtn, busy && { opacity: 0.6 }]} onPress={handleSubmit(onSubmit)} disabled={busy}>
             {busy ? (
               <View style={s.busyRow}>
                 <ActivityIndicator size="small" color="#FFF" />
@@ -475,7 +496,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Delete Image Confirmation Modal */}
+      {/* Delete Image Modal */}
       <Modal visible={!!imageToDelete} transparent animationType="fade" onRequestClose={() => !isDeletingImage && setImageToDelete(null)}>
         <View style={s.modalOverlay}>
           <View style={s.modalContent}>

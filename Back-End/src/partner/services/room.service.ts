@@ -46,6 +46,22 @@ export class RoomService {
               createMany: { data: data.amenityIds.map((amenityId) => ({ amenityId })) },
             },
           } : {}),
+          ...(data.pricingPolicies && data.pricingPolicies.length > 0 ? {
+            pricingPolicies: {
+              createMany: {
+                data: data.pricingPolicies.map((policy: any) => ({
+                  bookingType: policy.bookingType,
+                  basePrice: policy.basePrice,
+                  minHours: policy.minHours,
+                  maxHours: policy.maxHours,
+                  extraHourPrice: policy.extraHourPrice,
+                  overnightCheckinFrom: policy.overnightCheckinFrom,
+                  overnightCheckoutBefore: policy.overnightCheckoutBefore,
+                  isActive: true,
+                })),
+              },
+            },
+          } : {}),
         } as any, // Ép kiểu ngăn chặn lỗi ánh xạ mảng và enum nghiêm ngặt từ validator
         include: roomTypeInclude,
       });
@@ -89,6 +105,25 @@ export class RoomService {
         if (data.amenityIds.length > 0) {
           await tx.roomTypeAmenity.createMany({
             data: data.amenityIds.map((amenityId) => ({ roomTypeId, amenityId })) as any,
+          });
+        }
+      }
+
+      if (data.pricingPolicies) {
+        await tx.pricingPolicy.deleteMany({ where: { roomTypeId } });
+        if (data.pricingPolicies.length > 0) {
+          await tx.pricingPolicy.createMany({
+            data: data.pricingPolicies.map((policy: any) => ({
+              roomTypeId,
+              bookingType: policy.bookingType,
+              basePrice: policy.basePrice,
+              minHours: policy.minHours,
+              maxHours: policy.maxHours,
+              extraHourPrice: policy.extraHourPrice,
+              overnightCheckinFrom: policy.overnightCheckinFrom,
+              overnightCheckoutBefore: policy.overnightCheckoutBefore,
+              isActive: true,
+            })) as any,
           });
         }
       }

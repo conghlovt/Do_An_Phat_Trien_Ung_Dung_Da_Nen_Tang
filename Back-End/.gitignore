@@ -8,3 +8,5 @@ build/
 # 3. File rác của trình soạn thảo và hệ điều hành
 .vscode/
 .DS_Store
+
+.env

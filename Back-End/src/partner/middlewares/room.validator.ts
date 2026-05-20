@@ -8,6 +8,7 @@ export const createRoomTypeSchema = z.object({
   roomSizeSqm: z.number().min(1).max(1000).optional(),
   totalUnits: z.number().int().min(1).max(999).default(1),
   amenityIds: z.array(z.string().uuid()).optional(),
+  pricingPolicies: z.array(z.any()).optional(),
 });
 
 export const updateRoomTypeSchema = z.object({
@@ -19,6 +20,7 @@ export const updateRoomTypeSchema = z.object({
   totalUnits: z.number().int().min(1).max(999).optional(),
   status: z.enum(['active', 'inactive']).optional(),
   amenityIds: z.array(z.string().uuid()).optional(),
+  pricingPolicies: z.array(z.any()).optional(),
 });
 
 export const createRoomUnitSchema = z.object({

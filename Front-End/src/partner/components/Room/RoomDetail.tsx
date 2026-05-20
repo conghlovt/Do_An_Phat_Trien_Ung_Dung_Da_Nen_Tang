@@ -1,13 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import { ImageUploader } from '../shared/ImageUploader';
 import { ConfirmModal } from '../shared/ConfirmModal';
+import { MessageModal, MessageType } from '../shared/MessageModal';
 import { partnerService } from '../../services/partner.service';
 import type { RoomType, RoomUnit } from '../../services/partner.service';
+import { Image } from 'expo-image';
 import { ArrowLeft, Pencil, Trash2, Users, BedDouble, Maximize, DoorOpen, ImagePlus, Plus, X } from 'lucide-react-native';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const unitSchema = z.object({
+  roomNumber: z.string().min(1, 'Vui lòng nhập số phòng'),
+  floor: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type UnitFormData = z.infer<typeof unitSchema>;
 
 const isMobile = Platform.OS !== 'web';
 
@@ -26,8 +39,16 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
-  const [newUnit, setNewUnit] = useState({ roomNumber: '', floor: '', notes: '' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [msgModal, setMsgModal] = useState<{ visible: boolean; type: MessageType; message: string }>({ visible: false, type: 'error', message: '' });
+
+  const showError = (msg: string) => setMsgModal({ visible: true, type: 'error', message: msg });
+  const closeMsgModal = () => setMsgModal(prev => ({ ...prev, visible: false }));
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<UnitFormData>({
+    resolver: zodResolver(unitSchema),
+    defaultValues: { roomNumber: '', floor: '', notes: '' }
+  });
 
   const loadData = async () => {
     try {
@@ -36,8 +57,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
       const unitsData = await partnerService.getRoomUnits(hotelId, roomTypeId);
       setUnits(unitsData);
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError(err.message || 'Không thể tải dữ liệu phòng');
     } finally {
       setIsLoading(false);
     }
@@ -47,20 +67,18 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
 
   const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
 
-  const handleAddUnit = async () => {
+  const handleAddUnit = async (data: UnitFormData) => {
     try {
-      if (!newUnit.roomNumber) return;
       await partnerService.createRoomUnit(hotelId, roomTypeId, {
-        roomNumber: newUnit.roomNumber,
-        floor: newUnit.floor ? parseInt(newUnit.floor) : undefined,
-        notes: newUnit.notes,
+        roomNumber: data.roomNumber,
+        floor: data.floor ? parseInt(data.floor) : undefined,
+        notes: data.notes,
       });
-      setNewUnit({ roomNumber: '', floor: '', notes: '' });
+      reset();
       setShowAddUnit(false);
       await loadData();
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError(err.message || 'Không thể thêm phòng');
     }
   };
 
@@ -69,8 +87,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
       await partnerService.deleteRoomUnit(hotelId, roomTypeId, unitId);
       await loadData();
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError(err.message || 'Không thể xóa phòng');
     }
   };
 
@@ -80,8 +97,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
       await partnerService.uploadRoomMedia(hotelId, roomTypeId, files);
       await loadData();
     } catch (err: any) {
-      if (Platform.OS === 'web') alert('Lỗi tải ảnh: ' + err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError('Lỗi tải ảnh: ' + (err.message || 'Không rõ nguyên nhân'));
     } finally {
       setIsUploading(false);
     }
@@ -92,8 +108,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
       await partnerService.deleteRoomMedia(hotelId, roomTypeId, mediaId);
       await loadData();
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError(err.message || 'Không thể xóa ảnh');
     }
   };
 
@@ -102,8 +117,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
       await partnerService.deleteRoomType(hotelId, roomTypeId);
       onBack?.();
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message);
-      else Alert.alert('Lỗi', err.message);
+      showError(err.message || 'Không thể xóa loại phòng');
     }
   };
 
@@ -114,12 +128,12 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
     <View style={styles.container}>
       {isMobile ? (
         <View style={styles.mobileBackHeader}>
-          <TouchableOpacity onPress={() => onBack?.()} style={{ padding: 4 }}>
+          <TouchableOpacity onPress={() => { if (onBack) onBack(); else router.back(); }} style={{ padding: 4 }}>
             <ArrowLeft size={20} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.mobileBackTitle} numberOfLines={1}>{roomType.name}</Text>
           <View style={styles.mobileHeaderActions}>
-            <TouchableOpacity style={styles.mobileActionBtn} onPress={() => {}}>
+            <TouchableOpacity style={styles.mobileActionBtn} onPress={() => router.push(`/partner/room/edit-room?hotelId=${hotelId}&roomId=${roomTypeId}` as any)}>
               <Pencil size={16} color="#64748B" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.mobileDeleteActionBtn} onPress={() => setShowDeleteConfirm(true)}>
@@ -129,11 +143,11 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
         </View>
       ) : (
         <View style={styles.pageHeader}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => onBack?.()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => { if (onBack) onBack(); else router.back(); }}>
             <ArrowLeft size={18} color="#64748B" /><Text style={styles.backText}>Quay lại</Text>
           </TouchableOpacity>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.editBtn} onPress={() => {}}>
+            <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`/partner/room/edit-room?hotelId=${hotelId}&roomId=${roomTypeId}` as any)}>
               <Pencil size={14} color="#334155" />
               <Text style={styles.editBtnText}>Sửa</Text>
             </TouchableOpacity>
@@ -176,12 +190,16 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
           <View style={styles.titleRow}>
             <View style={styles.sectionTitleRow}><ImagePlus size={16} color="#1E293B" /><Text style={styles.sectionTitle}>Hình ảnh & Video</Text></View>
           </View>
-          <ImageUploader onUpload={handleUploadMedia} isUploading={isUploading} multiple={true} />
+          <ImageUploader onUpload={handleUploadMedia} isUploading={isUploading} multiple={true} onError={showError} />
           {roomType.media && roomType.media.length > 0 ? (
             <View style={styles.mediaGrid}>
               {roomType.media.map((item) => (
                 <View key={item.id} style={styles.mediaItem}>
-                  <View style={styles.mediaPlaceholder}><Text style={styles.mediaPlaceholderText}>Hình {item.sortOrder}</Text></View>
+                  {item.mediaType === 'image' ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.mediaPlaceholder} />
+                  ) : (
+                    <View style={styles.mediaPlaceholder}><Text style={styles.mediaPlaceholderText}>Hình {item.sortOrder}</Text></View>
+                  )}
                   <TouchableOpacity style={styles.deleteMediaBtn} onPress={() => handleDeleteMedia(item.id)}>
                     <X size={12} color="#FFF" />
                   </TouchableOpacity>
@@ -210,10 +228,35 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
           </View>
           {showAddUnit && (
             <View style={styles.addUnitForm}>
-              <TextInput style={styles.input} placeholder="Số phòng (VD: 101)" value={newUnit.roomNumber} onChangeText={v => setNewUnit({...newUnit, roomNumber: v})} />
-              <TextInput style={styles.input} placeholder="Tầng (Tùy chọn)" keyboardType="numeric" value={newUnit.floor} onChangeText={v => setNewUnit({...newUnit, floor: v})} />
-              <TextInput style={styles.input} placeholder="Ghi chú (Tùy chọn)" value={newUnit.notes} onChangeText={v => setNewUnit({...newUnit, notes: v})} />
-              <TouchableOpacity style={styles.saveUnitBtn} onPress={handleAddUnit}><Text style={styles.saveUnitText}>Lưu phòng</Text></TouchableOpacity>
+              <Controller
+                control={control}
+                name="roomNumber"
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <TextInput style={[styles.input, errors.roomNumber && styles.inputError]} placeholder="Số phòng (VD: 101)" value={value} onChangeText={onChange} />
+                    {errors.roomNumber && <Text style={styles.errorText}>{errors.roomNumber.message}</Text>}
+                  </>
+                )}
+              />
+              <Controller
+                control={control}
+                name="floor"
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <TextInput style={styles.input} placeholder="Tầng (Tùy chọn)" keyboardType="numeric" value={value} onChangeText={onChange} />
+                  </>
+                )}
+              />
+              <Controller
+                control={control}
+                name="notes"
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <TextInput style={styles.input} placeholder="Ghi chú (Tùy chọn)" value={value} onChangeText={onChange} />
+                  </>
+                )}
+              />
+              <TouchableOpacity style={styles.saveUnitBtn} onPress={handleSubmit(handleAddUnit)}><Text style={styles.saveUnitText}>Lưu phòng</Text></TouchableOpacity>
             </View>
           )}
           {units.length > 0 ? (
@@ -247,6 +290,13 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
         message={`Bạn có chắc chắn muốn xóa loại phòng "${roomType.name}"? Hành động này không thể hoàn tác.`}
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={handleDeleteRoomType}
+      />
+
+      <MessageModal
+        visible={msgModal.visible}
+        type={msgModal.type}
+        message={msgModal.message}
+        onClose={closeMsgModal}
       />
     </View>
   );
@@ -290,6 +340,8 @@ const styles = StyleSheet.create({
   addUnitText: { color: '#0F766E', fontSize: 12, fontWeight: '600' },
   addUnitForm: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 10, marginBottom: 16, gap: 10 },
   input: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
+  inputError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  errorText: { color: '#EF4444', fontSize: 11, marginLeft: 4 },
   saveUnitBtn: { backgroundColor: '#008080', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 4 },
   saveUnitText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
   unitsList: { gap: 10 },

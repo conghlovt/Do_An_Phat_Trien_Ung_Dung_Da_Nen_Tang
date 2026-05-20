@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { Camera } from 'lucide-react-native';
 
 interface ImageUploaderProps {
   onUpload: (files: any[]) => Promise<void>;
   isUploading?: boolean;
   multiple?: boolean;
+  onError?: (msg: string) => void;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUpload, isUploading = false, multiple = true }) => {
+export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUpload, isUploading = false, multiple = true, onError }) => {
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Cần quyền truy cập thư viện ảnh để upload!');
+      if (onError) onError('Cần quyền truy cập thư viện ảnh để upload!');
       return;
     }
 
@@ -70,7 +73,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUpload, isUpload
           </View>
         ) : (
           <View style={styles.center}>
-            <Text style={styles.uploadIcon}>📸</Text>
+            <Camera size={32} color="#94A3B8" />
             <Text style={styles.uploadTitle}>Nhấn để chọn hình ảnh / video</Text>
             <Text style={styles.uploadSubtitle}>Hỗ trợ JPG, PNG, MP4</Text>
           </View>

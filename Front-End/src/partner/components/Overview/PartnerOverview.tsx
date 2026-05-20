@@ -3,9 +3,9 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
   Image, RefreshControl, Dimensions, Modal,
 } from 'react-native';
-import type { ScreenName, ScreenParams } from '../PartnerDashboard';
 import { partnerService } from '../../services/partner.service';
 import type { Hotel, HotelListItem } from '../../services/partner.service';
+import { AmenityIcon } from '../shared/AmenityIcon';
 import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import { Pencil, Camera, Hotel as HotelIcon, ImageIcon, Info, Plus, Trash2 } from 'lucide-react-native';
@@ -24,7 +24,7 @@ const COLORS = {
 };
 
 interface Props {
-  onNavigate?: (screen: ScreenName, params?: ScreenParams) => void;
+  onNavigate?: (screen: string, params?: Record<string, any>) => void;
 }
 
 export function PartnerOverview({ onNavigate }: Props) {
@@ -191,7 +191,8 @@ export function PartnerOverview({ onNavigate }: Props) {
             <View style={styles.amenitiesGrid}>
               {hotel?.hotelAmenities?.length ? hotel.hotelAmenities.map((ha) => (
                 <View key={ha.amenity.id} style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>{ha.amenity.icon || '•'} {ha.amenity.name}</Text>
+                  <AmenityIcon name={ha.amenity.name} size={14} color="#0D9488" />
+                  <Text style={styles.amenityText}>{ha.amenity.name}</Text>
                 </View>
               )) : (
                 <Text style={styles.textSecondary}>Chưa có tiện ích nào được thêm.</Text>
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: isMobile ? 15 : 16, fontWeight: '700', color: COLORS.text, marginBottom: isMobile ? 12 : 16 },
   descriptionText: { fontSize: 14, color: COLORS.text, lineHeight: 22 },
   amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  amenityChip: { backgroundColor: COLORS.primaryLight, borderWidth: 1, borderColor: '#99F6E4', borderRadius: isMobile ? 20 : 4, paddingHorizontal: 12, paddingVertical: 6 },
+  amenityChip: { backgroundColor: COLORS.primaryLight, borderWidth: 1, borderColor: '#99F6E4', borderRadius: isMobile ? 20 : 4, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
   amenityText: { fontSize: 13, color: COLORS.primary },
   textSecondary: { color: COLORS.textSecondary, fontSize: 14 },
   imageCountBadge: { backgroundColor: COLORS.primaryLight, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: '#99F6E4', marginLeft: 'auto' },
