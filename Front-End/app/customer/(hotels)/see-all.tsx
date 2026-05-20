@@ -1,33 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import { styles } from '@/src/customer/components/hotels/seeAll.styles';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, FlatList, TextInput, Modal,
-  Platform, useWindowDimensions,
+  View, Text, Pressable, FlatList, TextInput, Modal,
+  Platform, ScrollView, useWindowDimensions,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useCustomerBack } from '@/src/customer/shared/navigation/useCustomerBack';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import {
   ChevronLeft, SlidersHorizontal, ArrowDownUp,
-  Star, Tag, Zap, X,
+  Zap, X,
 } from 'lucide-react-native';
-import { hotelsApi, Hotel } from '@/src/customer/features/hotels/api/hotels.api';
-import ImageWithFallback from '@/src/customer/shared/ui/ImageWithFallback';
-import { viewedHotelsStorage } from '@/src/customer/features/hotels/utils/viewedHotels';
-import { toHotelFromViewed } from '@/src/customer/features/hotels/utils/viewedHotelMapper';
+import HotelListCard from '@/src/customer/components/hotels/HotelListCard';
+import { useCustomerHotelsStore } from '@/src/customer/store/hotels.store';
+import { viewedHotelsStorage } from '@/src/customer/utils/viewedHotels';
 import {
   applyHotelListFilters,
+  HOTEL_AMENITY_FILTERS,
   HOTEL_FILTER_TYPES,
   SORT_OPTIONS,
   type SortOption,
-} from '@/src/customer/features/hotels/utils/hotelListFilters';
-import { FLASH_SALE_TABS, SECTION_TAG_MAP } from '@/src/customer/features/hotels/utils/hotelSections';
+} from '@/src/customer/utils/hotelListFilters';
+import { FLASH_SALE_TABS, SECTION_TAG_MAP } from '@/src/customer/utils/hotelSections';
+import {
+  CUSTOMER_PRIMARY_DARK as PRIMARY_DARK,
+  DEFAULT_MAX_PRICE,
+  DEFAULT_MIN_PRICE,
+} from '@/src/customer/constants/hotelFilters';
 
-const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
 const VIEWED_SECTION = 'Khách sạn đã xem';
-const DEFAULT_MIN_PRICE = '20000';
-const DEFAULT_MAX_PRICE = '10000000';
 
 export default function SeeAllScreen() {
   const goBack = useCustomerBack('/customer/dashboard');
@@ -41,12 +43,19 @@ export default function SeeAllScreen() {
   const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   const [activeTab, setActiveTab] = useState(params.tab || (isFlashSale ? 'Theo giờ' : undefined));
-  const [hotels, setHotels] = useState<Hotel[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    hotels,
+    hotelsLoading: loading,
+    clearHotels,
+    fetchHotels,
+    fetchViewedHotels,
+  } = useCustomerHotelsStore();
   const [selectedSort, setSelectedSort] = useState<SortOption>('relevant');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedHotelTypes, setSelectedHotelTypes] = useState<string[]>([]);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [minPrice, setMinPrice] = useState(DEFAULT_MIN_PRICE);
   const [maxPrice, setMaxPrice] = useState(DEFAULT_MAX_PRICE);
   // Applied filter values (chỉ gửi API sau khi bấm "Áp dụng")
@@ -72,49 +81,33 @@ export default function SeeAllScreen() {
   }, [isFlashSale]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
     if (isViewedSection) {
       viewedHotelsStorage.getAll()
-        .then(async (viewedHotels) => {
-          const hotelDetails = await Promise.all(
-            viewedHotels.map(async (hotel) => {
-              try {
-                const { data } = await hotelsApi.getById(hotel.id);
-                return data;
-              } catch {
-                return toHotelFromViewed(hotel);
-              }
-            }),
-          );
+        .then((viewedHotels) => fetchViewedHotels(viewedHotels));
 
-          if (!cancelled) {
-            setHotels(applyHotelListFilters(hotelDetails, {
-              maxPrice: appliedMaxPrice,
-              minPrice: appliedMinPrice,
-              selectedHotelTypes,
-              sort: selectedSort,
-            }));
-          }
-        })
-        .finally(() => { if (!cancelled) setLoading(false); });
-
-      return () => { cancelled = true; };
+      return () => clearHotels();
     }
 
     const tag = isFlashSale ? activeTab : SECTION_TAG_MAP[sectionTitle];
-    hotelsApi.getAll({
+    void fetchHotels({
       tag,
       sort: selectedSort,
       limit: 30,
       minPrice: appliedMinPrice,
       maxPrice: appliedMaxPrice,
-    })
-      .then(({ data }: any) => { if (!cancelled) setHotels(data); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [activeTab, selectedSort, sectionTitle, appliedMinPrice, appliedMaxPrice, isViewedSection, isFlashSale, selectedHotelTypes]);
+      roomAmenities: selectedAmenities.join(',') || undefined,
+    });
+
+    return () => clearHotels();
+  }, [activeTab, selectedSort, sectionTitle, appliedMinPrice, appliedMaxPrice, isViewedSection, isFlashSale, selectedAmenities, fetchHotels, fetchViewedHotels, clearHotels]);
+
+  const filteredHotels = useMemo(() => applyHotelListFilters(hotels, {
+    maxPrice: appliedMaxPrice,
+    minPrice: appliedMinPrice,
+    selectedAmenities,
+    selectedHotelTypes,
+    sort: selectedSort,
+  }), [appliedMaxPrice, appliedMinPrice, hotels, selectedAmenities, selectedHotelTypes, selectedSort]);
 
   const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -127,8 +120,15 @@ export default function SeeAllScreen() {
     setSelectedHotelTypes(prev => prev.includes(type) ? [] : [type]);
   };
 
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities(prev =>
+      prev.includes(amenity) ? prev.filter(item => item !== amenity) : [...prev, amenity],
+    );
+  };
+
   const selectedSortLabel = SORT_OPTIONS.find(option => option.id === selectedSort)?.label || 'Phù hợp nhất';
-  const activeFilterCount = selectedHotelTypes.length + (appliedMinPrice !== undefined || appliedMaxPrice !== undefined ? 1 : 0);
+  const activeFilterCount = selectedHotelTypes.length + selectedAmenities.length + (appliedMinPrice !== undefined || appliedMaxPrice !== undefined ? 1 : 0);
+  const visibleAmenities = showAllAmenities ? HOTEL_AMENITY_FILTERS : HOTEL_AMENITY_FILTERS.slice(0, 10);
 
   return (
     <View style={[styles.container, isWebLayout && styles.webContainer, { backgroundColor: currentTheme.background, paddingTop: isWebLayout ? 0 : insets.top }]}>
@@ -212,14 +212,14 @@ export default function SeeAllScreen() {
         {isWebLayout && (
           <>
             <View style={{ flex: 1 }} />
-            <Text style={styles.countText}>{loading ? '...' : `${hotels.length} khách sạn`}</Text>
+            <Text style={styles.countText}>{loading ? '...' : `${filteredHotels.length} khách sạn`}</Text>
           </>
         )}
       </View>
 
       {/* Hotel List */}
       <FlatList
-        data={loading ? Array(5).fill(null) : hotels}
+        data={loading ? Array(5).fill(null) : filteredHotels}
         keyExtractor={(item, i) => (item ? String(item.id) : `skeleton-${i}`)}
         contentContainerStyle={[styles.list, isWebLayout && styles.webList]}
         showsVerticalScrollIndicator={isWebLayout}
@@ -227,7 +227,7 @@ export default function SeeAllScreen() {
           loading ? (
             <View style={[styles.skeleton, { backgroundColor: currentTheme.card }]} />
           ) : (
-            <HotelListCard hotel={item} isFlashSale={isFlashSale} isWebLayout={isWebLayout} />
+            <HotelListCard hotel={item} isFlashSale={isFlashSale} />
           )
         }
         ListEmptyComponent={
@@ -269,7 +269,7 @@ export default function SeeAllScreen() {
               <X size={24} color={currentTheme.text} />
             </Pressable>
           </View>
-          <View style={{ padding: 16, flex: 1 }}>
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
             <Text style={[styles.filterSection, { color: currentTheme.text }]}>Loại khách sạn</Text>
             <View style={styles.chipRow}>
               {HOTEL_FILTER_TYPES.map(type => {
@@ -297,12 +297,31 @@ export default function SeeAllScreen() {
                 <TextInput style={[styles.priceField, { color: currentTheme.text }]} value={maxPrice} onChangeText={setMaxPrice} keyboardType="numeric" placeholderTextColor={currentTheme.iconInactive} />
               </View>
             </View>
-          </View>
+
+            <Text style={[styles.filterSection, { color: currentTheme.text }]}>Tiện ích phòng</Text>
+            <View style={styles.amenityList}>
+              {visibleAmenities.map((amenity) => {
+                const active = selectedAmenities.includes(amenity);
+                return (
+                  <Pressable key={amenity} style={styles.amenityRow} onPress={() => toggleAmenity(amenity)}>
+                    <View style={[styles.checkbox, active && styles.checkboxActive]}>
+                      {active && <Text style={styles.checkboxMark}>✓</Text>}
+                    </View>
+                    <Text style={[styles.amenityText, { color: currentTheme.text }]}>{amenity}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable style={styles.toggleAmenitiesBtn} onPress={() => setShowAllAmenities(value => !value)}>
+              <Text style={styles.toggleAmenitiesText}>{showAllAmenities ? '^ Thu gọn' : 'Xem tất cả'}</Text>
+            </Pressable>
+          </ScrollView>
           <View style={[styles.filterFooter, { borderTopColor: currentTheme.border, paddingBottom: insets.bottom + 16 }]}>
             <Pressable
               style={[styles.resetBtn, { borderColor: currentTheme.border }]}
               onPress={() => {
                 setSelectedHotelTypes([]);
+                setSelectedAmenities([]);
                 setMinPrice(DEFAULT_MIN_PRICE);
                 setMaxPrice(DEFAULT_MAX_PRICE);
                 setAppliedMinPrice(undefined);
@@ -329,287 +348,3 @@ export default function SeeAllScreen() {
     </View>
   );
 }
-
-function HotelListCard({ hotel, isFlashSale, isWebLayout }: { hotel: Hotel; isFlashSale: boolean; isWebLayout: boolean }) {
-  const router = useRouter();
-  const { currentTheme } = useThemeContext();
-  return (
-    <Pressable
-      style={[styles.hotelCard, isWebLayout && styles.webHotelCard, { backgroundColor: currentTheme.card, borderColor: 'rgba(133,194,164,0.28)' }]}
-      onPress={() => router.push({
-        pathname: '/customer/hotel-detail' as any,
-        params: {
-          id: String(hotel.id),
-          name: hotel.name,
-          rating: String(hotel.rating),
-          reviews: String(hotel.reviews),
-          location: hotel.location,
-          discount: hotel.discount,
-          price: hotel.price,
-          unit: hotel.unit,
-          oldPrice: hotel.oldPrice || '',
-          image: hotel.image,
-          badge: hotel.badge || '',
-        },
-      })}
-    >
-      <View style={[styles.hotelImageWrap, isWebLayout && styles.webHotelImageWrap]}>
-        <ImageWithFallback uri={hotel.image} style={styles.hotelImage} />
-        {isFlashSale && (
-          <View style={styles.flashBadge}>
-            <Zap size={10} color="#fff" fill="#fff" />
-            <Text style={styles.flashBadgeText}>Flash</Text>
-          </View>
-        )}
-        {!!hotel.badge && !isFlashSale && (
-          <View style={styles.hotBadge}>
-            <Text style={styles.hotBadgeText}>{hotel.badge}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.hotelInfo}>
-        <Text style={[styles.hotelName, { color: currentTheme.text }]} numberOfLines={2}>{hotel.name}</Text>
-        <View style={styles.hotelMeta}>
-          <Star size={12} color="#facc15" fill="#facc15" />
-          <Text style={[styles.hotelRating, { color: currentTheme.textSecondary }]}>{hotel.rating}</Text>
-          <Text style={styles.hotelReviews}>({hotel.reviews}) • {hotel.location}</Text>
-        </View>
-        <View style={styles.hotelTag}>
-          <Tag size={10} color="#599373" />
-          <Text style={styles.hotelTagText}>{hotel.discount}</Text>
-        </View>
-        <View style={{ flex: 1 }} />
-        <View style={styles.hotelPriceBlock}>
-          {!!hotel.oldPrice && (
-            <Text style={styles.oldPrice}>{hotel.oldPrice}</Text>
-          )}
-          <View style={styles.hotelPriceRow}>
-            <Text style={styles.hotelPrice}>{hotel.price}</Text>
-            <Text style={styles.hotelUnit}>{hotel.unit}</Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  webContainer: {
-    overflow: 'hidden',
-  },
-  gradientBg: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 200,
-    backgroundColor: 'rgba(133,194,164,0.3)',
-  },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  webHeader: {
-    width: '100%',
-    maxWidth: 1180,
-    alignSelf: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 18,
-    paddingBottom: 18,
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  title: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  // Countdown
-  countdownBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, paddingVertical: 8,
-    backgroundColor: '#fff8e1', marginHorizontal: 16, borderRadius: 12,
-    borderWidth: 1, borderColor: '#fde68a', marginBottom: 8,
-  },
-  webSection: {
-    width: '100%',
-    maxWidth: 1180,
-    alignSelf: 'center',
-    marginHorizontal: 0,
-    paddingHorizontal: 32,
-  },
-  countdownLabel: { fontSize: 13, fontWeight: '600', color: '#92400e', flex: 1 },
-  countdownTimer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  timeUnit: {
-    backgroundColor: '#111827', borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 4, minWidth: 32, alignItems: 'center',
-  },
-  timeNum: { color: '#fff', fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  timeSep: { color: '#111827', fontSize: 18, fontWeight: '800' },
-  // Tab bar
-  tabBar: {
-    flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8,
-  },
-  tabBtn: {
-    paddingHorizontal: 20, paddingVertical: 8, borderRadius: 99,
-    borderWidth: 1,
-  },
-  tabBtnActive: {
-    backgroundColor: PRIMARY, borderColor: PRIMARY,
-  },
-  tabText: { fontSize: 14, fontWeight: '600' },
-  tabTextActive: { color: '#fff' },
-  // Filter bar
-  filterBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 8,
-    marginHorizontal: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(133,194,164,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.72)',
-  },
-  webFilterBar: {
-    width: '100%',
-    maxWidth: 1180,
-    alignSelf: 'center',
-    marginHorizontal: 0,
-    paddingHorizontal: 32,
-  },
-  filterTitleWrap: {
-    minWidth: 150,
-  },
-  filterPanelTitle: { fontSize: 14, fontWeight: '800' },
-  filterPanelSubtitle: { fontSize: 11, color: PRIMARY_DARK, fontWeight: '600', marginTop: 2 },
-  filterChip: {
-    minWidth: 154,
-    minHeight: 50,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8,
-    borderWidth: 1.5,
-    borderColor: 'rgba(133,194,164,0.45)',
-    shadowColor: PRIMARY, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08,
-    shadowRadius: 8, elevation: 2,
-  },
-  mobileFilterChip: {
-    flex: 1,
-    minWidth: 0,
-  },
-  filterChipActive: { backgroundColor: 'rgba(133,194,164,0.18)' },
-  filterIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(133,194,164,0.18)',
-  },
-  filterTextWrap: { minWidth: 0, flex: 1 },
-  filterChipLabel: { fontSize: 11, fontWeight: '700', color: PRIMARY_DARK, marginBottom: 2 },
-  filterChipValue: { fontSize: 13, fontWeight: '800', maxWidth: 118 },
-  filterCountBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PRIMARY,
-  },
-  filterCountText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  countText: { fontSize: 13, color: PRIMARY_DARK, fontWeight: '700' },
-  // List
-  list: { padding: 16, paddingTop: 8, gap: 12, paddingBottom: 32 },
-  webList: {
-    width: '100%',
-    maxWidth: 1180,
-    alignSelf: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 16,
-    paddingBottom: 52,
-  },
-  skeleton: { height: 110, borderRadius: 16 },
-  emptyWrap: { paddingTop: 48, alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#9ca3af' },
-  // Hotel card
-  hotelCard: {
-    flexDirection: 'row', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06,
-    shadowRadius: 8, elevation: 2, borderWidth: 1,
-  },
-  webHotelCard: {
-    minHeight: 132,
-  },
-  hotelImageWrap: { width: 110, height: 110, position: 'relative' },
-  webHotelImageWrap: { width: 156, height: 132 },
-  hotelImage: { width: '100%', height: '100%' },
-  flashBadge: {
-    position: 'absolute', bottom: 6, left: 6,
-    backgroundColor: '#eab308', flexDirection: 'row', alignItems: 'center',
-    gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
-  },
-  flashBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  hotBadge: {
-    position: 'absolute', bottom: 6, left: 6,
-    backgroundColor: '#ff5a5f', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
-  },
-  hotBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  hotelInfo: { flex: 1, padding: 12, justifyContent: 'flex-start' },
-  hotelName: { fontSize: 14, fontWeight: '700', marginBottom: 4, lineHeight: 20 },
-  hotelMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  hotelRating: { fontSize: 12, fontWeight: '700' },
-  hotelReviews: { fontSize: 11, color: '#6b7280', flex: 1 },
-  hotelTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(133,194,164,0.18)', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(133,194,164,0.35)',
-    paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6,
-  },
-  hotelTagText: { fontSize: 10, fontWeight: '700', color: '#599373' },
-  hotelPriceBlock: {},
-  oldPrice: { fontSize: 11, color: '#9ca3af', textDecorationLine: 'line-through', marginBottom: 2 },
-  hotelPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  hotelPrice: { fontSize: 16, fontWeight: '700', color: PRIMARY_DARK },
-  hotelUnit: { fontSize: 11, color: '#6b7280' },
-  // Modals
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 16, paddingTop: 12,
-  },
-  sheetHandle: {
-    width: 40, height: 6, borderRadius: 3,
-    alignSelf: 'center', marginBottom: 16,
-  },
-  sheetTitle: { fontSize: 17, fontWeight: '700', marginBottom: 12 },
-  sheetRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f9fafb',
-  },
-  sheetRowText: { fontSize: 15 },
-  radioFilled: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: PRIMARY,
-    borderWidth: 5, borderColor: 'rgba(133,194,164,0.3)',
-  },
-  filterModal: { flex: 1 },
-  filterHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
-  },
-  filterTitle: { fontSize: 17, fontWeight: '700' },
-  filterSection: { fontSize: 15, fontWeight: '700', marginBottom: 12, marginTop: 8 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99,
-    borderWidth: 1,
-  },
-  chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  chipText: { fontSize: 13 },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  priceInput: { flex: 1, borderWidth: 1, borderRadius: 12, padding: 12 },
-  priceLabel: { fontSize: 11, color: '#9ca3af', marginBottom: 4 },
-  priceField: { fontSize: 15 },
-  filterFooter: {
-    flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1,
-  },
-  resetBtn: {
-    flex: 1, borderWidth: 1, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-  },
-  resetBtnText: { fontSize: 15, fontWeight: '600' },
-  applyBtn: { flex: 2, backgroundColor: PRIMARY, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  applyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-});

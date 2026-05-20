@@ -1,12 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import Header from '@/src/customer/features/home/components/Header';
-import CategoryNav from '@/src/customer/features/home/components/CategoryNav';
-import BookingGrid from '@/src/customer/features/booking/components/BookingGrid';
-import Banners from '@/src/customer/features/home/components/Banners';
-import HotelSection from '@/src/customer/features/hotels/components/HotelSection';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import Header from '@/src/customer/components/Header';
+import CategoryNav from '@/src/customer/components/CategoryNav';
+import BookingGrid from '@/src/customer/components/BookingGrid';
+import Banners from '@/src/customer/components/Banners';
+import HotelSection from '@/src/customer/components/HotelSection';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 export default function HomeScreen() {
   const router = useRouter();

@@ -2,8 +2,8 @@ import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useCustomerBack } from '@/src/customer/shared/navigation/useCustomerBack';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 
 const SECTIONS = [
   {

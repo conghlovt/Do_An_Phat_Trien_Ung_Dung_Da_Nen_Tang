@@ -39,6 +39,7 @@ export const hotelListQuerySchema = z.object({
   maxPrice: z.coerce.number().int().min(0).optional().transform((value) => value?.toString()),
   district: z.string().trim().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional().transform((value) => value?.toString()),
+  roomAmenities: z.string().trim().min(1).max(1000).optional(),
 }).refine(
   (query) => {
     if (!query.minPrice || !query.maxPrice) return true;

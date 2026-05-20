@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, ScrollView,
+  View, Text, Pressable, ScrollView,
   ActivityIndicator, Platform, useWindowDimensions,
 } from 'react-native';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useCustomerBack } from '@/src/customer/shared/navigation/useCustomerBack';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock } from 'lucide-react-native';
-import { hotelsApi, TimeSlot, BookingType } from '@/src/customer/features/hotels/api/hotels.api';
+import { hotelsApi, TimeSlot, BookingType } from '@/src/customer/api/hotels.api';
 import {
   HOUR_OPTIONS,
   MONTH_LABELS,
   WEEKDAYS,
-} from '@/src/customer/features/booking/components/date-picker/bookingDate.constants';
+} from '@/src/customer/components/date-picker/bookingDate.constants';
 import {
   addDays,
   clampDailyCheckoutDate,
@@ -28,15 +28,32 @@ import {
   getMaxDailyCheckoutDate,
   getMaxHourlyDuration,
   startOfDay,
-} from '@/src/customer/features/booking/components/date-picker/bookingDate.utils';
-import { BOOKING_TYPES, formatShortDate } from '@/src/customer/features/booking/utils/booking';
+} from '@/src/customer/components/date-picker/bookingDate.utils';
+import { BOOKING_TYPES, formatShortDate } from '@/src/customer/utils/booking';
+import {
+  bookingCalendarScreenStyles as styles,
+  PRIMARY,
+  PRIMARY_DARK,
+} from '@/src/customer/components/date-picker/bookingCalendarScreen.styles';
+import { getParamText } from '@/src/customer/navigation/routeParams';
 
-const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
-const PRIMARY_LIGHT = '#e8f6ed';
-const PRIMARY_SOFT = 'rgba(133,194,164,0.16)';
-const GRAY = '#6b7280';
-const LIGHT_GRAY = '#f3f4f6';
+function parseBookingPoint(value?: string, fallbackYear = new Date().getFullYear()) {
+  if (!value) return null;
+  const match = value.match(/^(\d{1,2}:\d{2}),\s*(\d{1,2})\/(\d{1,2})/);
+  if (!match) return null;
+
+  const [, time, dayText, monthText] = match;
+  const day = Number(dayText);
+  const month = Number(monthText);
+
+  if (!Number.isFinite(day) || !Number.isFinite(month)) return null;
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+
+  return {
+    time,
+    date: new Date(fallbackYear, month - 1, day),
+  };
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -50,21 +67,33 @@ export default function BookingCalendarScreen() {
   const params   = useLocalSearchParams<{
     hotelId: string;
     hotelName?: string;
+    hotelAddress?: string;
+    hotelImage?: string;
     bookingType: string;
+    checkIn?: string;
+    checkOut?: string;
+    hours?: string;
     returnTo: string;
   }>();
 
-  const hotelId = Number(params.hotelId) || 1;
+  const hotelId = getParamText(params.hotelId) || '1';
 
   // ── State ──────────────────────────────────────────────────────────────────
   const today = new Date();
-  const [activeTab, setActiveTab]           = useState<BookingType>((params.bookingType as BookingType) || 'Theo giờ');
-  const [calYear, setCalYear]               = useState(today.getFullYear());
-  const [calMonth, setCalMonth]             = useState(today.getMonth());
-  const [selectedDate, setSelectedDate]     = useState<Date>(today);
-  const [selectedDailyCheckoutDate, setSelectedDailyCheckoutDate] = useState<Date>(addDays(today, 1));
-  const [selectedStartTime, setSelectedStartTime] = useState(getDefaultCheckInTime((params.bookingType as BookingType) || 'Theo giờ', today));
-  const [selectedHours, setSelectedHours]   = useState(2);
+  const initialBookingType = (params.bookingType as BookingType) || 'Theo giờ';
+  const initialCheckIn = parseBookingPoint(params.checkIn, today.getFullYear());
+  const initialCheckOut = parseBookingPoint(params.checkOut, today.getFullYear());
+  const initialDate = initialCheckIn?.date || today;
+  const initialHours = Math.max(1, Number(params.hours) || 2);
+
+  const [activeTab, setActiveTab]           = useState<BookingType>(initialBookingType);
+  const [calYear, setCalYear]               = useState(initialDate.getFullYear());
+  const [calMonth, setCalMonth]             = useState(initialDate.getMonth());
+  const [selectedDate, setSelectedDate]     = useState<Date>(initialDate);
+  const [selectedDailyCheckoutDate, setSelectedDailyCheckoutDate] = useState<Date>(initialCheckOut?.date || addDays(initialDate, 1));
+  const [selectedStartTime, setSelectedStartTime] = useState(initialCheckIn?.time || getDefaultCheckInTime(initialBookingType, initialDate));
+  const [selectedHours, setSelectedHours]   = useState(initialHours);
+  const selectedStartTimeRef = useRef(selectedStartTime);
 
   const [timeSlots, setTimeSlots]           = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots]     = useState(false);
@@ -76,6 +105,10 @@ export default function BookingCalendarScreen() {
   const canApply = !loadingSlots && !!selectedSlot?.available && (
     activeTab !== 'Theo ngày' || dailyDurationDays >= 1
   );
+
+  useEffect(() => {
+    selectedStartTimeRef.current = selectedStartTime;
+  }, [selectedStartTime]);
 
   // ── Fetch time slots ───────────────────────────────────────────────────────
   const fetchSlots = useCallback(async () => {
@@ -99,11 +132,13 @@ export default function BookingCalendarScreen() {
 
       setTimeSlots(slots);
 
-      // Auto-select mốc đầu hợp lệ
       const firstAvail = slots.find(s => s.available);
-      if (firstAvail) {
-        setSelectedStartTime(firstAvail.time);
-        setSlotApiMaxHours(firstAvail.maxHours ?? undefined);
+      const currentAvail = slots.find(s => s.time === selectedStartTimeRef.current && s.available);
+      const nextSlot = currentAvail || firstAvail;
+
+      if (nextSlot) {
+        setSelectedStartTime(nextSlot.time);
+        setSlotApiMaxHours(nextSlot.maxHours ?? undefined);
       } else {
         setSelectedStartTime('');
         setSlotApiMaxHours(undefined);
@@ -118,9 +153,12 @@ export default function BookingCalendarScreen() {
       setTimeSlots(fallbackSlots);
 
       const firstAvail = fallbackSlots.find(s => s.available);
-      if (firstAvail) {
-        setSelectedStartTime(firstAvail.time);
-        setSlotApiMaxHours(firstAvail.maxHours);
+      const currentAvail = fallbackSlots.find(s => s.time === selectedStartTimeRef.current && s.available);
+      const nextSlot = currentAvail || firstAvail;
+
+      if (nextSlot) {
+        setSelectedStartTime(nextSlot.time);
+        setSlotApiMaxHours(nextSlot.maxHours);
       } else {
         setSelectedStartTime('');
         setSlotApiMaxHours(undefined);
@@ -251,7 +289,12 @@ export default function BookingCalendarScreen() {
     const returnTo = params.returnTo === 'room-list' ? 'room-list' : 'hotel-detail';
     const returnPath = returnTo === 'room-list' ? '/customer/room-list' : '/customer/hotel-detail';
     const returnParams = returnTo === 'room-list'
-      ? { hotelId: String(hotelId), hotelName: params.hotelName || 'Khách sạn' }
+      ? {
+          hotelId: String(hotelId),
+          hotelName: params.hotelName || 'Khách sạn',
+          ...(params.hotelAddress ? { hotelAddress: params.hotelAddress } : {}),
+          ...(params.hotelImage ? { hotelImage: params.hotelImage } : {}),
+        }
       : {
           id: String(hotelId),
           ...(params.hotelName ? { name: params.hotelName } : {}),
@@ -562,205 +605,3 @@ export default function BookingCalendarScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  webShell: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
-  },
-  webHeader: {
-    width: 950,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: '#111827' },
-
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  webTabBar: {
-    width: 950,
-    justifyContent: 'center',
-    gap: 34,
-  },
-  tabItem: {
-    flex: 1, paddingVertical: 14, alignItems: 'center',
-    borderBottomWidth: 3, borderBottomColor: 'transparent',
-  },
-  webTabItem: {
-    flex: 0,
-    minWidth: 100,
-  },
-  tabItemActive: { borderBottomColor: PRIMARY },
-  tabText: { fontSize: 14, color: GRAY, fontWeight: '600' },
-  tabTextActive: { color: PRIMARY_DARK, fontWeight: '700' },
-
-  webScroll: {
-    width: 950,
-    maxHeight: 560,
-    backgroundColor: '#fff',
-  },
-  webScrollContent: {
-    paddingHorizontal: 34,
-    paddingVertical: 22,
-  },
-  webPickerGrid: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-
-  // Calendar
-  calendarCard: { padding: 16, marginVertical: 8 },
-  webCalendarCard: {
-    width: 490,
-    marginVertical: 0,
-    padding: 0,
-    paddingRight: 34,
-    borderRightWidth: 1,
-    borderRightColor: '#eeeeee',
-  },
-  webOptionsColumn: {
-    flex: 1,
-    minWidth: 0,
-    paddingLeft: 34,
-  },
-  monthNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20,
-  },
-  navBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: PRIMARY_LIGHT },
-  monthLabel: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  weekRow: { flexDirection: 'row', marginBottom: 12 },
-  dayLabel: { flex: 1, textAlign: 'center', fontSize: 14, color: GRAY, fontWeight: '800', paddingVertical: 10 },
-  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: {
-    width: `${100 / 7}%`, height: 58, alignItems: 'center', justifyContent: 'center',
-    borderRadius: 14,
-  },
-  dayCellInRange: { backgroundColor: 'rgba(133,194,164,0.1)' },
-  dayCellSelected: { backgroundColor: PRIMARY_SOFT, borderWidth: 1, borderColor: 'rgba(133,194,164,0.42)' },
-  dayCellToday: { borderWidth: 2, borderColor: PRIMARY },
-  dayCellDisabled: { opacity: 0.42 },
-  dayText: { fontSize: 18, color: '#111827', fontWeight: '600' },
-  dayTextInRange: { color: PRIMARY_DARK, fontWeight: '700' },
-  dayTextSelected: { color: PRIMARY_DARK, fontWeight: '800' },
-  dayTextToday: { color: PRIMARY_DARK, fontWeight: '800' },
-  dayTextDisabled: { color: GRAY },
-
-  // Sections
-  section: { paddingHorizontal: 16, paddingBottom: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  webSection: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 28,
-    borderTopWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eeeeee',
-    marginBottom: 28,
-  },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  optionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
-  optionIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(133,194,164,0.12)',
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  webSectionTitle: { fontSize: 26, fontWeight: '800' },
-  maxHoursHint: { fontSize: 12, color: PRIMARY_DARK, fontWeight: '700', backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  slotsRow: { gap: 10, paddingRight: 40, minWidth: '100%' },
-  slotsScroller: { width: '100%', maxWidth: '100%', minWidth: 0 },
-
-  slotChip: {
-    minWidth: 124,
-    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 18,
-    alignItems: 'center',
-    backgroundColor: LIGHT_GRAY, borderWidth: 2, borderColor: LIGHT_GRAY,
-  },
-  slotChipSelected: { backgroundColor: PRIMARY_SOFT, borderColor: PRIMARY },
-  slotChipDisabled: { opacity: 0.4, backgroundColor: LIGHT_GRAY },
-  slotText: { fontSize: 18, fontWeight: '700', color: '#374151' },
-  slotTextSelected: { color: PRIMARY_DARK, fontWeight: '800' },
-  slotTextDisabled: { color: GRAY },
-  noSlotsText: { fontSize: 13, color: GRAY, paddingVertical: 10 },
-
-  checkoutPreview: {
-    marginTop: 14, backgroundColor: PRIMARY_LIGHT, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(133,194,164,0.45)',
-  },
-  checkoutPreviewText: { fontSize: 14, color: '#1f2937', fontWeight: '500' },
-
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  loadingText: { fontSize: 13, color: GRAY, fontWeight: '500' },
-
-  infoBox: {
-    marginHorizontal: 16, marginBottom: 16, backgroundColor: PRIMARY_LIGHT,
-    borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(133,194,164,0.45)',
-  },
-  infoText: { fontSize: 14, color: '#0d5e3d', lineHeight: 20, fontWeight: '500' },
-  checkoutCard: {
-    paddingTop: 0,
-    paddingBottom: 28,
-    borderTopWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eeeeee',
-  },
-  checkoutCardText: {
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: '800',
-    paddingLeft: 58,
-  },
-  checkoutMetaText: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 6,
-    paddingLeft: 58,
-  },
-
-  // Bottom Bar
-  bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0',
-    paddingHorizontal: 16, paddingTop: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 12,
-  },
-  webBottomBar: {
-    width: 950,
-    position: 'relative',
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 34,
-    paddingTop: 18,
-    paddingBottom: 22,
-  },
-  bottomSummary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 14, marginBottom: 12,
-  },
-  summaryItem: { alignItems: 'center' },
-  summaryLabel: { fontSize: 12, color: GRAY, marginBottom: 3, fontWeight: '500' },
-  summaryValue: { fontSize: 14, fontWeight: '700', color: PRIMARY },
-  summarySubValue: { fontSize: 11, fontWeight: '600', color: GRAY, marginTop: 2 },
-  summaryDash: { fontSize: 18, color: GRAY, marginBottom: 2 },
-  applyBtn: {
-    backgroundColor: PRIMARY, borderRadius: 16, paddingVertical: 16, alignItems: 'center',
-    shadowColor: PRIMARY, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 6,
-  },
-  applyBtnDisabled: {
-    opacity: 0.5,
-  },
-  applyBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});

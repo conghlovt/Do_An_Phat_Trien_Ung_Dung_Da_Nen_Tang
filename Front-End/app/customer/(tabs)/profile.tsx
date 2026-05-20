@@ -4,36 +4,41 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   Platform,
   useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import SettingsItem from '@/src/customer/features/profile/components/SettingsItem';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useAuth } from '@/src/customer/features/auth/hooks/useAuth';
+import SettingsItem from '@/src/customer/components/SettingsItem';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { useAuth } from '@/src/customer/hooks/useAuth';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDarkMode, setIsDarkMode, currentTheme } = useThemeContext();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { width } = useWindowDimensions();
   const appVersion = Constants.expoConfig?.version || '1.0.0';
   const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   const getInitials = () => {
-    if (!user) return '?';
+    if (!user) return 'TK';
     const name = user.username || user.email || '';
     const parts = name.split(/[\s@]/);
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
 
-  const displayName = user?.username || user?.email?.split('@')[0] || 'Khách';
+  const displayName = user?.username || user?.email?.split('@')[0] || (isAuthenticated ? 'Khách hàng' : 'Tài khoản khách');
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login' as any);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -55,49 +60,36 @@ export default function ProfileScreen() {
         <View style={isWebLayout && styles.webContent}>
         {/* Header: avatar */}
         <View style={styles.header}>
-          {isAuthenticated && user ? (
-            <>
-              <View style={[styles.avatarContainer, styles.avatarFilled]}>
-                <Text style={styles.avatarInitials}>{getInitials()}</Text>
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.headerText, { color: currentTheme.text }]}>
-                  {displayName}
-                </Text>
-                {user.email && user.username && (
-                  <Text style={[styles.emailText, { color: currentTheme.textSecondary }]}>
-                    {user.email}
-                  </Text>
-                )}
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.avatarContainer}>
-                <Ionicons name="person" size={40} color="#D1D1D1" />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.headerText, { color: currentTheme.text }]}>
-                  Khách
-                </Text>
-                <View style={styles.authButtons}>
-                  <TouchableOpacity
-                    style={[styles.loginBtn, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}
-                    onPress={() => router.push('/login' as any)}
-                  >
-                    <Text style={[styles.loginBtnText, { color: currentTheme.text }]}>Đăng nhập</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.registerBtnInline}
-                    onPress={() => router.push('/login/register' as any)}
-                  >
-                    <Text style={styles.registerBtnInlineText}>Đăng ký</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </>
-          )}
+          <View style={[styles.avatarContainer, styles.avatarFilled]}>
+            <Text style={styles.avatarInitials}>{getInitials()}</Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={[styles.headerText, { color: currentTheme.text }]}>
+              {displayName}
+            </Text>
+            {user?.email && (
+              <Text style={[styles.emailText, { color: currentTheme.textSecondary }]}>
+                {user.email}
+              </Text>
+            )}
+            {!isAuthenticated && (
+              <Text style={[styles.emailText, { color: currentTheme.textSecondary }]}>
+                Đăng nhập để lưu đặt phòng và nhận ưu đãi riêng.
+              </Text>
+            )}
+          </View>
         </View>
+
+        {!isAuthenticated && (
+          <View style={styles.authActions}>
+            <Pressable style={styles.loginBtn} onPress={() => router.push('/login' as any)}>
+              <Text style={styles.loginBtnText}>Đăng nhập</Text>
+            </Pressable>
+            <Pressable style={styles.registerBtn} onPress={() => router.push('/login/register' as any)}>
+              <Text style={styles.registerBtnText}>Đăng ký</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Phần Cài đặt */}
         <View style={styles.section}>
@@ -121,7 +113,6 @@ export default function ProfileScreen() {
               icon={<Feather name="settings" size={20} color="#85C2A4" />}
               title="Giao diện Sáng/Tối"
               hasSwitch
-              isLast={!isAuthenticated}
               currentTheme={currentTheme}
               isDarkMode={isDarkMode}
               setIsDarkMode={setIsDarkMode}
@@ -131,7 +122,7 @@ export default function ProfileScreen() {
                 icon={<Feather name="log-out" size={20} color="#e05252" />}
                 title="Đăng xuất"
                 isLast
-                onPress={logout}
+                onPress={handleLogout}
                 currentTheme={currentTheme}
                 titleColor="#e05252"
               />
@@ -241,31 +232,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  authButtons: {
+  authActions: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   loginBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+    flex: 1,
+    borderRadius: 14,
     borderWidth: 1,
+    borderColor: '#85c2a4',
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(133,194,164,0.1)',
   },
   loginBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
+    color: '#599373',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  registerBtnInline: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+  registerBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
     backgroundColor: '#85c2a4',
   },
-  registerBtnInlineText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fff',
+  registerBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   section: {
     paddingHorizontal: 20,

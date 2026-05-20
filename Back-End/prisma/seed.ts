@@ -60,6 +60,105 @@ async function main() {
 
     console.log('✔ Đã seed cơ sở lưu trú và phòng');
 
+      if (customer) {
+    const customerMessages = [
+      {
+        code: 'booking-confirmed-sg',
+        hotelName: 'Sài Gòn Hotel',
+        preview: 'Đơn đặt phòng của bạn đã được xác nhận. Vui lòng kiểm tra thời gian nhận phòng.',
+        time: '5 phút trước',
+        isRead: false,
+        sortOrder: 0,
+      },
+      {
+        code: 'upgrade-offer-hanoi',
+        hotelName: 'Hanoi Boutique Hotel',
+        preview: 'Khách sạn đã gửi ưu đãi nâng hạng phòng cho lượt đặt tiếp theo.',
+        time: '22 phút trước',
+        isRead: false,
+        sortOrder: 1,
+      },
+      {
+        code: 'thank-you-green',
+        hotelName: 'Green River Hotel',
+        preview: 'Cảm ơn bạn đã sử dụng StayHub. Chúc bạn có trải nghiệm tốt.',
+        time: 'Hôm qua',
+        isRead: true,
+        sortOrder: 2,
+      },
+    ];
+
+    for (const message of customerMessages) {
+      await prisma.customerMessage.upsert({
+        where: { code: message.code },
+        update: {
+          userId: customer.id,
+          hotelName: message.hotelName,
+          preview: message.preview,
+          time: message.time,
+          isRead: message.isRead,
+          sortOrder: message.sortOrder,
+        },
+        create: {
+          ...message,
+          userId: customer.id,
+        },
+      });
+    }
+
+    const customerNotifications = [
+      {
+        code: 'booking-confirmed',
+        type: 'booking',
+        title: 'Xác nhận đặt phòng',
+        description: 'Đặt phòng của bạn tại Sài Gòn Hotel đã được xác nhận',
+        isRead: false,
+        time: '2 phút trước',
+        sortOrder: 0,
+      },
+      {
+        code: 'special-offer',
+        type: 'offers',
+        title: 'Ưu đãi đặc biệt',
+        description: 'Giảm 20% cho lần đặt phòng tiếp theo',
+        isRead: false,
+        time: '15 phút trước',
+        sortOrder: 1,
+      },
+      {
+        code: 'checkin-reminder',
+        type: 'booking',
+        title: 'Nhắc nhở check-in',
+        description: 'Bạn sắp phải check-in tại khách sạn',
+        isRead: true,
+        time: 'Hôm qua',
+        sortOrder: 2,
+      },
+    ];
+
+    for (const notification of customerNotifications) {
+      await prisma.customerNotification.upsert({
+        where: { code: notification.code },
+        update: {
+          userId: customer.id,
+          type: notification.type as any,
+          title: notification.title,
+          description: notification.description,
+          time: notification.time,
+          isRead: notification.isRead,
+          sortOrder: notification.sortOrder,
+        },
+        create: {
+          ...notification,
+          userId: customer.id,
+          type: notification.type as any,
+        },
+      });
+    }
+
+    console.log('✔ Đã seed tin nhắn và thông báo customer');
+  }
+
     // 3. Seed Bookings
     if (customer && property.rooms[0]) {
       const booking = await prisma.booking.create({
@@ -123,29 +222,32 @@ async function main() {
   // 7. Seed Amenities
   const amenityData = [
     // General
-    { name: 'WiFi miễn phí', slug: 'wifi', icon: '📶', category: 'general' },
-    { name: 'Bãi đỗ xe', slug: 'parking', icon: '🅿️', category: 'general' },
+    { name: 'Wi-Fi miễn phí', slug: 'wifi', icon: '📶', category: 'general' },
+    { name: 'Bãi đỗ xe ô tô', slug: 'parking', icon: '🅿️', category: 'general' },
     { name: 'Thang máy', slug: 'elevator', icon: '🛗', category: 'general' },
-    { name: 'Lễ tân 24/7', slug: 'reception-24h', icon: '🏪', category: 'general' },
+    { name: 'Lễ tân 24/24', slug: 'reception-24h', icon: '🏪', category: 'general' },
     { name: 'Nhận phòng sớm', slug: 'early-checkin', icon: '⏰', category: 'general' },
     { name: 'Trả phòng muộn', slug: 'late-checkout', icon: '🕐', category: 'general' },
     { name: 'Cho phép thú cưng', slug: 'pet-friendly', icon: '🐾', category: 'general' },
     { name: 'Không hút thuốc', slug: 'no-smoking', icon: '🚭', category: 'general' },
+
     // Room
-    { name: 'Điều hòa', slug: 'air-conditioning', icon: '❄️', category: 'room' },
+    { name: 'Điều hoà', slug: 'air-conditioning', icon: '❄️', category: 'room' },
     { name: 'Tivi', slug: 'tv', icon: '📺', category: 'room' },
-    { name: 'Tủ lạnh mini', slug: 'mini-fridge', icon: '🧊', category: 'room' },
-    { name: 'Két an toàn', slug: 'safe-box', icon: '🔐', category: 'room' },
+    { name: 'Tủ lạnh', slug: 'mini-fridge', icon: '🧊', category: 'room' },
+    { name: 'Két sắt', slug: 'safe-box', icon: '🔐', category: 'room' },
     { name: 'Bàn làm việc', slug: 'desk', icon: '🖥️', category: 'room' },
     { name: 'Ấm đun nước', slug: 'kettle', icon: '☕', category: 'room' },
     { name: 'Máy sấy tóc', slug: 'hair-dryer', icon: '💇', category: 'room' },
     { name: 'Dép đi trong phòng', slug: 'slippers', icon: '🩴', category: 'room' },
+
     // Bathroom
     { name: 'Vòi sen', slug: 'shower', icon: '🚿', category: 'bathroom' },
     { name: 'Bồn tắm', slug: 'bathtub', icon: '🛁', category: 'bathroom' },
     { name: 'Đồ vệ sinh cá nhân', slug: 'toiletries', icon: '🧴', category: 'bathroom' },
     { name: 'Khăn tắm', slug: 'towels', icon: '🧹', category: 'bathroom' },
     { name: 'Áo choàng tắm', slug: 'bathrobe', icon: '👘', category: 'bathroom' },
+
     // Entertainment
     { name: 'Hồ bơi', slug: 'pool', icon: '🏊', category: 'entertainment' },
     { name: 'Phòng gym', slug: 'gym', icon: '🏋️', category: 'entertainment' },
@@ -153,12 +255,14 @@ async function main() {
     { name: 'Karaoke', slug: 'karaoke', icon: '🎤', category: 'entertainment' },
     { name: 'Khu vui chơi trẻ em', slug: 'kids-play', icon: '🧒', category: 'entertainment' },
     { name: 'Sân vườn', slug: 'garden', icon: '🌳', category: 'entertainment' },
+
     // Safety
     { name: 'Camera an ninh', slug: 'cctv', icon: '📹', category: 'safety' },
     { name: 'Bảo vệ 24/7', slug: 'security-guard', icon: '👮', category: 'safety' },
     { name: 'Bình chữa cháy', slug: 'fire-extinguisher', icon: '🧯', category: 'safety' },
     { name: 'Lối thoát hiểm', slug: 'emergency-exit', icon: '🚪', category: 'safety' },
     { name: 'Khóa thẻ từ', slug: 'keycard', icon: '🔑', category: 'safety' },
+
     // Service
     { name: 'Bữa sáng', slug: 'breakfast', icon: '🍳', category: 'service' },
     { name: 'Nhà hàng', slug: 'restaurant', icon: '🍽️', category: 'service' },
@@ -168,7 +272,7 @@ async function main() {
     { name: 'Đưa đón sân bay', slug: 'airport-shuttle', icon: '🚐', category: 'service' },
     { name: 'Cho thuê xe', slug: 'car-rental', icon: '🚗', category: 'service' },
   ];
-
+  
   for (const amenity of amenityData) {
     await prisma.amenity.upsert({
       where: { slug: amenity.slug },
@@ -521,14 +625,588 @@ const allHotelCards: HotelCardSeed[] = [
   ...newHotels,
 ];
 
+type PropertyTypeSeed = 'hotel' | 'homestay' | 'resort' | 'motel' | 'apartment';
+type AmenityCategorySeed = 'general' | 'room' | 'bathroom' | 'entertainment' | 'safety' | 'service';
+
+type AmenitySeed = {
+  name: string;
+  icon: string;
+  category: AmenityCategorySeed;
+};
+
+type RoomPlanSeed = {
+  name: string;
+  slug: string;
+  description: string;
+  maxGuests: number;
+  bedType: string;
+  roomSizeSqm: number;
+  totalUnits: number;
+  priceMultiplier: number;
+  amenities: string[];
+};
+
+const hotelAmenitySeeds: AmenitySeed[] = [
+  { name: 'Wi-Fi miễn phí', icon: 'wifi', category: 'general' },
+  { name: 'Ghế tình yêu', icon: 'heart', category: 'room' },
+  { name: 'Lễ tân 24/24', icon: 'concierge-bell', category: 'service' },
+  { name: 'Thang máy', icon: 'building-2', category: 'general' },
+  { name: 'Dịch vụ dọn phòng', icon: 'sparkles', category: 'service' },
+  { name: 'Tiện nghi là/ủi', icon: 'shirt', category: 'service' },
+  { name: 'Dịch vụ lưu trữ/bảo quản hành lý', icon: 'briefcase', category: 'service' },
+  { name: 'Bồn tắm', icon: 'bath', category: 'bathroom' },
+  { name: 'Smart TV', icon: 'tv', category: 'entertainment' },
+  { name: 'Điều hoà', icon: 'wind', category: 'room' },
+  { name: 'Khu vực có thể hút thuốc', icon: 'cigarette', category: 'general' },
+  { name: 'Đưa đón sân bay', icon: 'plane', category: 'service' },
+  { name: 'Bãi đỗ xe ô tô', icon: 'car', category: 'general' },
+  { name: 'Quán cafe', icon: 'coffee', category: 'service' },
+  { name: 'Nhà hàng', icon: 'utensils', category: 'service' },
+  { name: 'Đồ dùng làm bếp', icon: 'cooking-pot', category: 'room' },
+  { name: 'Máy sấy tóc', icon: 'waves', category: 'bathroom' },
+  { name: 'Két sắt', icon: 'shield-check', category: 'safety' },
+  { name: 'Bể bơi', icon: 'waves', category: 'general' },
+  { name: 'Tủ lạnh', icon: 'refrigerator', category: 'room' },
+];
+
+const roomPlansByPropertyType: Record<PropertyTypeSeed, RoomPlanSeed[]> = {
+  hotel: [
+    {
+      name: 'Phòng Standard',
+      slug: 'phong-standard',
+      description: 'Phòng tiêu chuẩn sạch sẽ, đầy đủ tiện nghi cho kỳ nghỉ ngắn.',
+      maxGuests: 2,
+      bedType: '1 giường Queen',
+      roomSizeSqm: 24,
+      totalUnits: 6,
+      priceMultiplier: 1,
+      amenities: ['Wi-Fi miễn phí', 'Smart TV', 'Điều hoà', 'Máy sấy tóc', 'Tủ lạnh'],
+    },
+    {
+      name: 'Phòng Deluxe',
+      slug: 'phong-deluxe',
+      description: 'Không gian rộng hơn, phù hợp cặp đôi hoặc khách công tác.',
+      maxGuests: 2,
+      bedType: '1 giường King',
+      roomSizeSqm: 32,
+      totalUnits: 5,
+      priceMultiplier: 1.35,
+      amenities: ['Wi-Fi miễn phí', 'Bồn tắm', 'Smart TV', 'Điều hoà', 'Két sắt'],
+    },
+    {
+      name: 'Suite gia đình',
+      slug: 'suite-gia-dinh',
+      description: 'Suite rộng rãi có khu tiếp khách và nhiều tiện ích gia đình.',
+      maxGuests: 4,
+      bedType: '2 giường Queen',
+      roomSizeSqm: 48,
+      totalUnits: 3,
+      priceMultiplier: 1.8,
+      amenities: ['Wi-Fi miễn phí', 'Bồn tắm', 'Smart TV', 'Đồ dùng làm bếp', 'Tủ lạnh'],
+    },
+  ],
+  homestay: [
+    {
+      name: 'Phòng Couple',
+      slug: 'phong-couple',
+      description: 'Phòng ấm cúng cho hai người, thiết kế gần gũi và riêng tư.',
+      maxGuests: 2,
+      bedType: '1 giường Queen',
+      roomSizeSqm: 22,
+      totalUnits: 4,
+      priceMultiplier: 0.95,
+      amenities: ['Wi-Fi miễn phí', 'Điều hoà', 'Smart TV', 'Máy sấy tóc'],
+    },
+    {
+      name: 'Phòng Garden',
+      slug: 'phong-garden',
+      description: 'Phòng có ánh sáng tự nhiên, phù hợp nghỉ dưỡng cuối tuần.',
+      maxGuests: 3,
+      bedType: '1 giường Queen + 1 sofa',
+      roomSizeSqm: 30,
+      totalUnits: 4,
+      priceMultiplier: 1.2,
+      amenities: ['Wi-Fi miễn phí', 'Tủ lạnh', 'Đồ dùng làm bếp', 'Khu vực có thể hút thuốc'],
+    },
+    {
+      name: 'Phòng Family',
+      slug: 'phong-family',
+      description: 'Phòng gia đình có khu sinh hoạt nhỏ và tiện nghi bếp cơ bản.',
+      maxGuests: 5,
+      bedType: '2 giường Queen',
+      roomSizeSqm: 42,
+      totalUnits: 2,
+      priceMultiplier: 1.55,
+      amenities: ['Wi-Fi miễn phí', 'Đồ dùng làm bếp', 'Tủ lạnh', 'Tiện nghi là/ủi'],
+    },
+  ],
+  resort: [
+    {
+      name: 'Garden Deluxe',
+      slug: 'garden-deluxe',
+      description: 'Phòng hướng vườn, phù hợp nghỉ dưỡng nhẹ nhàng.',
+      maxGuests: 2,
+      bedType: '1 giường King',
+      roomSizeSqm: 36,
+      totalUnits: 6,
+      priceMultiplier: 1.25,
+      amenities: ['Wi-Fi miễn phí', 'Bồn tắm', 'Smart TV', 'Điều hoà', 'Máy sấy tóc'],
+    },
+    {
+      name: 'Ocean Suite',
+      slug: 'ocean-suite',
+      description: 'Suite cao cấp với không gian rộng và tiện nghi thư giãn.',
+      maxGuests: 3,
+      bedType: '1 giường King + 1 sofa',
+      roomSizeSqm: 54,
+      totalUnits: 4,
+      priceMultiplier: 1.85,
+      amenities: ['Wi-Fi miễn phí', 'Bồn tắm', 'Smart TV', 'Két sắt', 'Tủ lạnh'],
+    },
+    {
+      name: 'Family Villa',
+      slug: 'family-villa',
+      description: 'Villa riêng cho gia đình hoặc nhóm bạn.',
+      maxGuests: 6,
+      bedType: '2 giường King',
+      roomSizeSqm: 76,
+      totalUnits: 2,
+      priceMultiplier: 2.4,
+      amenities: ['Wi-Fi miễn phí', 'Bồn tắm', 'Đồ dùng làm bếp', 'Tủ lạnh', 'Két sắt'],
+    },
+  ],
+  motel: [
+    {
+      name: 'Phòng Tiêu chuẩn',
+      slug: 'phong-tieu-chuan',
+      description: 'Phòng nghỉ cơ bản, sạch sẽ, tối ưu chi phí.',
+      maxGuests: 2,
+      bedType: '1 giường Queen',
+      roomSizeSqm: 20,
+      totalUnits: 8,
+      priceMultiplier: 0.85,
+      amenities: ['Wi-Fi miễn phí', 'Điều hoà', 'Smart TV'],
+    },
+    {
+      name: 'Phòng Superior',
+      slug: 'phong-superior',
+      description: 'Phòng rộng hơn với tiện ích bổ sung cho khách lưu trú ngắn.',
+      maxGuests: 2,
+      bedType: '1 giường King',
+      roomSizeSqm: 26,
+      totalUnits: 5,
+      priceMultiplier: 1.05,
+      amenities: ['Wi-Fi miễn phí', 'Smart TV', 'Điều hoà', 'Ghế tình yêu'],
+    },
+    {
+      name: 'Phòng Twin',
+      slug: 'phong-twin',
+      description: 'Phòng hai giường đơn phù hợp khách đi cùng bạn bè.',
+      maxGuests: 2,
+      bedType: '2 giường đơn',
+      roomSizeSqm: 28,
+      totalUnits: 3,
+      priceMultiplier: 1.15,
+      amenities: ['Wi-Fi miễn phí', 'Smart TV', 'Điều hoà', 'Máy sấy tóc'],
+    },
+  ],
+  apartment: [
+    {
+      name: 'Studio Apartment',
+      slug: 'studio-apartment',
+      description: 'Căn hộ studio tiện nghi với bếp nhỏ và khu làm việc.',
+      maxGuests: 2,
+      bedType: '1 giường Queen',
+      roomSizeSqm: 34,
+      totalUnits: 5,
+      priceMultiplier: 1.15,
+      amenities: ['Wi-Fi miễn phí', 'Đồ dùng làm bếp', 'Tủ lạnh', 'Tiện nghi là/ủi'],
+    },
+    {
+      name: 'One-bedroom Apartment',
+      slug: 'one-bedroom-apartment',
+      description: 'Căn hộ một phòng ngủ riêng biệt, phù hợp lưu trú dài ngày.',
+      maxGuests: 3,
+      bedType: '1 giường Queen + 1 sofa',
+      roomSizeSqm: 46,
+      totalUnits: 4,
+      priceMultiplier: 1.45,
+      amenities: ['Wi-Fi miễn phí', 'Smart TV', 'Đồ dùng làm bếp', 'Tủ lạnh', 'Máy sấy tóc'],
+    },
+    {
+      name: 'Two-bedroom Apartment',
+      slug: 'two-bedroom-apartment',
+      description: 'Căn hộ hai phòng ngủ dành cho gia đình hoặc nhóm nhỏ.',
+      maxGuests: 5,
+      bedType: '2 giường Queen',
+      roomSizeSqm: 68,
+      totalUnits: 2,
+      priceMultiplier: 1.9,
+      amenities: ['Wi-Fi miễn phí', 'Smart TV', 'Đồ dùng làm bếp', 'Tủ lạnh', 'Két sắt'],
+    },
+  ],
+};
+
+const roundToTenThousand = (value: number) => Math.round(value / 10000) * 10000;
+
+const uniqueNames = (items: string[]) => Array.from(new Set(items.filter(Boolean)));
+
+const ROOM_INVENTORY_DAYS = 45;
+
+const getPropertyType = (hotel: HotelCardSeed, index: number): PropertyTypeSeed => {
+  const searchable = `${hotel.name} ${hotel.city ?? ''} ${hotel.area ?? ''}`.toLowerCase();
+  if (/(resort|phú quốc|phu quoc|nha trang|hạ long|ha long|vũng tàu|vung tau|phan thiết|phan thiet)/i.test(searchable)) {
+    return 'resort';
+  }
+
+  const propertyTypes: PropertyTypeSeed[] = ['hotel', 'homestay', 'resort', 'motel', 'apartment'];
+  return propertyTypes[index % propertyTypes.length];
+};
+
+const buildHotelAmenityNames = (hotel: HotelCardSeed, index: number, propertyType: PropertyTypeSeed) => {
+  const amenities = ['Wi-Fi miễn phí', 'Lễ tân 24/24', 'Dịch vụ dọn phòng'];
+
+  if (index % 2 === 0) amenities.push('Thang máy', 'Bãi đỗ xe ô tô');
+  if (index % 3 === 0) amenities.push('Nhà hàng', 'Quán cafe');
+  if (index % 4 === 0) amenities.push('Đưa đón sân bay', 'Dịch vụ lưu trữ/bảo quản hành lý');
+  if (hotel.tags.includes('Theo giờ')) amenities.push('Ghế tình yêu', 'Smart TV', 'Điều hoà');
+  if (hotel.tags.includes('Nổi bật') || hotel.tags.includes('Ưu đãi')) amenities.push('Bể bơi', 'Két sắt');
+
+  const amenitiesByType: Record<PropertyTypeSeed, string[]> = {
+    hotel: ['Thang máy', 'Nhà hàng', 'Bãi đỗ xe ô tô'],
+    homestay: ['Khu vực có thể hút thuốc', 'Đồ dùng làm bếp', 'Quán cafe'],
+    resort: ['Bể bơi', 'Nhà hàng', 'Đưa đón sân bay', 'Bồn tắm'],
+    motel: ['Bãi đỗ xe ô tô', 'Két sắt', 'Dịch vụ lưu trữ/bảo quản hành lý'],
+    apartment: ['Đồ dùng làm bếp', 'Tủ lạnh', 'Tiện nghi là/ủi'],
+  };
+
+  return uniqueNames([...amenities, ...amenitiesByType[propertyType]]);
+};
+
+const toAmenityJoinData = (
+  names: string[],
+  amenityIds: Map<string, string>,
+  mapItem: (amenityId: string) => Record<string, string>,
+) => {
+  const ids = uniqueNames(names)
+    .map((name) => amenityIds.get(name))
+    .filter((id): id is string => Boolean(id));
+
+  return Array.from(new Set(ids)).map(mapItem);
+};
+
+const getPriceSet = (hotel: HotelCardSeed, multiplier: number) => {
+  const cardPrice = hotel.priceValue;
+  const hourlyBase = hotel.tags.includes('Theo giờ')
+    ? cardPrice
+    : Math.max(180000, roundToTenThousand(cardPrice * 0.35));
+  const overnightBase = hotel.tags.includes('Qua đêm')
+    ? cardPrice
+    : Math.max(360000, roundToTenThousand(cardPrice * 1.8));
+  const dailyBase = Math.max(overnightBase + 120000, roundToTenThousand(overnightBase * 1.35));
+
+  return {
+    hourly: roundToTenThousand(hourlyBase * multiplier),
+    overnight: roundToTenThousand(overnightBase * multiplier),
+    daily: roundToTenThousand(dailyBase * multiplier),
+  };
+};
+
+const getInventoryDate = (offsetDays: number) => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + offsetDays);
+  return date;
+};
+
+const buildRoomInventorySeed = (
+  roomTypeId: string,
+  totalUnits: number,
+  hotelIndex: number,
+  roomIndex: number,
+) => Array.from({ length: ROOM_INVENTORY_DAYS }, (_, dayOffset) => {
+  const isClosed = (hotelIndex + roomIndex + dayOffset) % 31 === 0;
+  const bookedRooms = isClosed
+    ? 0
+    : Math.min(totalUnits, (hotelIndex + roomIndex + dayOffset) % Math.max(1, Math.ceil(totalUnits / 2)));
+
+  return {
+    roomTypeId,
+    date: getInventoryDate(dayOffset),
+    totalRooms: totalUnits,
+    bookedRooms,
+    isClosed,
+  };
+});
+
+const seedAmenities = async () => {
+  const amenityIds = new Map<string, string>();
+
+  for (const amenity of hotelAmenitySeeds) {
+
+    const row = await prisma.amenity.upsert({
+      where: { name: amenity.name },
+      update: {
+        icon: amenity.icon,
+        category: amenity.category as any,
+        isActive: true,
+
+      },
+      create: {
+        name: amenity.name,
+        slug: slugify(amenity.name), 
+        icon: amenity.icon,
+        category: amenity.category as any,
+        isActive: true,
+      },
+    });
+    amenityIds.set(amenity.name, row.id);
+  }
+
+  return amenityIds;
+};
+
+const seedHotelDomainForCard = async (
+  hotelCard: { id: string; slug: string },
+  hotel: HotelCardSeed,
+  index: number,
+  ownerId: string,
+  amenityIds: Map<string, string>,
+) => {
+  const propertyType = getPropertyType(hotel, index);
+  const city = hotel.city ?? 'Hà Nội';
+  const area = hotel.area ?? hotel.district ?? hotel.location;
+  const addressLine = `Số ${100 + index}, đường ${area}`;
+  const fullAddress = [addressLine, area, city].filter(Boolean).join(', ');
+  const hotelId = hotelCard.id;
+  const hotelAmenities = buildHotelAmenityNames(hotel, index, propertyType);
+  const roomPlans = roomPlansByPropertyType[propertyType];
+
+  await prisma.hotel.upsert({
+    where: { id: hotelId },
+    update: {
+      ownerId,
+      name: hotel.name,
+      slug: `stayhub-${hotelCard.slug}`,
+      description: `${hotel.name} thuộc nhóm ${propertyType}, phù hợp đặt phòng theo giờ, qua đêm hoặc theo ngày trên StayHub.`,
+      propertyType: propertyType as any,
+      starRating: Math.min(5, Math.max(1, Math.round(hotel.rating))),
+      status: 'approved' as any,
+      isFeatured: hotel.tags.includes('Nổi bật'),
+      checkInTime: '14:00',
+      checkOutTime: '12:00',
+      minBookingHours: hotel.tags.includes('Theo giờ') ? 2 : null,
+      avgRating: hotel.rating as any,
+      totalReviews: hotel.reviews,
+      approvedAt: new Date(),
+    } as any,
+    create: {
+      id: hotelId,
+      ownerId,
+      name: hotel.name,
+      slug: `stayhub-${hotelCard.slug}`,
+      description: `${hotel.name} thuộc nhóm ${propertyType}, phù hợp đặt phòng theo giờ, qua đêm hoặc theo ngày trên StayHub.`,
+      propertyType: propertyType as any,
+      starRating: Math.min(5, Math.max(1, Math.round(hotel.rating))),
+      status: 'approved' as any,
+      isFeatured: hotel.tags.includes('Nổi bật'),
+      totalRooms: 0,
+      checkInTime: '14:00',
+      checkOutTime: '12:00',
+      minBookingHours: hotel.tags.includes('Theo giờ') ? 2 : null,
+      cancellationPolicy: 'moderate' as any,
+      cancellationHours: 24,
+      depositPercent: 0 as any,
+      avgRating: hotel.rating as any,
+      totalReviews: hotel.reviews,
+      approvedAt: new Date(),
+    } as any,
+  });
+
+  await prisma.hotelAddress.upsert({
+    where: { hotelId },
+    update: {
+      addressLine,
+      ward: area,
+      district: hotel.district,
+      city,
+      province: city,
+      country: 'Vietnam',
+      fullAddress,
+    } as any,
+    create: {
+      hotelId,
+      addressLine,
+      ward: area,
+      district: hotel.district,
+      city,
+      province: city,
+      country: 'Vietnam',
+      fullAddress,
+    } as any,
+  });
+
+  await prisma.hotelImage.deleteMany({ where: { hotelId } });
+  await prisma.hotelImage.createMany({
+    data: [hotel.image, imagePool[(index + 3) % imagePool.length], imagePool[(index + 7) % imagePool.length]].map((imageUrl, sortOrder) => ({
+      hotelId,
+      imageUrl: cleanUrl(imageUrl),
+      caption: sortOrder === 0 ? 'Ảnh bìa khách sạn' : `Không gian khách sạn ${sortOrder + 1}`,
+      isCover: sortOrder === 0,
+      sortOrder,
+    })) as any,
+  });
+
+  await prisma.hotelAmenity.deleteMany({ where: { hotelId } });
+  const hotelAmenityData = toAmenityJoinData(hotelAmenities, amenityIds, (amenityId) => ({ hotelId, amenityId }));
+  if (hotelAmenityData.length > 0) {
+    await prisma.hotelAmenity.createMany({
+      data: hotelAmenityData as any,
+      skipDuplicates: true,
+    });
+  }
+
+  let totalRooms = 0;
+
+  for (let roomIndex = 0; roomIndex < roomPlans.length; roomIndex++) {
+    const roomPlan = roomPlans[roomIndex];
+    if (!roomPlan) continue;
+
+    const totalUnits = roomPlan.totalUnits + (index % 3);
+    totalRooms += totalUnits;
+
+    const roomType = await prisma.roomType.upsert({
+      where: {
+        hotelId_slug: {
+          hotelId,
+          slug: roomPlan.slug,
+        },
+      },
+      update: {
+        name: roomPlan.name,
+        description: roomPlan.description,
+        maxGuests: roomPlan.maxGuests,
+        bedType: roomPlan.bedType,
+        roomSizeSqm: roomPlan.roomSizeSqm as any,
+        totalUnits,
+        status: 'active' as any,
+        sortOrder: roomIndex,
+      } as any,
+      create: {
+        hotelId,
+        name: roomPlan.name,
+        slug: roomPlan.slug,
+        description: roomPlan.description,
+        maxGuests: roomPlan.maxGuests,
+        bedType: roomPlan.bedType,
+        roomSizeSqm: roomPlan.roomSizeSqm as any,
+        totalUnits,
+        status: 'active' as any,
+        sortOrder: roomIndex,
+      } as any,
+    });
+
+    const priceSet = getPriceSet(hotel, roomPlan.priceMultiplier);
+    const pricingPolicies = [
+      { bookingType: 'hourly', basePrice: priceSet.hourly, minHours: 2, maxHours: 10, extraHourPrice: roundToTenThousand(priceSet.hourly * 0.35) },
+      { bookingType: 'overnight', basePrice: priceSet.overnight, minHours: null, maxHours: null, extraHourPrice: null },
+      { bookingType: 'daily', basePrice: priceSet.daily, minHours: null, maxHours: null, extraHourPrice: null },
+    ];
+
+    for (const policy of pricingPolicies) {
+      await prisma.pricingPolicy.upsert({
+        where: {
+          roomTypeId_bookingType: {
+            roomTypeId: roomType.id,
+            bookingType: policy.bookingType as any,
+          },
+        },
+        update: {
+          basePrice: policy.basePrice as any,
+          minHours: policy.minHours,
+          maxHours: policy.maxHours,
+          extraHourPrice: policy.extraHourPrice as any,
+          overnightCheckinFrom: policy.bookingType === 'overnight' ? '22:00' : null,
+          overnightCheckoutBefore: policy.bookingType === 'overnight' ? '10:00' : null,
+          isActive: true,
+        } as any,
+        create: {
+          roomTypeId: roomType.id,
+          bookingType: policy.bookingType as any,
+          basePrice: policy.basePrice as any,
+          minHours: policy.minHours,
+          maxHours: policy.maxHours,
+          extraHourPrice: policy.extraHourPrice as any,
+          overnightCheckinFrom: policy.bookingType === 'overnight' ? '22:00' : null,
+          overnightCheckoutBefore: policy.bookingType === 'overnight' ? '10:00' : null,
+          isActive: true,
+        } as any,
+      });
+    }
+
+    await prisma.roomUnit.deleteMany({ where: { roomTypeId: roomType.id } });
+    await prisma.roomUnit.createMany({
+      data: Array.from({ length: totalUnits }, (_, unitIndex) => ({
+        roomTypeId: roomType.id,
+        roomNumber: `${roomIndex + 2}${String(unitIndex + 1).padStart(2, '0')}`,
+        floor: roomIndex + 2,
+        status: 'available',
+        notes: 'Seed room unit',
+      })) as any,
+    });
+
+    await prisma.roomInventory.deleteMany({ where: { roomTypeId: roomType.id } });
+    await prisma.roomInventory.createMany({
+      data: buildRoomInventorySeed(roomType.id, totalUnits, index, roomIndex) as any,
+    });
+
+    await prisma.roomMedia.deleteMany({ where: { roomTypeId: roomType.id } });
+    await prisma.roomMedia.createMany({
+      data: [hotel.image, imagePool[(index + roomIndex + 5) % imagePool.length]].map((imageUrl, sortOrder) => ({
+        roomTypeId: roomType.id,
+        imageUrl: cleanUrl(imageUrl),
+        mediaType: 'image',
+        caption: sortOrder === 0 ? roomPlan.name : `${roomPlan.name} - góc nhìn ${sortOrder + 1}`,
+        isCover: sortOrder === 0,
+        sortOrder,
+      })) as any,
+    });
+
+    await prisma.roomTypeAmenity.deleteMany({ where: { roomTypeId: roomType.id } });
+    const roomAmenityData = toAmenityJoinData(roomPlan.amenities, amenityIds, (amenityId) => ({
+      roomTypeId: roomType.id,
+      amenityId,
+    }));
+
+    if (roomAmenityData.length > 0) {
+      await prisma.roomTypeAmenity.createMany({
+        data: roomAmenityData as any,
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  await prisma.hotel.update({
+    where: { id: hotelId },
+    data: { totalRooms } as any,
+  });
+};
+
 const seedHotelCards = async () => {
-  console.log('🌱 Seeding hotel cards theo tỉnh/thành phố...');
+  console.log('🌱 Seeding hotel cards, khách sạn, tiện ích và phòng...');
+  const partner = await prisma.user.findUnique({ where: { email: 'partner@gmail.com' } });
+  if (!partner) {
+    console.log('⚠ Không tìm thấy tài khoản partner để seed khách sạn.');
+    return;
+  }
+
+  const amenityIds = await seedAmenities();
 
   for (let index = 0; index < allHotelCards.length; index++) {
     const hotel = allHotelCards[index];
     const slug = `${slugify(hotel.name)}-${index + 1}`;
 
-    await prisma.hotelCard.upsert({
+    const hotelCard = await prisma.hotelCard.upsert({
       where: { slug },
       update: {
         name: hotel.name,
@@ -570,11 +1248,12 @@ const seedHotelCards = async () => {
         sortOrder: index,
       },
     });
+
+    await seedHotelDomainForCard(hotelCard, hotel, index, partner.id, amenityIds);
   }
 
-  console.log(`✅ Seeded ${allHotelCards.length} hotel cards thành công.`);
+  console.log(`✅ Seeded ${allHotelCards.length} hotel cards, hotels, amenities, room types, room units, pricing và inventory thành công.`);
 };
-
 
 main()
   .catch((e) => {

@@ -3,17 +3,17 @@ import {
   Platform, View, Text, StyleSheet, Pressable, TextInput, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useCustomerBack } from '@/src/customer/shared/navigation/useCustomerBack';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { X, Navigation, Calendar, Search } from 'lucide-react-native';
-import BookingDateModal from '@/src/customer/features/booking/components/date-picker/BookingDateModal';
+import BookingDateModal from '@/src/customer/components/date-picker/BookingDateModal';
 import {
   BOOKING_TAB_TO_TYPE,
   BOOKING_TYPE_TO_TAB,
   formatShortDate,
   SEARCH_BOOKING_TABS,
   type BookingTabType,
-} from '@/src/customer/features/booking/utils/booking';
+} from '@/src/customer/utils/booking';
 
 const PRIMARY = '#85c2a4';
 const PRIMARY_DARK = '#599373';

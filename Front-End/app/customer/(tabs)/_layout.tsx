@@ -1,9 +1,9 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ClipboardList, Compass, Gift, Home, User } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 const PRIMARY = '#85c2a4';
 const PRIMARY_DARK = '#6dbb99';
@@ -16,7 +16,8 @@ const TAB_ITEMS = [
   { name: 'profile', label: 'Tài khoản', Icon: User },
 ] as const;
 
-function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+function CustomTabBar({ state }: BottomTabBarProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { currentTheme } = useThemeContext();
   const { width } = useWindowDimensions();
@@ -43,7 +44,8 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         return (
           <Pressable
             key={route.key}
-            onPress={() => navigation.navigate(route.name)}
+            onPress={() => router.replace(`/customer/${route.name}` as any)}
+            accessibilityRole="tab"
             style={styles.tabItem}
           >
             <Icon
@@ -64,6 +66,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 export default function TabLayout() {
   return (
     <Tabs
+      initialRouteName="dashboard"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >

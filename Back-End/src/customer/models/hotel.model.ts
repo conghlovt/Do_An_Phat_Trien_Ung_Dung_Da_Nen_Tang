@@ -16,6 +16,8 @@ export interface Hotel {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  amenities?: string[];
+  roomAmenities?: string[];
 }
 
 export interface HotelQueryParams {
@@ -25,6 +27,7 @@ export interface HotelQueryParams {
   maxPrice?: string;
   district?: string;
   limit?: string;
+  roomAmenities?: string;
 }
 
 export interface LocationWard {

@@ -7,17 +7,13 @@ import {
   Ticket, CreditCard, Stamp, Gift, CircleDollarSign,
   Megaphone, Calendar, ChevronRight,
 } from 'lucide-react-native';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
-import { useAuth } from '@/src/customer/features/auth/hooks/useAuth';
-import { useRouter } from 'expo-router';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 const PRIMARY = '#85c2a4';
 
 export default function OffersScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { currentTheme, isDarkMode } = useThemeContext();
-  const { isAuthenticated } = useAuth();
   const { width } = useWindowDimensions();
   const isWebLayout = Platform.OS === 'web' && width >= 768;
 
@@ -58,9 +54,9 @@ export default function OffersScreen() {
         </View>
       </View>
 
-      {/* Registration Benefits */}
+      {/* Account Benefits */}
       <View style={[styles.benefitsCard, { backgroundColor: isDarkMode ? '#2d5c47' : '#f0f8f4', borderColor: currentTheme.border }]}>
-        <Text style={[styles.benefitsTitle, { color: currentTheme.text }]}>Đăng ký tài khoản & nhận các quyền lợi</Text>
+        <Text style={[styles.benefitsTitle, { color: currentTheme.text }]}>Quyền lợi tài khoản của bạn</Text>
 
         {[
           { Icon: Gift, text: 'Nhận và sử dụng ưu đãi từ StayHub và đối tác' },
@@ -73,8 +69,8 @@ export default function OffersScreen() {
           </View>
         ))}
 
-        <Pressable style={styles.registerBtn} onPress={() => !isAuthenticated && router.push('/login/register' as any)}>
-          <Text style={styles.registerBtnText}>{isAuthenticated ? 'Xem ưu đãi của tôi' : 'Đăng ký & nhận ưu đãi'}</Text>
+        <Pressable style={styles.registerBtn}>
+          <Text style={styles.registerBtnText}>Xem ưu đãi của tôi</Text>
         </Pressable>
       </View>
 

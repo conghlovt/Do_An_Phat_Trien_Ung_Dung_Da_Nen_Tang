@@ -1,0 +1,85 @@
+import { StyleSheet } from 'react-native';
+
+export const SUPPORT_ACCENT = '#F97316';
+
+export const supportStyles = StyleSheet.create({
+  container: { flex: 1 },
+  webContainer: {
+    overflow: 'hidden',
+  },
+  header: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
+  },
+  webHeader: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 18,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontSize: 18, fontWeight: '800', marginLeft: 8 },
+  content: { flex: 1 },
+  contentInner: { padding: 16, gap: 12, paddingBottom: 32 },
+  webContent: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 28,
+    paddingBottom: 52,
+  },
+  card: {
+    borderRadius: 14,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  centeredCard: {
+    alignItems: 'center',
+  },
+  iconAndText: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  iconCircle: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  itemTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  itemSubtitle: { fontSize: 13, lineHeight: 20 },
+  actionBtn: {
+    backgroundColor: SUPPORT_ACCENT,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  actionBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  childContent: { marginTop: 12 },
+  offsetText: { marginLeft: 56 },
+  mapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: SUPPORT_ACCENT,
+  },
+  mapBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+});

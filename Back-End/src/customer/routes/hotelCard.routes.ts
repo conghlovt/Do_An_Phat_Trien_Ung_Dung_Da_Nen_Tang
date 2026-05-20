@@ -5,10 +5,10 @@ import { validate } from '../middlewares/validate.middleware';
 
 const router = Router();
 
-// GET /api/v1/hotel-cards
+// GET /api/hotel-cards
 router.get('/', hotelCardController.getHotelCards);
 
-// GET /api/v1/hotel-cards/city/:city
+// GET /api/hotel-cards/city/:city
 router.get('/city/:city', validate(hotelCardCityParamsSchema, 'params'), hotelCardController.getHotelCardsByCity);
 
 export default router;

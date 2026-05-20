@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import ExploreMoreSection from '@/src/customer/features/hotels/components/ExploreMoreSection';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import ExploreMoreSection from '@/src/customer/components/ExploreMoreSection';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 export default function DiscoverScreen() {
   const { currentTheme } = useThemeContext();

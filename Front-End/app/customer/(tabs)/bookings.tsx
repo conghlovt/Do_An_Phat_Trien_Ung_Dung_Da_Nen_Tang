@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useThemeContext } from '@/src/customer/shared/theme/ThemeContext';
+import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 export default function BookingsScreen() {
   const insets = useSafeAreaInsets();
