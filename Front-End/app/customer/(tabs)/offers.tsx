@@ -30,13 +30,13 @@ export default function OffersScreen() {
       </View>
 
       {/* Top Cards */}
-      <View style={styles.topCards}>
+      <View style={[styles.topCards, isWebLayout && styles.webTopCards]}>
         {[
           { Icon: Ticket, label: 'Ưu đãi' },
           { Icon: CreditCard, label: 'SH Xu' },
           { Icon: Stamp, label: 'Tem' },
         ].map(({ Icon, label }) => (
-          <Pressable key={label} style={[styles.topCard, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
+          <Pressable key={label} style={[styles.topCard, isWebLayout && styles.webTopCard, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
             <Icon size={28} color={PRIMARY} strokeWidth={1.5} />
             <Text style={[styles.topCardLabel, { color: currentTheme.text }]}>{label}</Text>
           </Pressable>
@@ -44,8 +44,8 @@ export default function OffersScreen() {
       </View>
 
       {/* Invite Banner */}
-      <View style={[styles.inviteBanner, { backgroundColor: isDarkMode ? '#2d5c47' : '#eaf5ef' }]}>
-        <View style={styles.inviteContent}>
+      <View style={[styles.inviteBanner, isWebLayout && styles.webInviteBanner, { backgroundColor: isDarkMode ? 'rgba(133,194,164,0.24)' : '#eaf5ef' }]}>
+        <View style={[styles.inviteContent, isWebLayout && styles.webInviteContent]}>
           <Text style={[styles.inviteTitle, { color: currentTheme.text }]}>Nhận quà yêu 50K</Text>
           <Text style={[styles.inviteSubtitle, { color: currentTheme.textSecondary }]}>Mời bạn bè nhận ngay quà siêu chất cùng StayHub</Text>
           <Pressable style={styles.inviteBtn}>
@@ -55,7 +55,7 @@ export default function OffersScreen() {
       </View>
 
       {/* Account Benefits */}
-      <View style={[styles.benefitsCard, { backgroundColor: isDarkMode ? '#2d5c47' : '#f0f8f4', borderColor: currentTheme.border }]}>
+      <View style={[styles.benefitsCard, isWebLayout && styles.webBenefitsCard, { backgroundColor: isDarkMode ? 'rgba(133,194,164,0.24)' : '#f0f8f4', borderColor: currentTheme.border }]}>
         <Text style={[styles.benefitsTitle, { color: currentTheme.text }]}>Quyền lợi tài khoản của bạn</Text>
 
         {[
@@ -75,12 +75,12 @@ export default function OffersScreen() {
       </View>
 
       {/* Bottom Menu */}
-      <View style={styles.menuSection}>
+      <View style={[styles.menuSection, isWebLayout && styles.webMenuSection, { backgroundColor: isWebLayout ? currentTheme.card : 'transparent', borderColor: currentTheme.border }]}>
         {[
           { Icon: Megaphone, label: 'Chương trình' },
           { Icon: Calendar, label: 'Lịch ưu đãi' },
         ].map(({ Icon, label }) => (
-          <Pressable key={label} style={[styles.menuRow, { borderBottomColor: currentTheme.border }]}>
+          <Pressable key={label} style={[styles.menuRow, isWebLayout && styles.webMenuRow, { borderBottomColor: currentTheme.border }]}>
             <Icon size={24} color={PRIMARY} strokeWidth={1.5} />
             <Text style={[styles.menuLabel, { color: currentTheme.text }]}>{label}</Text>
             <ChevronRight size={18} color={currentTheme.textSecondary} />
@@ -104,11 +104,20 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingBottom: 16 },
   webHeader: {
     borderRadius: 16,
-    marginHorizontal: 16,
+    marginHorizontal: 0,
     marginBottom: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(133,194,164,0.18)',
   },
   headerTitle: { fontSize: 24, fontWeight: '700' },
   topCards: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 24 },
+  webTopCards: {
+    paddingHorizontal: 0,
+    gap: 18,
+    marginBottom: 18,
+  },
   topCard: {
     flex: 1, borderRadius: 16, padding: 16,
     alignItems: 'center', gap: 8,
@@ -116,12 +125,27 @@ const styles = StyleSheet.create({
     shadowRadius: 8, elevation: 3,
     borderWidth: 1,
   },
+  webTopCard: {
+    minHeight: 118,
+    borderRadius: 18,
+    justifyContent: 'center',
+  },
   topCardLabel: { fontSize: 14, fontWeight: '500' },
   inviteBanner: {
     marginHorizontal: 16, marginBottom: 16,
     borderRadius: 16, padding: 16, overflow: 'hidden',
   },
+  webInviteBanner: {
+    marginHorizontal: 0,
+    marginBottom: 18,
+    borderRadius: 18,
+    paddingHorizontal: 28,
+    paddingVertical: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(133,194,164,0.24)',
+  },
   inviteContent: { width: '60%' },
+  webInviteContent: { width: '100%', maxWidth: 560 },
   inviteTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   inviteSubtitle: { fontSize: 13, lineHeight: 18, marginBottom: 16 },
   inviteBtn: {
@@ -133,6 +157,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 24,
     borderRadius: 16, padding: 16, borderWidth: 1,
   },
+  webBenefitsCard: {
+    marginHorizontal: 0,
+    marginBottom: 18,
+    borderRadius: 18,
+    padding: 24,
+  },
   benefitsTitle: { fontSize: 15, fontWeight: '700', marginBottom: 16 },
   benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   benefitText: { flex: 1, fontSize: 14, lineHeight: 20 },
@@ -142,9 +172,19 @@ const styles = StyleSheet.create({
   },
   registerBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   menuSection: { paddingHorizontal: 16 },
+  webMenuSection: {
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
   menuRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16,
     borderBottomWidth: 1,
+  },
+  webMenuRow: {
+    paddingHorizontal: 18,
+    minHeight: 64,
   },
   menuLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
 });

@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarFilled: {
-    backgroundColor: '#599373',
+    backgroundColor: '#85c2a4',
     borderColor: '#85c2a4',
   },
   avatarInitials: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(133,194,164,0.1)',
   },
   loginBtnText: {
-    color: '#599373',
+    color: '#85c2a4',
     fontSize: 14,
     fontWeight: '800',
   },

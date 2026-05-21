@@ -1,6 +1,6 @@
 export const BOOKING_DATE_COLORS = {
   accent: '#85c2a4',
-  accentDark: '#599373',
+  accentDark: '#85c2a4',
   accentSoft: 'rgba(133,194,164,0.16)',
   text: '#333333',
   muted: '#9ca3af',

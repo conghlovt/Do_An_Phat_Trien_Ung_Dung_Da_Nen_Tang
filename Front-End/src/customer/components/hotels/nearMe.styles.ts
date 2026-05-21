@@ -164,7 +164,7 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
   },
   webSortMenuTextActive: {
-    color: '#f97316',
+    color: PRIMARY,
   },
   webSidebarPriceRow: {
     flexDirection: 'column',
@@ -283,7 +283,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(133,194,164,0.18)', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(133,194,164,0.35)',
     paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6,
   },
-  hotelTagText: { fontSize: 10, fontWeight: '700', color: '#599373' },
+  hotelTagText: { fontSize: 10, fontWeight: '700', color: PRIMARY_DARK },
   hotelPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   hotelPrice: { fontSize: 16, fontWeight: '700', color: PRIMARY_DARK },
   webHotelPrice: { fontSize: 20 },

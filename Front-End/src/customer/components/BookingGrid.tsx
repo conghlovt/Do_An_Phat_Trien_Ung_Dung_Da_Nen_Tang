@@ -9,14 +9,18 @@ interface Props {
   onBookingTypeClick?: (type: string, title: string) => void;
 }
 
+const PRIMARY = '#85c2a4';
+const PRIMARY_SOFT = 'rgba(133,194,164,0.14)';
+const PRIMARY_BORDER = 'rgba(133,194,164,0.36)';
+
 const CELLS = [
   {
     type: 'near-me',
     label: 'Gần tôi',
     sub: 'Một bước lên mây',
-    iconBg: '#2dd4bf',
-    bg: 'rgba(240,253,250,0.7)',
-    border: 'rgba(153,246,228,0.5)',
+    iconBg: PRIMARY,
+    bg: PRIMARY_SOFT,
+    border: PRIMARY_BORDER,
     Icon: MapPin,
     iconColor: '#fff',
   },
@@ -24,31 +28,31 @@ const CELLS = [
     type: 'hourly',
     label: 'Theo giờ',
     sub: 'Xin từng phút giây',
-    iconBg: '#f9a8b8',
-    bg: 'rgba(255,241,242,0.7)',
-    border: 'rgba(254,205,211,0.5)',
+    iconBg: PRIMARY,
+    bg: PRIMARY_SOFT,
+    border: PRIMARY_BORDER,
     Icon: Clock,
-    iconColor: '#fff1f2',
+    iconColor: '#fff',
   },
   {
     type: 'overnight',
     label: 'Qua đêm',
     sub: 'Ngon giấc như ở nhà',
-    iconBg: '#a5b4fc',
-    bg: 'rgba(238,242,255,0.7)',
-    border: 'rgba(199,210,254,0.5)',
+    iconBg: PRIMARY,
+    bg: PRIMARY_SOFT,
+    border: PRIMARY_BORDER,
     Icon: BedDouble,
-    iconColor: '#4f46e5',
+    iconColor: '#fff',
   },
   {
     type: 'daily',
     label: 'Theo ngày',
     sub: 'Mỗi ngày 1 niềm vui',
-    iconBg: '#93c5fd',
-    bg: 'rgba(239,246,255,0.7)',
-    border: 'rgba(191,219,254,0.5)',
+    iconBg: PRIMARY,
+    bg: PRIMARY_SOFT,
+    border: PRIMARY_BORDER,
     Icon: CalendarDays,
-    iconColor: '#1d4ed8',
+    iconColor: '#fff',
   },
 ] as const;
 

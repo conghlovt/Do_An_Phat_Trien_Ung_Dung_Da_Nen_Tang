@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const SUPPORT_ACCENT = '#F97316';
+export const SUPPORT_ACCENT = '#85c2a4';
 
 export const supportStyles = StyleSheet.create({
   container: { flex: 1 },
@@ -34,7 +34,7 @@ export const supportStyles = StyleSheet.create({
   contentInner: { padding: 16, gap: 12, paddingBottom: 32 },
   webContent: {
     width: '100%',
-    maxWidth: 1180,
+    maxWidth: 980,
     alignSelf: 'center',
     paddingHorizontal: 32,
     paddingTop: 28,
@@ -49,10 +49,22 @@ export const supportStyles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
   },
+  webCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 18,
+  },
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  webActionCard: {
+    minHeight: 96,
   },
   centeredCard: {
     alignItems: 'center',
@@ -61,12 +73,20 @@ export const supportStyles = StyleSheet.create({
   iconCircle: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   itemSubtitle: { fontSize: 13, lineHeight: 20 },
+  webIconCircle: { width: 50, height: 50, borderRadius: 14 },
+  webItemTitle: { fontSize: 17, fontWeight: '800', marginBottom: 6 },
+  webItemSubtitle: { fontSize: 14, lineHeight: 22 },
   actionBtn: {
     backgroundColor: SUPPORT_ACCENT,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginLeft: 8,
+  },
+  webActionBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   actionBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   childContent: { marginTop: 12 },

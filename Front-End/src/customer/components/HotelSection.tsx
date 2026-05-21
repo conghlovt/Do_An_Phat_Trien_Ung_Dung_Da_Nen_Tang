@@ -75,10 +75,10 @@ export default function HotelSection({ title, hasMore, tabs }: HotelSectionProps
 
   const renderTitleIcon = () => {
     if (isFlashSale) return <Zap size={20} color="#eab308" fill="#eab308" />;
-    if (title === 'Ưu đãi đặc biệt') return <Star size={20} color="#85c2a4" fill="#85c2a4" />;
-    if (title === 'StayHub gợi ý') return <Sparkles size={20} color="#8b5cf6" />;
-    if (title === 'Top được bình chọn') return <Trophy size={20} color="#059669" />;
-    if (title === 'Khách sạn mới') return <Crown size={20} color="#3b82f6" />;
+    if (title === 'Ưu đãi đặc biệt') return <Star size={20} color={accentColor} fill={accentColor} />;
+    if (title === 'StayHub gợi ý') return <Sparkles size={20} color={accentColor} />;
+    if (title === 'Top được bình chọn') return <Trophy size={20} color={accentColor} />;
+    if (title === 'Khách sạn mới') return <Crown size={20} color={accentColor} />;
     return null;
   };
 

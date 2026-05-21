@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const STAYHUB_COLOR = '#599373';
+export const STAYHUB_COLOR = '#85c2a4';
 
 export const styles = StyleSheet.create({
   container: {

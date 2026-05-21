@@ -3,9 +3,9 @@ import type { BookingType } from '../types/hotels.types';
 export const SECTION_COLORS: Record<string, string> = {
   'Flash Sale': '#eab308',
   'Ưu đãi đặc biệt': '#85c2a4',
-  'StayHub gợi ý': '#8b5cf6',
-  'Top được bình chọn': '#059669',
-  'Khách sạn mới': '#3b82f6',
+  'StayHub gợi ý': '#85c2a4',
+  'Top được bình chọn': '#85c2a4',
+  'Khách sạn mới': '#85c2a4',
 };
 
 export const SECTION_TAG_MAP: Record<string, string> = {

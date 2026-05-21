@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, Clock, SlidersHorizontal } from 'lucide-react-native';
-import RoomAmenityFilterSheet from '@/src/customer/components/rooms/RoomAmenityFilterSheet';
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react-native';
 import RoomCard from '@/src/customer/components/rooms/RoomCard';
 import RoomDetailModal from '@/src/customer/components/rooms/RoomDetailModal';
 import { roomListStyles as styles } from '@/src/customer/components/rooms/roomList.styles';
@@ -23,7 +22,6 @@ import { useCustomerHotelsStore } from '@/src/customer/store/hotels.store';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import type { Room } from '@/src/customer/api/hotels.api';
 import { getBookingDurationLabel } from '@/src/customer/utils/roomDisplay';
-import { filterRoomsByAmenities, getRoomAmenityOptions } from '@/src/customer/utils/roomFilters';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -47,8 +45,6 @@ export default function RoomListScreen() {
   const hotelId = getParamText(params.hotelId) || '1';
   const { currentHotel, rooms, roomsLoading: loading, fetchRooms, clearRooms } = useCustomerHotelsStore();
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const isWebLayout = Platform.OS === 'web' && width >= 768;
   const webImageWidth = Math.min(Math.max(width - 380, 640), 1116);
   const durationLabel = getBookingDurationLabel(params.bookingType, params.hours);
@@ -63,22 +59,6 @@ export default function RoomListScreen() {
 
     return () => clearRooms();
   }, [clearRooms, fetchRooms, hotelId, params.bookingType]);
-
-  const roomAmenityOptions = useMemo(
-    () => getRoomAmenityOptions(rooms),
-    [rooms],
-  );
-
-  const displayedRooms = useMemo(
-    () => filterRoomsByAmenities(rooms, selectedAmenities),
-    [rooms, selectedAmenities],
-  );
-
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities(prev =>
-      prev.includes(amenity) ? prev.filter(item => item !== amenity) : [...prev, amenity],
-    );
-  };
 
   const openBookingCalendar = () => {
     router.push({
@@ -149,32 +129,13 @@ export default function RoomListScreen() {
         </View>
       </View>
 
-      {roomAmenityOptions.length > 0 && (
-        <View style={[styles.roomFilterBar, isWebLayout && styles.webRoomFilterBar, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
-          <Pressable
-            style={[styles.roomFilterChip, selectedAmenities.length > 0 && styles.roomFilterChipActive]}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <SlidersHorizontal size={16} color={ROOM_LIST_PRIMARY} />
-            <Text style={[styles.roomFilterText, { color: currentTheme.text }]}>
-              {selectedAmenities.length > 0 ? `${selectedAmenities.length} tiện ích phòng` : 'Lọc tiện ích phòng'}
-            </Text>
-          </Pressable>
-          {selectedAmenities.length > 0 && (
-            <Pressable onPress={() => setSelectedAmenities([])}>
-              <Text style={styles.clearFilterText}>Đặt lại</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
       {loading ? (
         <ScrollView contentContainerStyle={[styles.listContent, isWebLayout && styles.webList]}>
           {[1, 2, 3].map(item => <View key={item} style={[styles.skeletonCard, { backgroundColor: currentTheme.card }]} />)}
         </ScrollView>
       ) : (
         <FlatList
-          data={displayedRooms}
+          data={rooms}
           keyExtractor={room => String(room.id)}
           contentContainerStyle={[styles.listContent, isWebLayout && styles.webList]}
           showsVerticalScrollIndicator={isWebLayout}
@@ -210,18 +171,6 @@ export default function RoomListScreen() {
           imageWidth={isWebLayout ? webImageWidth : SCREEN_W}
         />
       )}
-
-      <RoomAmenityFilterSheet
-        currentTheme={currentTheme}
-        insets={insets}
-        options={roomAmenityOptions}
-        selectedAmenities={selectedAmenities}
-        visible={showFilterModal}
-        onApply={() => setShowFilterModal(false)}
-        onClose={() => setShowFilterModal(false)}
-        onReset={() => setSelectedAmenities([])}
-        onToggleAmenity={toggleAmenity}
-      />
     </View>
   );
 }

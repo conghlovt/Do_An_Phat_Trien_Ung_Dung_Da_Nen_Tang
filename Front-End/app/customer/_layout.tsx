@@ -18,7 +18,7 @@ import {
   User,
 } from 'lucide-react-native';
 
-const PRIMARY_DARK = '#6dbb99';
+const PRIMARY_DARK = '#85c2a4';
 const BRAND_LIGHT = '#85c2a4';
 const BRAND_DARK = '#ffffff';
 const WEB_SIDEBAR_EXPANDED = 318;
@@ -213,6 +213,7 @@ function CustomerStack() {
       <Stack.Screen name="(hotels)/near-me" options={nearMeOptions} />
       <Stack.Screen name="(booking)/booking-calendar" options={bottomModalOptions} />
       <Stack.Screen name="(booking)/booking-confirm" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="(booking)/booking-detail" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="(search)/search" options={fullScreenBottomOptions} />
       <Stack.Screen name="(messages)/messages" options={fullScreenRightOptions} />
       <Stack.Screen name="(messages)/notifications" options={fullScreenRightOptions} />

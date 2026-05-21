@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import ImageWithFallback from '@/src/customer/components/ImageWithFallback';
 
-const PRIMARY_DARK = '#599373';
+const PRIMARY_DARK = '#85c2a4';
 
 interface HotelCardProps {
   id: number | string;

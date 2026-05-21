@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 export const PRIMARY = '#85c2a4';
-export const PRIMARY_DARK = '#599373';
+export const PRIMARY_DARK = '#85c2a4';
 const PRIMARY_LIGHT = '#e8f6ed';
 const PRIMARY_SOFT = 'rgba(133,194,164,0.16)';
 const GRAY = '#6b7280';
@@ -11,7 +11,7 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   webShell: {
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
     paddingBottom: 24,
   },
   header: {
@@ -19,17 +19,19 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
   },
   webHeader: {
-    width: 950,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    width: '100%',
+    maxWidth: 1180,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: '#111827' },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   webTabBar: {
-    width: 950,
+    width: '100%',
+    maxWidth: 1180,
     justifyContent: 'center',
     gap: 34,
   },
@@ -45,8 +47,9 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
   tabText: { fontSize: 14, color: GRAY, fontWeight: '600' },
   tabTextActive: { color: PRIMARY_DARK, fontWeight: '700' },
   webScroll: {
-    width: 950,
-    maxHeight: 560,
+    width: '100%',
+    maxWidth: 1180,
+    maxHeight: 620,
     backgroundColor: '#fff',
   },
   webScrollContent: {
@@ -59,7 +62,7 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
   },
   calendarCard: { padding: 16, marginVertical: 8 },
   webCalendarCard: {
-    width: 490,
+    width: 580,
     marginVertical: 0,
     padding: 0,
     paddingRight: 34,
@@ -140,7 +143,7 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 16, backgroundColor: PRIMARY_LIGHT,
     borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(133,194,164,0.45)',
   },
-  infoText: { fontSize: 14, color: '#0d5e3d', lineHeight: 20, fontWeight: '500' },
+  infoText: { fontSize: 14, color: PRIMARY, lineHeight: 20, fontWeight: '500' },
   checkoutCard: {
     paddingTop: 0,
     paddingBottom: 28,
@@ -167,10 +170,11 @@ export const bookingCalendarScreenStyles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 12,
   },
   webBottomBar: {
-    width: 950,
+    width: '100%',
+    maxWidth: 1180,
     position: 'relative',
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

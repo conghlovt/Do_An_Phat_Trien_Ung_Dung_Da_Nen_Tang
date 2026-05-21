@@ -10,7 +10,7 @@ import { useAuth } from '@/src/customer/hooks/useAuth';
 import LocationPickerModal from '@/src/customer/components/LocationPickerModal';
 import { messagesApi } from '@/src/customer/api/messages.api';
 
-const STAYHUB_COLOR = '#599373';
+const STAYHUB_COLOR = '#85c2a4';
 const STAYHUB_LIGHT = '#85c2a4';
 const STAYHUB_DARK = '#ffffff';
 const PRIMARY = '#85c2a4';

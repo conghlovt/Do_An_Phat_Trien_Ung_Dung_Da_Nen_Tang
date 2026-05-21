@@ -1,7 +1,7 @@
 import React, { memo, type ComponentType, type ReactNode, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
-import { supportStyles as styles } from './support.styles';
+import { SUPPORT_ACCENT, supportStyles as styles } from './support.styles';
 
 type SupportIcon = ComponentType<{
   color?: string;
@@ -28,6 +28,8 @@ function SupportCardComponent({
   title,
 }: SupportCardProps) {
   const { currentTheme } = useThemeContext();
+  const { width } = useWindowDimensions();
+  const isWebLayout = Platform.OS === 'web' && width >= 768;
   const hasAction = useMemo(() => Boolean(actionLabel && onAction), [actionLabel, onAction]);
   const hasMainContent = useMemo(() => Boolean(title || subtitle || Icon), [Icon, subtitle, title]);
 
@@ -35,27 +37,29 @@ function SupportCardComponent({
     <View
       style={[
         styles.card,
+        isWebLayout && styles.webCard,
         hasAction && styles.actionCard,
+        hasAction && isWebLayout && styles.webActionCard,
         centered && styles.centeredCard,
-        { backgroundColor: currentTheme.card },
+        { backgroundColor: currentTheme.card, borderColor: currentTheme.border },
       ]}
     >
       {hasMainContent ? (
         <View style={styles.iconAndText}>
           {Icon ? (
-            <View style={[styles.iconCircle, { backgroundColor: currentTheme.decor }]}>
-              <Icon size={24} color={currentTheme.text} />
+            <View style={[styles.iconCircle, isWebLayout && styles.webIconCircle, { backgroundColor: currentTheme.decor }]}>
+              <Icon size={24} color={SUPPORT_ACCENT} />
             </View>
           ) : null}
           <View style={{ flex: 1 }}>
-            {title ? <Text style={[styles.itemTitle, { color: currentTheme.text }]}>{title}</Text> : null}
-            {subtitle ? <Text style={[styles.itemSubtitle, { color: currentTheme.textSecondary }]}>{subtitle}</Text> : null}
+            {title ? <Text style={[styles.itemTitle, isWebLayout && styles.webItemTitle, { color: currentTheme.text }]}>{title}</Text> : null}
+            {subtitle ? <Text style={[styles.itemSubtitle, isWebLayout && styles.webItemSubtitle, { color: currentTheme.textSecondary }]}>{subtitle}</Text> : null}
           </View>
         </View>
       ) : null}
 
       {hasAction ? (
-        <Pressable style={styles.actionBtn} onPress={onAction}>
+        <Pressable style={[styles.actionBtn, isWebLayout && styles.webActionBtn]} onPress={onAction}>
           <Text style={styles.actionBtnText}>{actionLabel}</Text>
         </Pressable>
       ) : null}

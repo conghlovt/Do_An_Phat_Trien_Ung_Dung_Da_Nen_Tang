@@ -22,7 +22,7 @@ import { enrichHotel, HOTEL_REVIEWS, SUGGESTED_HOTELS } from '@/src/customer/uti
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
+const PRIMARY_DARK = '#85c2a4';
 const STAR_COLOR = '#facc15';
 
 function getBookingDurationLabel(bookingType: string, value: number) {

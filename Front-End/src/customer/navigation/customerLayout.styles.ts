@@ -1,8 +1,8 @@
 import { Platform, StyleSheet } from 'react-native';
 
-const PRIMARY_DARK = '#6dbb99';
+const PRIMARY_DARK = '#85c2a4';
 const PRIMARY_SOFT = '#eef8f4';
-const PRIMARY_ICON_BG = '#8bcaad';
+const PRIMARY_ICON_BG = '#85c2a4';
 
 export const styles = StyleSheet.create({
   rootContainer: {
@@ -80,7 +80,7 @@ export const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 16,
-    backgroundColor: '#8bcaaa',
+    backgroundColor: '#85c2a4',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -235,7 +235,7 @@ export const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#8bcaaa',
+    backgroundColor: '#85c2a4',
     alignItems: 'center',
     justifyContent: 'center',
   },

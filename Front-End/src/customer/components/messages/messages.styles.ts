@@ -103,14 +103,14 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
   tabBtnActive: {
-    backgroundColor: '#f3f2fb',
+    backgroundColor: 'rgba(133,194,164,0.16)',
   },
   tabText: {
     fontSize: 21,
     fontWeight: '800',
   },
   tabTextActive: {
-    color: '#3f4654',
+    color: '#85c2a4',
   },
   tabBadge: {
     minWidth: 22,

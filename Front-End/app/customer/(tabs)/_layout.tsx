@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#6dbb99';
+const PRIMARY_DARK = '#85c2a4';
 
 const TAB_ITEMS = [
   { name: 'dashboard', label: 'Trang chủ', Icon: Home },

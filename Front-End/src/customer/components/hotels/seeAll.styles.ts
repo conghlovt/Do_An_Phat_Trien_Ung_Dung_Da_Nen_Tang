@@ -168,7 +168,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(133,194,164,0.18)', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(133,194,164,0.35)',
     paddingHorizontal: 6, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 6,
   },
-  hotelTagText: { fontSize: 10, fontWeight: '700', color: '#599373' },
+  hotelTagText: { fontSize: 10, fontWeight: '700', color: PRIMARY_DARK },
   hotelPriceBlock: {},
   oldPrice: { fontSize: 11, color: '#9ca3af', textDecorationLine: 'line-through', marginBottom: 2 },
   hotelPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },

@@ -2,7 +2,7 @@ import { Dimensions, StyleSheet } from 'react-native';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
+const PRIMARY_DARK = '#85c2a4';
 const PRIMARY_LIGHT = '#e8f6ed';
 
 export const styles = StyleSheet.create({
@@ -213,7 +213,7 @@ export const styles = StyleSheet.create({
     backgroundColor: PRIMARY_LIGHT, borderRadius: 12, borderWidth: 2, borderColor: PRIMARY,
     paddingHorizontal: 12, paddingVertical: 10, flex: 1,
   },
-  timeText: { fontSize: 12, color: '#0d5e3d', fontWeight: '600', flex: 1 },
+  timeText: { fontSize: 12, color: PRIMARY, fontWeight: '600', flex: 1 },
   priceArea: { alignItems: 'flex-end', minWidth: 60 },
   oldPriceBottom: { fontSize: 12, color: '#9ca3af', textDecorationLine: 'line-through', fontWeight: '500' },
   priceBottom: { fontSize: 18, fontWeight: '800', color: PRIMARY_DARK },

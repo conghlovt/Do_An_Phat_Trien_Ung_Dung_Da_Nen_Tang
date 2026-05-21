@@ -17,13 +17,13 @@ import type { CustomerNotification, NotificationTab } from '@/src/customer/types
 const getNotificationMeta = (type: NotificationTab) => {
   switch (type) {
     case 'booking':
-      return { Icon: CalendarCheck, color: '#2f855f', bg: '#e6f6ee', label: 'Đặt phòng' };
+      return { Icon: CalendarCheck, color: '#85c2a4', bg: 'rgba(133,194,164,0.16)', label: 'Đặt phòng' };
     case 'offers':
-      return { Icon: TicketPercent, color: '#c2410c', bg: '#fff1e7', label: 'Ưu đãi' };
+      return { Icon: TicketPercent, color: '#85c2a4', bg: 'rgba(133,194,164,0.16)', label: 'Ưu đãi' };
     case 'others':
       return { Icon: Info, color: '#475569', bg: '#eef2f7', label: 'Khác' };
     default:
-      return { Icon: Info, color: '#2f855f', bg: '#e6f6ee', label: 'Thông báo' };
+      return { Icon: Info, color: '#85c2a4', bg: 'rgba(133,194,164,0.16)', label: 'Thông báo' };
   }
 };
 

@@ -16,7 +16,7 @@ import {
 } from '@/src/customer/utils/booking';
 
 const PRIMARY = '#85c2a4';
-const PRIMARY_DARK = '#599373';
+const PRIMARY_DARK = '#85c2a4';
 const PRIMARY_SOFT = 'rgba(133,194,164,0.12)';
 const PRIMARY_BORDER = 'rgba(133,194,164,0.35)';
 const WEB_INPUT_RESET = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null;

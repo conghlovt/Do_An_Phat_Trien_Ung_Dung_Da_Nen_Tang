@@ -23,15 +23,17 @@ import { useAuth } from '@/src/customer/hooks/useAuth';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { getParamText } from '@/src/customer/navigation/routeParams';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
+import { customerBookingsStorage } from '@/src/customer/utils/customerBookings';
 import { getBookingDurationLabel } from '@/src/customer/utils/roomDisplay';
 
-const ORANGE = '#ff6817';
+const PRIMARY = '#85c2a4';
+const PRIMARY_FILL = 'rgba(133,194,164,0.35)';
 const TEXT_DARK = '#25252d';
 const TEXT_MUTED = '#85858d';
 const BORDER = '#ededf1';
 const SURFACE = '#ffffff';
 const PAGE_BG = '#f7f7f8';
-const SUCCESS = '#22c55e';
+const SUCCESS = PRIMARY;
 const DEFAULT_ROOM_IMAGE = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800';
 
 type BookingPoint = {
@@ -95,6 +97,7 @@ export default function BookingConfirmScreen() {
     hotelId?: string;
     hotelName?: string;
     hotelAddress?: string;
+    hotelImage?: string;
     roomId?: string;
     roomName?: string;
     roomImage?: string;
@@ -106,6 +109,8 @@ export default function BookingConfirmScreen() {
   }>();
 
   const [confirmed, setConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
   const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   const hotelName = getParamText(params.hotelName) || 'Khách sạn';
@@ -121,6 +126,34 @@ export default function BookingConfirmScreen() {
   const customerName = user?.username || 'Joyer.673';
   const customerPhone = 'Chưa cập nhật';
 
+  const handleConfirmBooking = async () => {
+    if (saving) return;
+
+    setSaving(true);
+    try {
+      const booking = await customerBookingsStorage.add({
+        hotelId: getParamText(params.hotelId) || '',
+        hotelName,
+        hotelAddress,
+        hotelImage: getParamText(params.hotelImage),
+        roomId: getParamText(params.roomId),
+        roomName,
+        roomImage,
+        price,
+        bookingType,
+        checkIn: getParamText(params.checkIn) || `${checkIn.time}, ${checkIn.dateText}`,
+        checkOut: getParamText(params.checkOut) || `${checkOut.time}, ${checkOut.dateText}`,
+        hours: getParamText(params.hours),
+        customerName,
+        customerPhone,
+      });
+      setConfirmedBookingId(booking.id);
+      setConfirmed(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (confirmed) {
     return (
       <View
@@ -135,7 +168,15 @@ export default function BookingConfirmScreen() {
         <Text style={[styles.successText, { color: currentTheme.textSecondary }]}>
           Thông tin đặt phòng tại {hotelName} đã được ghi nhận.
         </Text>
-        <Pressable style={styles.successPrimaryBtn} onPress={() => router.replace('/customer/bookings' as any)}>
+        {confirmedBookingId && (
+          <Pressable
+            style={styles.successPrimaryBtn}
+            onPress={() => router.replace({ pathname: '/customer/booking-detail' as any, params: { bookingId: confirmedBookingId } })}
+          >
+            <Text style={styles.successPrimaryText}>Xem chi tiết đặt phòng</Text>
+          </Pressable>
+        )}
+        <Pressable style={styles.successSecondaryBtn} onPress={() => router.replace('/customer/bookings' as any)}>
           <Text style={styles.successPrimaryText}>Xem phòng đã đặt</Text>
         </Pressable>
         <Pressable style={[styles.successGhostBtn, { borderColor: currentTheme.border }]} onPress={() => router.replace('/customer/dashboard' as any)}>
@@ -155,7 +196,7 @@ export default function BookingConfirmScreen() {
     >
       <View style={[styles.header, isWebLayout && styles.webHeader]}>
         <Pressable onPress={goBack} style={styles.headerIconBtn}>
-          <ChevronLeft size={32} color="#050506" strokeWidth={3} />
+          <ChevronLeft size={24} color="#050506" strokeWidth={2.6} />
         </Pressable>
         <Text style={styles.headerTitle}>Xác nhận và thanh toán</Text>
         <View style={styles.headerSpacer} />
@@ -169,10 +210,10 @@ export default function BookingConfirmScreen() {
           isWebLayout && styles.webScrollContent,
         ]}
       >
-        <View style={styles.section}>
+        <View style={[styles.section, isWebLayout && styles.webSection]}>
           <Text style={styles.sectionTitle}>Lựa chọn của bạn</Text>
-          <View style={styles.choiceRow}>
-            <ImageWithFallback uri={roomImage} alt={roomName} style={styles.roomImage} />
+          <View style={[styles.choiceRow, isWebLayout && styles.webChoiceRow]}>
+            <ImageWithFallback uri={roomImage} alt={roomName} style={[styles.roomImage, isWebLayout && styles.webRoomImage]} />
             <View style={styles.choiceInfo}>
               <Text style={styles.hotelName}>{hotelName}</Text>
               <Text style={styles.roomName}>{roomName}</Text>
@@ -182,14 +223,14 @@ export default function BookingConfirmScreen() {
 
           <View style={styles.thinDivider} />
 
-          <View style={styles.timeRow}>
-            <View style={styles.durationCard}>
+          <View style={[styles.timeRow, isWebLayout && styles.webTimeRow]}>
+            <View style={[styles.durationCard, isWebLayout && styles.webDurationCard]}>
               <View style={styles.clockCircle}>
-                <Clock size={26} color={ORANGE} fill={SURFACE} />
+                <Clock size={26} color={PRIMARY} fill={SURFACE} />
               </View>
               <Text style={styles.durationText}>{durationLabel}</Text>
             </View>
-            <View style={styles.timeCard}>
+            <View style={[styles.timeCard, isWebLayout && styles.webTimeCard]}>
               <Text style={styles.timeLabel}>Nhận phòng</Text>
               <Text style={styles.timeValue}>{checkIn.time}  •  {checkIn.dateText}</Text>
               <Text style={[styles.timeLabel, styles.checkoutLabel]}>Trả phòng</Text>
@@ -198,11 +239,11 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
 
-        <View style={styles.band} />
+        <View style={[styles.band, isWebLayout && styles.webBand]} />
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Người đặt phòng</Text>
+        <View style={[styles.section, isWebLayout && styles.webSection]}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Người đặt phòng</Text>
             <Pressable hitSlop={8}>
               <Text style={styles.editText}>Sửa</Text>
             </Pressable>
@@ -217,21 +258,21 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
 
-        <View style={styles.band} />
+        <View style={[styles.band, isWebLayout && styles.webBand]} />
 
-        <View style={styles.section}>
+        <View style={[styles.section, isWebLayout && styles.webSection]}>
           <Pressable style={styles.actionRow}>
             <View style={styles.rowLabelWrap}>
-              <Tag size={24} color={ORANGE} fill="#ff9b63" />
+              <Tag size={20} color={PRIMARY} fill={PRIMARY_FILL} />
               <Text style={styles.actionTitle}>Ưu đãi</Text>
             </View>
-            <ChevronRight size={34} color={ORANGE} strokeWidth={2.8} />
+            <ChevronRight size={24} color={PRIMARY} strokeWidth={2.6} />
           </Pressable>
         </View>
 
-        <View style={styles.band} />
+        <View style={[styles.band, isWebLayout && styles.webBand]} />
 
-        <View style={styles.section}>
+        <View style={[styles.section, isWebLayout && styles.webSection]}>
           <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
           <View style={[styles.paymentLine, styles.paymentLineTop]}>
             <Text style={styles.paymentLabel}>Tiền phòng</Text>
@@ -243,9 +284,9 @@ export default function BookingConfirmScreen() {
           </View>
         </View>
 
-        <View style={styles.band} />
+        <View style={[styles.band, isWebLayout && styles.webBand]} />
 
-        <View style={styles.section}>
+        <View style={[styles.section, isWebLayout && styles.webSection]}>
           <Text style={styles.sectionTitle}>Chính sách hủy phòng</Text>
           <Text style={styles.policyText}>
             Hủy miễn phí trước <Text style={styles.policyStrong}>{cancellationDeadline}</Text> đối với tất cả các phương thức thanh toán.
@@ -271,10 +312,10 @@ export default function BookingConfirmScreen() {
       >
         <Pressable style={styles.paymentMethodRow}>
           <View style={styles.rowLabelWrap}>
-            <CreditCard size={24} color={ORANGE} />
+            <CreditCard size={20} color={PRIMARY} />
             <Text style={styles.paymentMethodText}>Chọn phương thức thanh toán</Text>
           </View>
-          <ChevronRight size={34} color={ORANGE} strokeWidth={2.8} />
+          <ChevronRight size={24} color={PRIMARY} strokeWidth={2.6} />
         </Pressable>
         <View style={styles.bottomDivider} />
         <View style={styles.bottomSummaryRow}>
@@ -282,8 +323,8 @@ export default function BookingConfirmScreen() {
             <Text style={styles.bottomLabel}>Tổng thanh toán</Text>
             <Text style={styles.bottomPrice}>{price}</Text>
           </View>
-          <Pressable style={styles.bookButton} onPress={() => setConfirmed(true)}>
-            <Text style={styles.bookButtonText}>Đặt phòng</Text>
+          <Pressable style={[styles.bookButton, saving && styles.bookButtonDisabled]} onPress={handleConfirmBooking} disabled={saving}>
+            <Text style={styles.bookButtonText}>{saving ? 'Đang lưu...' : 'Đặt phòng'}</Text>
           </Pressable>
         </View>
       </View>
@@ -297,12 +338,9 @@ const styles = StyleSheet.create({
   },
   webContainer: {
     width: '100%',
-    maxWidth: 560,
+    maxWidth: 1180,
     alignSelf: 'center',
-    overflow: 'hidden',
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: BORDER,
+    overflow: 'visible',
   },
   header: {
     height: 96,
@@ -314,7 +352,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
   },
   webHeader: {
-    height: 86,
+    height: 82,
+    marginTop: 24,
+    marginHorizontal: 32,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 24,
   },
   headerIconBtn: {
     width: 46,
@@ -325,7 +369,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     color: TEXT_DARK,
-    fontSize: 25,
+    fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -337,17 +381,33 @@ const styles = StyleSheet.create({
   },
   webScrollContent: {
     minHeight: 760,
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    paddingBottom: 220,
   },
   section: {
     backgroundColor: SURFACE,
     paddingHorizontal: 24,
     paddingVertical: 24,
   },
+  webSection: {
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 18,
+    marginBottom: 18,
+    paddingHorizontal: 28,
+    paddingVertical: 26,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 18,
+    elevation: 2,
+  },
   sectionTitle: {
     color: TEXT_DARK,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
-    marginBottom: 22,
+    marginBottom: 16,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -356,18 +416,26 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   editText: {
-    color: ORANGE,
-    fontSize: 18,
+    color: PRIMARY,
+    fontSize: 15,
     fontWeight: '800',
   },
   choiceRow: {
     flexDirection: 'row',
     gap: 14,
   },
+  webChoiceRow: {
+    gap: 18,
+  },
   roomImage: {
     width: 142,
     height: 126,
     borderRadius: 12,
+  },
+  webRoomImage: {
+    width: 190,
+    height: 136,
+    borderRadius: 16,
   },
   choiceInfo: {
     flex: 1,
@@ -376,21 +444,21 @@ const styles = StyleSheet.create({
   },
   hotelName: {
     color: TEXT_DARK,
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 15,
+    lineHeight: 21,
   },
   roomName: {
     color: TEXT_DARK,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
-    lineHeight: 30,
+    lineHeight: 24,
     textTransform: 'uppercase',
   },
   addressText: {
     color: TEXT_DARK,
-    fontSize: 18,
-    lineHeight: 26,
-    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
   },
   thinDivider: {
     height: 1,
@@ -402,13 +470,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 14,
   },
+  webTimeRow: {
+    gap: 18,
+  },
   durationCard: {
     width: 142,
     minHeight: 150,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff8444',
+    backgroundColor: PRIMARY,
+  },
+  webDurationCard: {
+    width: 180,
+    minHeight: 156,
+    borderRadius: 18,
   },
   clockCircle: {
     width: 48,
@@ -421,7 +497,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     color: SURFACE,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
   },
   timeCard: {
@@ -433,9 +509,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     justifyContent: 'center',
   },
+  webTimeCard: {
+    minHeight: 156,
+    borderRadius: 18,
+    paddingHorizontal: 24,
+  },
   timeLabel: {
     color: TEXT_MUTED,
-    fontSize: 18,
+    fontSize: 14,
     marginBottom: 6,
   },
   checkoutLabel: {
@@ -443,12 +524,15 @@ const styles = StyleSheet.create({
   },
   timeValue: {
     color: TEXT_DARK,
-    fontSize: 21,
+    fontSize: 17,
     fontWeight: '900',
   },
   band: {
     height: 14,
     backgroundColor: PAGE_BG,
+  },
+  webBand: {
+    display: 'none',
   },
   infoLine: {
     minHeight: 46,
@@ -459,12 +543,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     color: TEXT_DARK,
-    fontSize: 21,
+    fontSize: 16,
   },
   infoValue: {
     flex: 1,
     color: TEXT_DARK,
-    fontSize: 21,
+    fontSize: 16,
     fontWeight: '800',
     textAlign: 'right',
   },
@@ -482,7 +566,7 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     color: TEXT_DARK,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '900',
   },
   paymentLine: {
@@ -499,28 +583,28 @@ const styles = StyleSheet.create({
   },
   paymentLabel: {
     color: TEXT_DARK,
-    fontSize: 22,
+    fontSize: 16,
   },
   paymentValue: {
     color: TEXT_DARK,
-    fontSize: 22,
+    fontSize: 16,
   },
   totalTitle: {
     color: TEXT_DARK,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '900',
   },
   policyText: {
     color: TEXT_DARK,
-    fontSize: 20,
-    lineHeight: 32,
-    marginBottom: 16,
+    fontSize: 15,
+    lineHeight: 23,
+    marginBottom: 12,
   },
   policyStrong: {
     fontWeight: '900',
   },
   inlineLink: {
-    color: ORANGE,
+    color: PRIMARY,
     fontWeight: '900',
     textDecorationLine: 'underline',
   },
@@ -536,7 +620,18 @@ const styles = StyleSheet.create({
     paddingTop: 18,
   },
   webBottomBar: {
-    maxWidth: 560,
+    left: 32,
+    right: 32,
+    bottom: 24,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 18,
+    paddingHorizontal: 24,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
   },
   paymentMethodRow: {
     minHeight: 54,
@@ -546,7 +641,7 @@ const styles = StyleSheet.create({
   },
   paymentMethodText: {
     color: TEXT_DARK,
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
   },
   bottomDivider: {
@@ -563,12 +658,12 @@ const styles = StyleSheet.create({
   },
   bottomLabel: {
     color: TEXT_MUTED,
-    fontSize: 18,
+    fontSize: 14,
     marginBottom: 4,
   },
   bottomPrice: {
     color: TEXT_DARK,
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '900',
   },
   bookButton: {
@@ -577,11 +672,14 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: ORANGE,
+    backgroundColor: PRIMARY,
+  },
+  bookButtonDisabled: {
+    opacity: 0.6,
   },
   bookButtonText: {
     color: SURFACE,
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '800',
   },
   successContainer: {
@@ -598,7 +696,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     color: TEXT_DARK,
-    fontSize: 25,
+    fontSize: 22,
     fontWeight: '900',
     marginTop: 22,
     marginBottom: 10,
@@ -616,8 +714,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: ORANGE,
+    backgroundColor: PRIMARY,
     marginBottom: 12,
+  },
+  successSecondaryBtn: {
+    width: '100%',
+    minHeight: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY,
+    marginBottom: 12,
+    opacity: 0.82,
   },
   successPrimaryText: {
     color: SURFACE,

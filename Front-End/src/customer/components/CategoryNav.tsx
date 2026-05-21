@@ -18,11 +18,11 @@ const CATEGORIES: Category[] = [
   { name: 'Tình yêu', Icon: Heart, bg: '#fef2f2', iconColor: '#ef4444' },
   { name: 'Phòng Phim', Icon: Film, bg: '#e8f6ed', iconColor: '#85c2a4' },
   { name: 'Flash Deal', Icon: Zap, bg: '#fefce8', iconColor: '#eab308' },
-  { name: 'Check-in kín đáo', Icon: Smartphone, bg: '#eff6ff', iconColor: '#3b82f6' },
-  { name: 'Stay Xịn Mới', Icon: Sparkles, bg: '#f5f3ff', iconColor: '#8b5cf6' },
-  { name: 'Camping', Icon: Tent, bg: '#f0fdf4', iconColor: '#16a34a' },
-  { name: 'Giảm Giá', Icon: BadgePercent, bg: '#fdf2f8', iconColor: '#ec4899' },
-  { name: 'Homestay', Icon: Home, bg: '#f0fdfa', iconColor: '#0d9488' },
+  { name: 'Check-in kín đáo', Icon: Smartphone, bg: '#e8f6ed', iconColor: '#85c2a4' },
+  { name: 'Stay Xịn Mới', Icon: Sparkles, bg: '#e8f6ed', iconColor: '#85c2a4' },
+  { name: 'Camping', Icon: Tent, bg: '#e8f6ed', iconColor: '#85c2a4' },
+  { name: 'Giảm Giá', Icon: BadgePercent, bg: '#e8f6ed', iconColor: '#85c2a4' },
+  { name: 'Homestay', Icon: Home, bg: '#e8f6ed', iconColor: '#85c2a4' },
 ];
 
 export default function CategoryNav({ onCategoryClick }: { onCategoryClick?: (name: string) => void }) {

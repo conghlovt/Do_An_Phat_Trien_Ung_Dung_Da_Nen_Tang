@@ -3,7 +3,7 @@ import type { SortOption } from '@/src/customer/utils/hotelListFilters';
 export type NearMeSortOption = SortOption | 'distance';
 
 export const CUSTOMER_PRIMARY = '#85c2a4';
-export const CUSTOMER_PRIMARY_DARK = '#599373';
+export const CUSTOMER_PRIMARY_DARK = CUSTOMER_PRIMARY;
 
 export const DEFAULT_MIN_PRICE = '20000';
 export const DEFAULT_MAX_PRICE = '10000000';
