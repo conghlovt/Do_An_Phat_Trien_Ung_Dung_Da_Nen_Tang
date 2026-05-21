@@ -10,7 +10,7 @@ import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import {
   BedDouble, Plus, ChevronLeft, ChevronRight, Lock,
-  Eye, Calendar, Clock, Moon, Sun,
+  Eye, Calendar, Clock, Moon, Sun, Hotel as HotelIcon,
 } from 'lucide-react-native';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -59,6 +59,7 @@ export function RoomManagement() {
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [noHotel, setNoHotel] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 600;
 
@@ -94,7 +95,14 @@ export function RoomManagement() {
       if (targetHotel) {
         setHotelId(targetHotel.id);
         setHotelStatus(targetHotel.status);
+        setNoHotel(false);
+      } else {
+        setNoHotel(true);
+        setRoomsLoading(false);
       }
+    }).catch(() => {
+      setNoHotel(true);
+      setRoomsLoading(false);
     });
   }, [initialHotelId]);
 
@@ -143,6 +151,24 @@ export function RoomManagement() {
   const handleCreateRoom = () => {
     router.push(`/partner/room/new-room?hotelId=${hotelId}` as any);
   };
+
+  if (noHotel) {
+    return (
+      <View style={s.container}>
+        <View style={s.noHotelWrapper}>
+          <View style={s.noHotelIconBox}>
+            <HotelIcon size={40} color="#0D9488" />
+          </View>
+          <Text style={s.noHotelTitle}>Bạn chưa có khách sạn nào</Text>
+          <Text style={s.noHotelSubtitle}>Hãy tạo khách sạn trước để có thể thêm và quản lý các loại phòng của bạn.</Text>
+          <TouchableOpacity style={s.noHotelBtn} onPress={() => router.push('/partner/hotel/new-hotel' as any)}>
+            <Plus size={18} color="#FFF" />
+            <Text style={s.noHotelBtnText}>Tạo khách sạn ngay</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (roomsLoading && roomTypes.length === 0) return <LoadingSpinner />;
 
@@ -328,4 +354,57 @@ const s = StyleSheet.create({
   cellBooked: { fontSize: 10, color: '#F59E0B', fontWeight: '600' },
   cellPrice: { fontSize: 10, color: '#64748B', fontWeight: '600' },
   closedText: { fontSize: 11, color: '#EF4444', fontWeight: '600', marginTop: 2 },
+
+  // No hotel empty state
+  noHotelWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    ...(Platform.OS === 'web' ? { minHeight: '70vh' as any } : {}),
+  },
+  noHotelIconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 2,
+    borderColor: '#CCFBF1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  noHotelTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  noHotelSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 340,
+    marginBottom: 24,
+  },
+  noHotelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0D9488',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(13,148,136,0.3)' as any },
+      default: { shadowColor: '#0D9488', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
+    }),
+  },
+  noHotelBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

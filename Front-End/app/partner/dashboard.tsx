@@ -34,6 +34,7 @@ export default function PartnerDashboardScreen() {
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const loadHotels = async () => {
     try {
@@ -64,15 +65,19 @@ export default function PartnerDashboardScreen() {
   const performDelete = async () => {
     if (!hotelToDelete) return;
     try {
+      setErrorMsg('');
       setIsLoading(true);
       await partnerService.deleteHotel(hotelToDelete);
       setSuccessMsg('Đã xóa khách sạn thành công');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2000);
       await loadHotels();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Không thể xóa khách sạn. Vui lòng thử lại.';
+      setErrorMsg(msg);
+      setTimeout(() => setErrorMsg(''), 5000);
     } finally {
+      setIsLoading(false);
       setShowDeleteConfirm(false);
       setHotelToDelete(null);
     }
@@ -109,6 +114,12 @@ export default function PartnerDashboardScreen() {
           <Text style={styles.addBtnText}>Thêm khách sạn</Text>
         </TouchableOpacity>
       </View>
+
+      {errorMsg ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{errorMsg}</Text>
+        </View>
+      ) : null}
 
       <ScrollView
         style={styles.scroll}
@@ -155,12 +166,14 @@ export default function PartnerDashboardScreen() {
                 </View>
 
                 <View style={styles.cardActions}>
-                  <TouchableOpacity 
-                    style={[styles.actionBtn, styles.actionBtnDanger]} 
-                    onPress={() => confirmDelete(hotel.id)}
-                  >
-                    <Trash2 size={16} color="#EF4444" />
-                  </TouchableOpacity>
+                  {hotel.status !== 'approved' && (
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.actionBtnDanger]} 
+                      onPress={() => confirmDelete(hotel.id)}
+                    >
+                      <Trash2 size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  )}
                   {hotel.status === 'draft' && (
                     <TouchableOpacity 
                       style={[styles.actionBtn, styles.actionBtnSubmit]} 
@@ -299,4 +312,6 @@ const styles = StyleSheet.create({
   modalCancelText: { color: '#475569', fontSize: 14, fontWeight: '600' },
   modalDeleteBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center' },
   modalDeleteText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  errorBanner: { marginHorizontal: 20, marginTop: 0, marginBottom: 0, backgroundColor: '#FEF2F2', padding: 12, borderBottomWidth: 1, borderBottomColor: '#FECACA' },
+  errorBannerText: { color: '#EF4444', fontSize: 14, textAlign: 'center', fontWeight: '500' },
 });

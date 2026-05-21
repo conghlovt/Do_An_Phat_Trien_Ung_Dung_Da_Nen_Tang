@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { partnerService } from '../../services/partner.service';
 import type { Hotel } from '../../services/partner.service';
-import { ArrowLeft, ShieldCheck, Clock, Check, Save } from 'lucide-react-native';
+import { ArrowLeft, ShieldCheck, Clock, Check, Save, Hotel as HotelIcon, Plus } from 'lucide-react-native';
 import { SuccessModal } from '../shared/SuccessModal';
 
 const isMobile = Platform.OS !== 'web';
@@ -17,6 +18,7 @@ const POLICIES = [
 interface Props { onBack?: () => void; }
 
 export function CancellationPolicy({ onBack }: Props) {
+  const router = useRouter();
   const [hotelId, setHotelId] = useState('');
   const [currentHotel, setCurrentHotel] = useState<Hotel | null>(null);
   const [selectedPolicy, setSelectedPolicy] = useState('flexible');
@@ -24,10 +26,19 @@ export function CancellationPolicy({ onBack }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [noHotel, setNoHotel] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     partnerService.getHotels().then(({ items }) => {
-      if (items.length > 0) setHotelId(items[0].id);
+      if (items.length > 0) {
+        setHotelId(items[0].id);
+        setNoHotel(false);
+      } else {
+        setNoHotel(true);
+      }
+    }).finally(() => {
+      setIsLoading(false);
     });
   }, []);
 
@@ -43,6 +54,10 @@ export function CancellationPolicy({ onBack }: Props) {
   }, [currentHotel]);
 
   const handleSave = async () => {
+    if (!hotelId) {
+      setErrorMsg('Vui lòng tạo khách sạn trước khi cập nhật chính sách.');
+      return;
+    }
     try {
       setErrorMsg('');
       setIsSaving(true);
@@ -61,6 +76,40 @@ export function CancellationPolicy({ onBack }: Props) {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#0F766E" /></View>;
+  }
+
+  if (noHotel) {
+    return (
+      <View style={s.container}>
+        {isMobile ? (
+          <View style={s.mobileBackHeader}>
+            <TouchableOpacity style={s.backBtn} onPress={() => onBack?.()}><ArrowLeft size={20} color="#1E293B" /></TouchableOpacity>
+            <Text style={s.mobileBackTitle}>Chính sách hủy phòng</Text>
+          </View>
+        ) : (
+          <View style={s.pageHeader}>
+            <TouchableOpacity style={s.backBtn} onPress={() => onBack?.()}>
+              <ArrowLeft size={18} color="#64748B" /><Text style={s.backText}>Quay lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={s.noHotelWrapper}>
+          <View style={s.noHotelIconBox}>
+            <HotelIcon size={40} color="#0D9488" />
+          </View>
+          <Text style={s.noHotelTitle}>Bạn chưa có khách sạn nào</Text>
+          <Text style={s.noHotelSubtitle}>Hãy tạo khách sạn trước để có thể thiết lập chính sách hủy phòng.</Text>
+          <TouchableOpacity style={s.noHotelBtn} onPress={() => router.push('/partner/hotel/new-hotel' as any)}>
+            <Plus size={18} color="#FFF" />
+            <Text style={s.noHotelBtnText}>Tạo khách sạn ngay</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
@@ -177,4 +226,57 @@ const s = StyleSheet.create({
   errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center' },
   successBox: { marginHorizontal: isMobile ? 16 : 20, marginTop: 16, backgroundColor: '#F0FDFA', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#CCFBF1' },
   successText: { color: '#0D9488', fontSize: 14, textAlign: 'center' },
+
+  // No hotel empty state
+  noHotelWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    ...(Platform.OS === 'web' ? { minHeight: '70vh' as any } : {}),
+  },
+  noHotelIconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 2,
+    borderColor: '#CCFBF1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  noHotelTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  noHotelSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 340,
+    marginBottom: 24,
+  },
+  noHotelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0D9488',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(13,148,136,0.3)' as any },
+      default: { shadowColor: '#0D9488', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
+    }),
+  },
+  noHotelBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

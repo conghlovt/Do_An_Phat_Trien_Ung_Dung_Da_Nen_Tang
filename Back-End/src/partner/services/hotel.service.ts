@@ -293,13 +293,13 @@ export class HotelService {
   }
 
   /**
-   * Delete hotel (Partner - only if draft/rejected)
+   * Delete hotel (Partner - only if not yet approved)
    */
   async delete(hotelId: string, ownerId: string) {
     const hotel = await this.verifyOwnership(hotelId, ownerId);
-    if (hotel.status !== 'draft' && hotel.status !== 'rejected') {
+    if (hotel.status === 'approved') {
       throw new UnprocessableError(
-        'Chỉ có thể xóa khách sạn ở trạng thái nháp hoặc bị từ chối',
+        'Không thể xóa khách sạn đã được duyệt. Vui lòng liên hệ quản trị viên.',
         'HOTEL_CANNOT_DELETE'
       );
     }
