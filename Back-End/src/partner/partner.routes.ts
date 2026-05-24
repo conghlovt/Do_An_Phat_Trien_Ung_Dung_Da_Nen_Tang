@@ -13,6 +13,7 @@ import { pricingController } from './controllers/pricing.controller';
 import { inventoryController } from './controllers/inventory.controller';
 import { bookingController } from './controllers/booking.controller';
 import { uploadController } from './controllers/upload.controller';
+import { voucherController } from './controllers/voucher.controller';
 
 // Validators
 import { registerSchema, loginSchema, refreshTokenSchema, forgotPasswordSchema, resetPasswordSchema } from './middlewares/auth.validator';
@@ -98,13 +99,41 @@ partnerRouter.get('/hotels/:hotelId/room-types/:roomTypeId/pricing/:pricingId/sp
 partnerRouter.post('/hotels/:hotelId/room-types/:roomTypeId/pricing/:pricingId/special-prices', validate(createSpecialPriceSchema), asyncHandler((req, res) => pricingController.createSpecialPrice(req as any, res)));
 partnerRouter.delete('/hotels/:hotelId/room-types/:roomTypeId/pricing/:pricingId/special-prices/:specialPriceId', asyncHandler((req, res) => pricingController.deleteSpecialPrice(req as any, res)));
 
+
 // --- Inventory ---
 partnerRouter.get('/hotels/:hotelId/inventory', (req, res, next) => inventoryController.getCalendar(req, res, next));
 partnerRouter.put('/hotels/:hotelId/inventory/:roomTypeId', (req, res, next) => inventoryController.updateInventory(req, res, next));
 
+// --- Vouchers ---
+partnerRouter.get(
+  '/hotels/:hotelId/vouchers',
+  asyncHandler((req, res) => voucherController.list(req as any, res))
+);
+
+partnerRouter.post(
+  '/hotels/:hotelId/vouchers',
+  asyncHandler((req, res) => voucherController.create(req as any, res))
+);
+
+partnerRouter.get(
+  '/hotels/:hotelId/vouchers/:voucherId',
+  asyncHandler((req, res) => voucherController.get(req as any, res))
+);
+
+partnerRouter.put(
+  '/hotels/:hotelId/vouchers/:voucherId',
+  asyncHandler((req, res) => voucherController.update(req as any, res))
+);
+
+partnerRouter.delete(
+  '/hotels/:hotelId/vouchers/:voucherId',
+  asyncHandler((req, res) => voucherController.remove(req as any, res))
+);
+
 // --- Bookings ---
 partnerRouter.get('/bookings', asyncHandler((req, res) => bookingController.listMyBookings(req as any, res)));
 partnerRouter.patch('/bookings/:id/status', asyncHandler((req, res) => bookingController.updateStatus(req as any, res)));
+
 
 // Export all routers
 export default {

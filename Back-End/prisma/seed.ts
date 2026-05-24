@@ -191,20 +191,7 @@ async function main() {
     }
   }
 
-  // 5. Seed Vouchers
-  await prisma.voucher.upsert({
-    where: { code: 'CHAOBANMOI' },
-    update: {},
-    create: {
-      code: 'CHAOBANMOI',
-      discount: 20,
-      type: 'PERCENTAGE',
-      expiry: new Date('2025-12-31'),
-      usageLimit: 100,
-      status: 'ACTIVE',
-    } as any,
-  });
-  console.log('✔ Đã seed mã giảm giá');
+
 
   // 6. Seed Content
   await prisma.contentPost.create({
@@ -282,9 +269,12 @@ async function main() {
   }
   console.log(`✔ Đã seed ${amenityData.length} tiện ích`);
 
+
   await seedHotelCards();
 
-  console.log('--- Hoàn tất Seeding ---');
+  await seedVouchers();
+
+  console.log('--- Hoàn tất ---');
 }
 
 // ─── Hotels ───────────────────────────────────────────────────────────────────
@@ -1254,6 +1244,138 @@ const seedHotelCards = async () => {
 
   console.log(`✅ Seeded ${allHotelCards.length} hotel cards, hotels, amenities, room types, room units, pricing và inventory thành công.`);
 };
+
+
+const seedVouchers = async () => {
+  console.log('🌱 Seeding vouchers...');
+
+  const partner = await prisma.user.findUnique({
+    where: { email: 'partner@gmail.com' },
+  });
+
+  if (!partner) {
+    console.log('⚠ Không tìm thấy partner để seed voucher.');
+    return;
+  }
+
+  const hotel = await prisma.hotel.findFirst({
+    where: {
+      ownerId: partner.id,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  if (!hotel) {
+    console.log('⚠ Không tìm thấy hotel để seed voucher. Hãy seed hotel trước.');
+    return;
+  }
+
+  const roomTypes = await prisma.roomType.findMany({
+    where: {
+      hotelId: hotel.id,
+    },
+    take: 2,
+  });
+
+  const welcomeVoucher = await prisma.voucher.upsert({
+    where: {
+      hotelId_code: {
+        hotelId: hotel.id,
+        code: 'CHAOBANMOI',
+      },
+    },
+    update: {
+      name: 'Chào bạn mới',
+      discountType: 'percent',
+      discountValue: 20,
+      minOrderValue: 0,
+      maxDiscount: 100000,
+      usageLimit: 100,
+      usedCount: 0,
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-12-31T23:59:59.000Z'),
+      status: 'ACTIVE',
+    },
+    create: {
+      hotelId: hotel.id,
+      code: 'CHAOBANMOI',
+      name: 'Chào bạn mới',
+      discountType: 'percent',
+      discountValue: 20,
+      minOrderValue: 0,
+      maxDiscount: 100000,
+      usageLimit: 100,
+      usedCount: 0,
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-12-31T23:59:59.000Z'),
+      status: 'ACTIVE',
+    },
+  });
+
+  await prisma.voucherRoomType.deleteMany({
+    where: {
+      voucherId: welcomeVoucher.id,
+    },
+  });
+
+  if (roomTypes.length > 0) {
+    await prisma.voucherRoomType.createMany({
+      data: roomTypes.map((roomType) => ({
+        voucherId: welcomeVoucher.id,
+        roomTypeId: roomType.id,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const allRoomVoucher = await prisma.voucher.upsert({
+    where: {
+      hotelId_code: {
+        hotelId: hotel.id,
+        code: 'SUMMER30',
+      },
+    },
+    update: {
+      name: 'Giảm 30% mùa hè',
+      discountType: 'percent',
+      discountValue: 30,
+      minOrderValue: 500000,
+      maxDiscount: 200000,
+      usageLimit: 100,
+      usedCount: 0,
+      startDate: new Date('2026-05-01T00:00:00.000Z'),
+      endDate: new Date('2026-06-30T23:59:59.000Z'),
+      status: 'ACTIVE',
+    },
+    create: {
+      hotelId: hotel.id,
+      code: 'SUMMER30',
+      name: 'Giảm 30% mùa hè',
+      discountType: 'percent',
+      discountValue: 30,
+      minOrderValue: 500000,
+      maxDiscount: 200000,
+      usageLimit: 100,
+      usedCount: 0,
+      startDate: new Date('2026-05-01T00:00:00.000Z'),
+      endDate: new Date('2026-06-30T23:59:59.000Z'),
+      status: 'ACTIVE',
+    },
+  });
+
+  // Không tạo VoucherRoomType cho SUMMER30
+  // Nghĩa là voucher này áp dụng cho tất cả loại phòng
+  await prisma.voucherRoomType.deleteMany({
+    where: {
+      voucherId: allRoomVoucher.id,
+    },
+  });
+
+  console.log('✔ Đã seed voucher');
+};
+
 
 main()
   .catch((e) => {

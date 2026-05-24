@@ -101,6 +101,50 @@ export interface CalendarRoomType {
   inventory: Record<string, InventoryItem>; pricing: Record<string, number>;
 }
 
+export type VoucherStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+export type VoucherDiscountType = 'percent' | 'fixed';
+
+export interface VoucherRoomType {
+  id?: string;
+  name?: string;
+}
+
+export interface Voucher {
+  id: string;
+  hotelId: string;
+  code: string;
+  name: string;
+  discountType: VoucherDiscountType;
+  discountValue: number;
+  minOrderValue?: number;
+  maxDiscount?: number;
+  usageLimit?: number;
+  usedCount: number;
+  startDate: string;
+  endDate: string;
+  status: VoucherStatus;
+  applicableRoomTypeIds: string[];
+  roomTypes?: VoucherRoomType[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateVoucherInput {
+  code: string;
+  name: string;
+  discountType: VoucherDiscountType;
+  discountValue: number;
+  minOrderValue?: number;
+  maxDiscount?: number;
+  usageLimit?: number;
+  startDate: string;
+  endDate: string;
+  applicableRoomTypeIds: string[];
+}
+
+export type UpdateVoucherInput = Partial<CreateVoucherInput>;
+
+
 // ─── API Calls ────────────────────────────────────────────────────────────────
 
 const HOTEL_BASE = '/v1/partner/hotels';
@@ -108,9 +152,26 @@ const HOTEL_BASE = '/v1/partner/hotels';
 export const partnerService = {
   // ── Hotels ────────────────────────────────────────────────────
   getHotels: async (params?: HotelQueryParams) => {
-    const res = await apiInstance.get(HOTEL_BASE, { params });
-    return res.data.data as { items: HotelListItem[] };
+    const res: any = await apiInstance.get(HOTEL_BASE, { params });
+
+    console.log('RAW getHotels response:', res);
+
+    const payload =
+      res?.data?.data ||
+      res?.data ||
+      res;
+
+    const items =
+      payload?.items ||
+      payload?.data?.items ||
+      [];
+
+    return {
+      items: Array.isArray(items) ? items : [],
+    } as { items: HotelListItem[] };
   },
+
+
   getHotel: async (id: string) => {
     const res = await apiInstance.get(`${HOTEL_BASE}/${id}`);
     return res.data.data.hotel as Hotel;
@@ -230,4 +291,79 @@ export const partnerService = {
     const res = await apiInstance.put(`${HOTEL_BASE}/${hotelId}/inventory/${roomTypeId}`, { date, ...data });
     return res.data.data;
   },
+
+
+// ── Vouchers ──────────────────────────────────────────────────
+
+  getVouchers: async (hotelId: string) => {
+    const res: any = await apiInstance.get(`${HOTEL_BASE}/${hotelId}/vouchers`);
+
+    console.log('RAW getVouchers response:', res);
+
+    const payload =
+      res?.data?.data ||
+      res?.data ||
+      res;
+
+    const items =
+      payload?.items ||
+      payload?.data?.items ||
+      [];
+
+    return Array.isArray(items) ? items : [];
+  },
+
+
+  getVoucher: async (hotelId: string, voucherId: string) => {
+    const res: any = await apiInstance.get(
+      `${HOTEL_BASE}/${hotelId}/vouchers/${voucherId}`
+    );
+
+    const payload =
+      res?.data?.data ||
+      res?.data ||
+      res;
+
+    return payload?.voucher as Voucher;
+  },
+
+  createVoucher: async (hotelId: string, data: CreateVoucherInput) => {
+    const res: any = await apiInstance.post(
+      `${HOTEL_BASE}/${hotelId}/vouchers`,
+      data
+    );
+
+    const payload =
+      res?.data?.data ||
+      res?.data ||
+      res;
+
+    return payload?.voucher as Voucher;
+  },
+
+  updateVoucher: async (
+    hotelId: string,
+    voucherId: string,
+    data: UpdateVoucherInput
+  ) => {
+    const res: any = await apiInstance.put(
+      `${HOTEL_BASE}/${hotelId}/vouchers/${voucherId}`,
+      data
+    );
+
+    const payload =
+      res?.data?.data ||
+      res?.data ||
+      res;
+
+    return payload?.voucher as Voucher;
+  },
+
+  deleteVoucher: async (hotelId: string, voucherId: string) => {
+    await apiInstance.delete(`${HOTEL_BASE}/${hotelId}/vouchers/${voucherId}`);
+  },
+
+
+
+
 };

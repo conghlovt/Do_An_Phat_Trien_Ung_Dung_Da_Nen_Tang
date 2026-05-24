@@ -3,8 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from '
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '../../../login/hooks/useAuth';
 import {
-  Home, BedDouble, BarChart3, Settings, LogOut, Hotel,
-  ChevronLeft, ChevronRight, Calendar,
+  Home,
+  BedDouble,
+  BarChart3,
+  Settings,
+  LogOut,
+  Hotel,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  TicketPercent,
 } from 'lucide-react-native';
 
 interface MenuItem {
@@ -15,11 +23,12 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { label: 'Trang chủ',      icon: Home,     path: '/partner/dashboard' },
-  { label: 'Quản lý phòng',  icon: BedDouble, path: '/partner/rooms' },
-  { label: 'Đơn đặt phòng', icon: Calendar,  path: '/partner/booking' },
-  { label: 'Thống kê',       icon: BarChart3, path: '/partner/stats' },
-  { label: 'Thiết lập',      icon: Settings,  path: '/partner/settings' },
+  { label: 'Trang chủ', icon: Home, path: '/partner/dashboard' },
+  { label: 'Quản lý phòng', icon: BedDouble, path: '/partner/rooms' },
+  { label: 'Đơn đặt phòng', icon: Calendar, path: '/partner/booking' },
+  { label: 'Voucher', icon: TicketPercent, path: '/partner/vouchers' },
+  { label: 'Thống kê', icon: BarChart3, path: '/partner/stats' },
+  { label: 'Thiết lập', icon: Settings, path: '/partner/settings' },
 ];
 
 const SIDEBAR_EXPANDED = 220;
