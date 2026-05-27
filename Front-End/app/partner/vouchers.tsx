@@ -29,7 +29,7 @@ const isMobile = Platform.OS !== 'web';
 
 // Hotel đã test có voucher.
 // Sau này có dropdown chọn khách sạn thì bỏ fallback này.
-const DEFAULT_TEST_HOTEL_ID = 'cmpm3a1uy0000lwm8s527oy7q';
+const DEFAULT_TEST_HOTEL_ID = '';
 
 function formatCurrency(value?: number | null) {
   if (!value) return 'Không giới hạn';
@@ -108,7 +108,7 @@ export default function PartnerVouchersPage() {
   const queryHotelId =
     typeof params.hotelId === 'string' ? params.hotelId : '';
 
-  const [hotelId, setHotelId] = useState(queryHotelId || DEFAULT_TEST_HOTEL_ID);
+  const [hotelId, setHotelId] = useState(queryHotelId || '');
   const [keyword, setKeyword] = useState('');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,12 +117,6 @@ export default function PartnerVouchersPage() {
   const resolveHotelId = async () => {
     if (queryHotelId) {
       return queryHotelId;
-    }
-
-    // Tạm thời ưu tiên hotel đã có voucher để demo/test.
-    // Nếu muốn lấy khách sạn đầu tiên thật thì đổi đoạn này.
-    if (DEFAULT_TEST_HOTEL_ID) {
-      return DEFAULT_TEST_HOTEL_ID;
     }
 
     const hotelRes = await partnerService.getHotels();

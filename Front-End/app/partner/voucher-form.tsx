@@ -21,7 +21,7 @@ import { partnerService } from '../../src/partner/services/partner.service';
 import { partnerVoucherService } from '../../src/partner/services/voucher.service';
 
 const isMobile = Platform.OS !== 'web';
-const DEFAULT_TEST_HOTEL_ID = 'cmpm3a1uy0000lwm8s527oy7q';
+const DEFAULT_TEST_HOTEL_ID = '';
 
 const customerTierOptions = [
   { id: 'REGULAR', name: 'Khách thường' },
@@ -241,7 +241,7 @@ export default function VoucherFormPage() {
   const hotelId =
     typeof params.hotelId === 'string' && params.hotelId
       ? params.hotelId
-      : DEFAULT_TEST_HOTEL_ID;
+      : ''
 
   // Hỗ trợ cả id cũ và voucherId mới
   const voucherId =
