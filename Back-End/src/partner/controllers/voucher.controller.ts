@@ -12,9 +12,7 @@ export const voucherController = {
       success: true,
       code: 'VOUCHER_LIST_FETCHED',
       message: 'Lấy danh sách voucher thành công',
-      data: {
-        items: vouchers,
-      },
+      data: { items: vouchers },
     });
   },
 
@@ -29,9 +27,7 @@ export const voucherController = {
       success: true,
       code: 'VOUCHER_FETCHED',
       message: 'Lấy thông tin voucher thành công',
-      data: {
-        voucher,
-      },
+      data: { voucher },
     });
   },
 
@@ -46,9 +42,7 @@ export const voucherController = {
       success: true,
       code: 'VOUCHER_CREATED',
       message: 'Tạo voucher thành công',
-      data: {
-        voucher,
-      },
+      data: { voucher },
     });
   },
 
@@ -68,9 +62,7 @@ export const voucherController = {
       success: true,
       code: 'VOUCHER_UPDATED',
       message: 'Cập nhật voucher thành công',
-      data: {
-        voucher,
-      },
+      data: { voucher },
     });
   },
 
@@ -85,6 +77,21 @@ export const voucherController = {
       success: true,
       code: 'VOUCHER_DELETED',
       message: 'Xóa voucher thành công',
+    });
+  },
+
+  async apply(req: any, res: any) {
+    const { hotelId } = req.params;
+    const userId = req.user?.id;
+
+    const result = await voucherService.applyVoucher(hotelId, userId, req.body);
+
+    return res.json({
+      status: 'success',
+      success: true,
+      code: 'VOUCHER_APPLIED',
+      message: 'Áp dụng voucher thành công',
+      data: result,
     });
   },
 };

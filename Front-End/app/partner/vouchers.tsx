@@ -8,7 +8,7 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import {
   Plus,
   TicketPercent,
@@ -22,14 +22,21 @@ import {
   type Voucher,
 } from '../../src/partner/services/partner.service';
 
+import { partnerVoucherService } from '../../src/partner/services/voucher.service';
+
 const isMobile = Platform.OS !== 'web';
 
-function formatCurrency(value?: number) {
+
+// Hotel đã test có voucher.
+// Sau này có dropdown chọn khách sạn thì bỏ fallback này.
+const DEFAULT_TEST_HOTEL_ID = 'cmpm3a1uy0000lwm8s527oy7q';
+
+function formatCurrency(value?: number | null) {
   if (!value) return 'Không giới hạn';
   return value.toLocaleString('vi-VN') + 'đ';
 }
 
-function formatDate(value?: string) {
+function formatDate(value?: string | null) {
   if (!value) return '';
   return value.slice(0, 10);
 }
@@ -60,47 +67,96 @@ function getRoomText(item: Voucher) {
   }
 
   if (item.roomTypes?.length) {
-    return item.roomTypes.map((room) => room.name).filter(Boolean).join(', ');
+    return item.roomTypes
+      .map((room) => room.name)
+      .filter(Boolean)
+      .join(', ');
   }
 
   return ids.join(', ');
 }
 
+function getCustomerTierList(item: any): string[] {
+  const rule = item.rules?.find((r: any) => r.type === 'customerTier');
+
+  const values: string[] = Array.isArray(rule?.values) ? rule.values : [];
+
+  if (!values.length) return ['Tất cả'];
+
+  const labelMap: Record<string, string> = {
+    REGULAR: 'Thường',
+    RETURNING: 'Quay lại',
+    LOYAL: 'Thân thiết',
+    VIP: 'VIP',
+  };
+
+  return values.map((value: string) => labelMap[value] || value);
+}
+
+function getPerUserText(item: any) {
+  const perUser = item.constraints?.perUser;
+
+  if (!perUser) return 'Không giới hạn';
+
+  return `${perUser} lần mỗi khách`;
+}
+
 export default function PartnerVouchersPage() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
-  const [hotelId, setHotelId] = useState('');
+  const queryHotelId =
+    typeof params.hotelId === 'string' ? params.hotelId : '';
+
+  const [hotelId, setHotelId] = useState(queryHotelId || DEFAULT_TEST_HOTEL_ID);
   const [keyword, setKeyword] = useState('');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
+
+  const resolveHotelId = async () => {
+    if (queryHotelId) {
+      return queryHotelId;
+    }
+
+    // Tạm thời ưu tiên hotel đã có voucher để demo/test.
+    // Nếu muốn lấy khách sạn đầu tiên thật thì đổi đoạn này.
+    if (DEFAULT_TEST_HOTEL_ID) {
+      return DEFAULT_TEST_HOTEL_ID;
+    }
+
+    const hotelRes = await partnerService.getHotels();
+    const firstHotel = hotelRes.items?.[0];
+
+    if (!firstHotel?.id) {
+      return '';
+    }
+
+    return firstHotel.id;
+  };
 
   const loadVouchers = async () => {
     try {
       setLoading(true);
       setErrorText('');
 
+      const activeHotelId = await resolveHotelId();
 
-        const hotelRes = await partnerService.getHotels();
-
-        console.log('HOTEL RESPONSE FRONTEND:', hotelRes);
-
-        const firstHotel = hotelRes.items?.[0];
-
-
-      if (!firstHotel?.id) {
+      if (!activeHotelId) {
         setHotelId('');
         setVouchers([]);
         setErrorText('Bạn chưa có khách sạn nào.');
         return;
       }
 
-      setHotelId(firstHotel.id);
+      setHotelId(activeHotelId);
 
-      const data = await partnerService.getVouchers(firstHotel.id);
+      const data = await partnerVoucherService.getVouchers(activeHotelId);
+
       setVouchers(data);
     } catch (err: any) {
       console.error('Lỗi load voucher:', err);
+
       setErrorText(
         err?.response?.data?.message ||
           err?.message ||
@@ -114,7 +170,7 @@ export default function PartnerVouchersPage() {
   useFocusEffect(
     useCallback(() => {
       loadVouchers();
-    }, [])
+    }, [queryHotelId])
   );
 
   const filteredVouchers = useMemo(() => {
@@ -124,8 +180,8 @@ export default function PartnerVouchersPage() {
 
     return vouchers.filter((item) => {
       return (
-        item.code.toLowerCase().includes(q) ||
-        item.name.toLowerCase().includes(q)
+        item.code?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q)
       );
     });
   }, [keyword, vouchers]);
@@ -141,10 +197,11 @@ export default function PartnerVouchersPage() {
     if (!ok) return;
 
     try {
-      await partnerService.deleteVoucher(hotelId, voucherId);
+      await partnerVoucherService.deleteVoucher(hotelId, voucherId);
       await loadVouchers();
     } catch (err: any) {
       console.error('Lỗi xóa voucher:', err);
+
       setErrorText(
         err?.response?.data?.message || err?.message || 'Xóa voucher thất bại'
       );
@@ -160,6 +217,21 @@ export default function PartnerVouchersPage() {
     router.push({
       pathname: '/partner/voucher-form' as any,
       params: { hotelId },
+    });
+  };
+
+  const goToEdit = (voucherId: string) => {
+    if (!hotelId) {
+      setErrorText('Không tìm thấy khách sạn để sửa voucher.');
+      return;
+    }
+
+    router.push({
+      pathname: '/partner/voucher-form' as any,
+      params: {
+        hotelId,
+        voucherId,
+      },
     });
   };
 
@@ -238,7 +310,7 @@ export default function PartnerVouchersPage() {
                 </View>
 
                 <Text style={s.usage}>
-                  Đã dùng {item.usedCount}/{item.usageLimit || '∞'}
+                  Đã dùng {item.usedCount || 0}/{item.usageLimit || '∞'}
                 </Text>
               </View>
 
@@ -260,20 +332,27 @@ export default function PartnerVouchersPage() {
                   value={formatDate(item.endDate)}
                 />
                 <InfoItem label="Loại phòng" value={getRoomText(item)} />
+
+                <View style={s.infoItem}>
+                  <Text style={s.infoLabel}>Hạng khách</Text>
+
+                  <View style={s.tierWrap}>
+
+                    {getCustomerTierList(item).map((tier: string, index: number) => (
+                      <View key={`${tier}-${index}`} style={s.tierBadge}>
+                        <Text style={s.tierText}>{tier}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <InfoItem label="Giới hạn mỗi khách" value={getPerUserText(item)} />
               </View>
 
               <View style={s.actions}>
                 <TouchableOpacity
                   style={s.editBtn}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/partner/voucher-form' as any,
-                      params: {
-                        id: item.id,
-                        hotelId,
-                      },
-                    })
-                  }
+                  onPress={() => goToEdit(item.id)}
                 >
                   <Pencil size={14} color="#334155" />
                   <Text style={s.editText}>Sửa</Text>
@@ -490,11 +569,13 @@ const s = StyleSheet.create({
     color: '#94A3B8',
     marginBottom: 4,
   },
+
   infoValue: {
     fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '700',
+    color: '#0D9488',
+    fontWeight: '800',
   },
+
   actions: {
     marginTop: 16,
     flexDirection: 'row',
@@ -527,4 +608,23 @@ const s = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '700',
   },
+  tierWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  tierBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+
+  tierText: {
+    color: '#0F766E',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
 });

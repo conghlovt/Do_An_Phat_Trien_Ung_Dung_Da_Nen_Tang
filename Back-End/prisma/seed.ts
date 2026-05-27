@@ -3,6 +3,14 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
+import { Prisma } from '@prisma/client';
+
+
+
+const toJson = (data: unknown): Prisma.InputJsonValue => {
+  return data as Prisma.InputJsonValue;
+};
+
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -1258,124 +1266,254 @@ const seedVouchers = async () => {
     return;
   }
 
-  const hotel = await prisma.hotel.findFirst({
+  const hotels = await prisma.hotel.findMany({
     where: {
       ownerId: partner.id,
     },
-    orderBy: {
-      createdAt: 'asc',
+    select: {
+      id: true,
+      name: true,
     },
   });
 
-  if (!hotel) {
+  if (!hotels.length) {
     console.log('⚠ Không tìm thấy hotel để seed voucher. Hãy seed hotel trước.');
     return;
   }
 
-  const roomTypes = await prisma.roomType.findMany({
+  // Xóa voucher khách hàng mới theo yêu cầu: không dùng WELCOME10 nữa
+  await prisma.voucher.deleteMany({
     where: {
-      hotelId: hotel.id,
+      code: 'WELCOME10',
     },
-    take: 2,
   });
 
-  const welcomeVoucher = await prisma.voucher.upsert({
-    where: {
-      hotelId_code: {
-        hotelId: hotel.id,
-        code: 'CHAOBANMOI',
+  console.log('✔ Đã xóa voucher WELCOME10');
+
+  const voucherTemplates = [
+    {
+      code: 'LOYAL15',
+      name: 'Ưu đãi khách hàng thân thiết',
+      rules: [
+        { type: 'customerTier', values: ['LOYAL', 'VIP'] },
+        { type: 'minOrder', value: 700000 },
+      ],
+      actions: [
+        { type: 'percent', value: 15, max: 150000 },
+      ],
+      constraints: {
+        usageLimit: 300,
+        usedCount: 0,
+        perUser: 2,
       },
     },
-    update: {
-      name: 'Chào bạn mới',
-      discountType: 'percent',
-      discountValue: 20,
-      minOrderValue: 0,
-      maxDiscount: 100000,
-      usageLimit: 100,
-      usedCount: 0,
-      startDate: new Date('2026-01-01T00:00:00.000Z'),
-      endDate: new Date('2026-12-31T23:59:59.000Z'),
-      status: 'ACTIVE',
-    },
-    create: {
-      hotelId: hotel.id,
-      code: 'CHAOBANMOI',
-      name: 'Chào bạn mới',
-      discountType: 'percent',
-      discountValue: 20,
-      minOrderValue: 0,
-      maxDiscount: 100000,
-      usageLimit: 100,
-      usedCount: 0,
-      startDate: new Date('2026-01-01T00:00:00.000Z'),
-      endDate: new Date('2026-12-31T23:59:59.000Z'),
-      status: 'ACTIVE',
-    },
-  });
 
-  await prisma.voucherRoomType.deleteMany({
-    where: {
-      voucherId: welcomeVoucher.id,
+    {
+      code: 'FLASH30',
+      name: 'Flash sale giờ vàng',
+      rules: [
+        { type: 'minOrder', value: 500000 },
+      ],
+      actions: [
+        { type: 'percent', value: 30, max: 200000 },
+      ],
+      constraints: {
+        usageLimit: 100,
+        usedCount: 0,
+        perUser: 1,
+        startDate: '2026-06-01T00:00:00.000Z',
+        endDate: '2026-06-07T23:59:59.000Z',
+      },
     },
-  });
 
-  if (roomTypes.length > 0) {
-    await prisma.voucherRoomType.createMany({
-      data: roomTypes.map((roomType) => ({
-        voucherId: welcomeVoucher.id,
-        roomTypeId: roomType.id,
-      })),
-      skipDuplicates: true,
-    });
+    {
+      code: 'FLASHNIGHT30',
+      name: 'Flash sale đêm',
+      rules: [
+        { type: 'bookingType', value: 'overnight' },
+        { type: 'minOrder', value: 500000 },
+      ],
+      actions: [
+        { type: 'percent', value: 30, max: 220000 },
+      ],
+      constraints: {
+        usageLimit: 80,
+        usedCount: 0,
+        perUser: 1,
+        startDate: '2026-06-01T00:00:00.000Z',
+        endDate: '2026-06-07T23:59:59.000Z',
+      },
+    },
+
+    {
+      code: 'STAY3DAYS',
+      name: 'Ở từ 3 ngày giảm thêm',
+      rules: [
+        { type: 'stayDays', min: 3 },
+        { type: 'minOrder', value: 1500000 },
+      ],
+      actions: [
+        { type: 'fixed', value: 250000 },
+      ],
+      constraints: {
+        usageLimit: 150,
+        usedCount: 0,
+        perUser: 1,
+      },
+    },
+
+    {
+      code: 'WEEKEND12',
+      name: 'Ưu đãi cuối tuần',
+      rules: [
+        { type: 'minOrder', value: 600000 },
+      ],
+      actions: [
+        { type: 'percent', value: 12, max: 100000 },
+      ],
+      constraints: {
+        usageLimit: 200,
+        usedCount: 0,
+        perUser: 2,
+        startDate: '2026-06-06T00:00:00.000Z',
+        endDate: '2026-06-08T23:59:59.000Z',
+      },
+    },
+
+    {
+      code: 'VIP25',
+      name: 'Ưu đãi khách VIP',
+      rules: [
+        { type: 'customerTier', values: ['VIP'] },
+        { type: 'minOrder', value: 1000000 },
+      ],
+      actions: [
+        { type: 'percent', value: 25, max: 300000 },
+      ],
+      constraints: {
+        usageLimit: 100,
+        usedCount: 0,
+        perUser: 2,
+      },
+    },
+
+    {
+      code: 'BIRTHDAY100',
+      name: 'Quà sinh nhật khách hàng',
+      rules: [
+        { type: 'customerTier', values: ['REGULAR', 'RETURNING', 'LOYAL', 'VIP'] },
+        { type: 'minOrder', value: 500000 },
+      ],
+      actions: [
+        { type: 'fixed', value: 100000 },
+      ],
+      constraints: {
+        usageLimit: 500,
+        usedCount: 0,
+        perUser: 1,
+      },
+    },
+
+    {
+      code: 'COMEBACK20',
+      name: 'Quay lại nhận ưu đãi',
+      rules: [
+        { type: 'customerTier', values: ['RETURNING', 'LOYAL', 'VIP'] },
+        { type: 'minOrder', value: 600000 },
+      ],
+      actions: [
+        { type: 'percent', value: 20, max: 150000 },
+      ],
+      constraints: {
+        usageLimit: 300,
+        usedCount: 0,
+        perUser: 1,
+      },
+    },
+
+    {
+      code: 'EARLYBIRD10',
+      name: 'Đặt sớm nhận ưu đãi',
+      rules: [
+        { type: 'minOrder', value: 500000 },
+      ],
+      actions: [
+        { type: 'percent', value: 10, max: 90000 },
+      ],
+      constraints: {
+        usageLimit: 250,
+        usedCount: 0,
+        perUser: 2,
+      },
+    },
+
+    {
+      code: 'LASTMINUTE18',
+      name: 'Ưu đãi đặt sát giờ',
+      rules: [
+        { type: 'minOrder', value: 350000 },
+      ],
+      actions: [
+        { type: 'percent', value: 18, max: 100000 },
+      ],
+      constraints: {
+        usageLimit: 180,
+        usedCount: 0,
+        perUser: 1,
+      },
+    },
+
+    {
+      code: 'HOURLY20',
+      name: 'Giảm 20% đặt phòng theo giờ',
+      rules: [
+        { type: 'bookingType', value: 'hourly' },
+        { type: 'stayHours', min: 2 },
+      ],
+      actions: [
+        { type: 'percent', value: 20, max: 80000 },
+      ],
+      constraints: {
+        usageLimit: 200,
+        usedCount: 0,
+        perUser: 2,
+      },
+    },
+  ];
+
+  for (const hotel of hotels) {
+    for (const voucher of voucherTemplates) {
+      await prisma.voucher.upsert({
+        where: {
+          hotelId_code: {
+            hotelId: hotel.id,
+            code: voucher.code,
+          },
+        },
+        update: {
+          name: voucher.name,
+          rules: toJson(voucher.rules),
+          actions: toJson(voucher.actions),
+          constraints: toJson(voucher.constraints),
+          status: 'ACTIVE',
+        } as any,
+        create: {
+          hotelId: hotel.id,
+          code: voucher.code,
+          name: voucher.name,
+          rules: toJson(voucher.rules),
+          actions: toJson(voucher.actions),
+          constraints: toJson(voucher.constraints),
+          status: 'ACTIVE',
+        } as any,
+      });
+    }
   }
 
-  const allRoomVoucher = await prisma.voucher.upsert({
-    where: {
-      hotelId_code: {
-        hotelId: hotel.id,
-        code: 'SUMMER30',
-      },
-    },
-    update: {
-      name: 'Giảm 30% mùa hè',
-      discountType: 'percent',
-      discountValue: 30,
-      minOrderValue: 500000,
-      maxDiscount: 200000,
-      usageLimit: 100,
-      usedCount: 0,
-      startDate: new Date('2026-05-01T00:00:00.000Z'),
-      endDate: new Date('2026-06-30T23:59:59.000Z'),
-      status: 'ACTIVE',
-    },
-    create: {
-      hotelId: hotel.id,
-      code: 'SUMMER30',
-      name: 'Giảm 30% mùa hè',
-      discountType: 'percent',
-      discountValue: 30,
-      minOrderValue: 500000,
-      maxDiscount: 200000,
-      usageLimit: 100,
-      usedCount: 0,
-      startDate: new Date('2026-05-01T00:00:00.000Z'),
-      endDate: new Date('2026-06-30T23:59:59.000Z'),
-      status: 'ACTIVE',
-    },
-  });
-
-  // Không tạo VoucherRoomType cho SUMMER30
-  // Nghĩa là voucher này áp dụng cho tất cả loại phòng
-  await prisma.voucherRoomType.deleteMany({
-    where: {
-      voucherId: allRoomVoucher.id,
-    },
-  });
-
-  console.log('✔ Đã seed voucher');
+  console.log(
+    `✔ Đã seed ${voucherTemplates.length} voucher cho ${hotels.length} khách sạn`
+  );
 };
-
 
 main()
   .catch((e) => {

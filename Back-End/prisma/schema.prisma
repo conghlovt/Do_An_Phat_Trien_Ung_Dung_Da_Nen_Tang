@@ -107,49 +107,31 @@ model Review {
 }
 
 model Voucher {
-  id              String        @id @default(uuid())
+  id        String   @id @default(uuid())
+  hotelId   String?  @map("hotel_id")
 
-  hotelId         String        @map("hotel_id")
+  code      String
+  name      String
 
-  code            String
-  name            String
+  // CORE ENGINE
+  rules       Json
+  actions     Json
+  constraints Json
 
-  discountType    String        @map("discount_type") // percent | fixed
-  discountValue   Int           @map("discount_value")
+  status    VoucherStatus @default(ACTIVE)
 
-  minOrderValue   Int?          @map("min_order_value")
-  maxDiscount     Int?          @map("max_discount")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  usageLimit      Int           @default(100) @map("usage_limit")
-  usedCount       Int           @default(0)   @map("used_count")
-
-  startDate       DateTime      @map("start_date")
-  endDate         DateTime      @map("end_date")
-
-  status          VoucherStatus @default(ACTIVE)
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  hotel           Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-
-  roomTypes       VoucherRoomType[]
+  hotel     Hotel? @relation(fields: [hotelId], references: [id])
 
   @@unique([hotelId, code])
-  @@index([hotelId])
+  @@index([code])
+  @@index([status])
 }
 
-model VoucherRoomType {
-  id         String @id @default(uuid())
 
-  voucherId  String @map("voucher_id")
-  roomTypeId String @map("room_type_id")
 
-  voucher    Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
-  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
-
-  @@unique([voucherId, roomTypeId])
-}
 
 
 model Finance {
@@ -352,7 +334,6 @@ model RoomType {
   roomTypeAmenities RoomTypeAmenity[]
   hotel             Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   roomUnits         RoomUnit[]
-  voucherRoomTypes  VoucherRoomType[]
 
   @@unique([hotelId, slug])
   @@index([hotelId])

@@ -1,6 +1,13 @@
-import { PrismaClient, VoucherStatus } from '@prisma/client';
+import { PrismaClient, VoucherStatus, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import {
+  applyActions,
+  validateConstraints,
+  validateRules,
+  normalizeArray,
+  normalizeObject,
+} from '../utils/voucher.engine';
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -8,28 +15,13 @@ const pool = new pg.Pool({
 
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-
+const toJson = (value: unknown): Prisma.InputJsonValue => {
+  return value as Prisma.InputJsonValue;
+};
 function makeError(message: string, statusCode = 400) {
   const error: any = new Error(message);
   error.statusCode = statusCode;
   return error;
-}
-
-function formatVoucher(voucher: any) {
-  const voucherRoomTypes = voucher.roomTypes || [];
-
-  return {
-    ...voucher,
-    applicableRoomTypeIds:
-      voucherRoomTypes.length > 0
-        ? voucherRoomTypes.map((item: any) => item.roomTypeId)
-        : ['all'],
-
-    roomTypes: voucherRoomTypes.map((item: any) => ({
-      id: item.roomType?.id,
-      name: item.roomType?.name,
-    })),
-  };
 }
 
 async function checkHotelOwner(hotelId: string, ownerId: string) {
@@ -54,26 +46,32 @@ async function checkHotelOwner(hotelId: string, ownerId: string) {
   return hotel;
 }
 
-async function validateRoomTypesBelongToHotel(
-  hotelId: string,
-  applicableRoomTypeIds: string[]
-) {
-  if (!applicableRoomTypeIds.length || applicableRoomTypeIds.includes('all')) {
-    return;
-  }
+function formatVoucher(voucher: any) {
+  const rules = normalizeArray(voucher.rules);
+  const actions = normalizeArray(voucher.actions);
+  const constraints = normalizeObject(voucher.constraints);
 
-  const count = await prisma.roomType.count({
-    where: {
-      hotelId,
-      id: {
-        in: applicableRoomTypeIds,
-      },
-    },
-  });
+  return {
+    ...voucher,
 
-  if (count !== applicableRoomTypeIds.length) {
-    throw makeError('Một hoặc nhiều loại phòng không thuộc khách sạn này', 400);
-  }
+    rules,
+    actions,
+    constraints,
+
+    // compatibility cho frontend cũ
+    discountType: actions[0]?.type || 'fixed',
+    discountValue: actions[0]?.value || 0,
+    maxDiscount: actions[0]?.max || null,
+    minOrderValue:
+      rules.find((rule: any) => rule.type === 'minOrder')?.value || null,
+    usageLimit: constraints.usageLimit || null,
+    usedCount: constraints.usedCount || 0,
+    startDate: constraints.startDate || null,
+    endDate: constraints.endDate || null,
+    applicableRoomTypeIds:
+      rules.find((rule: any) => rule.type === 'roomType')?.ids || ['all'],
+    roomTypes: [],
+  };
 }
 
 export const voucherService = {
@@ -83,13 +81,6 @@ export const voucherService = {
     const vouchers = await prisma.voucher.findMany({
       where: {
         hotelId,
-      },
-      include: {
-        roomTypes: {
-          include: {
-            roomType: true,
-          },
-        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -107,13 +98,6 @@ export const voucherService = {
         id: voucherId,
         hotelId,
       },
-      include: {
-        roomTypes: {
-          include: {
-            roomType: true,
-          },
-        },
-      },
     });
 
     if (!voucher) {
@@ -126,51 +110,41 @@ export const voucherService = {
   async create(hotelId: string, ownerId: string, data: any) {
     await checkHotelOwner(hotelId, ownerId);
 
-    const applicableRoomTypeIds =
-      Array.isArray(data.applicableRoomTypeIds) &&
-      data.applicableRoomTypeIds.length > 0
-        ? data.applicableRoomTypeIds
-        : ['all'];
+    const code = String(data.code || '').trim().toUpperCase();
+    const name = String(data.name || '').trim();
 
-    await validateRoomTypesBelongToHotel(hotelId, applicableRoomTypeIds);
+    if (!code) {
+      throw makeError('Mã voucher không được để trống', 400);
+    }
+
+    if (!name) {
+      throw makeError('Tên voucher không được để trống', 400);
+    }
+
+    const rules = Array.isArray(data.rules) ? data.rules : [];
+    const actions = Array.isArray(data.actions) ? data.actions : [];
+    const constraints =
+      data.constraints && typeof data.constraints === 'object'
+        ? data.constraints
+        : {};
+
+    if (!actions.length) {
+      throw makeError('Voucher cần ít nhất một hành động giảm giá', 400);
+    }
 
     const voucher = await prisma.voucher.create({
       data: {
         hotelId,
-        code: String(data.code || '').trim().toUpperCase(),
-        name: String(data.name || '').trim(),
-        discountType: data.discountType || 'percent',
-        discountValue: Number(data.discountValue || 0),
-        minOrderValue:
-          data.minOrderValue !== undefined && data.minOrderValue !== null
-            ? Number(data.minOrderValue)
-            : null,
-        maxDiscount:
-          data.maxDiscount !== undefined && data.maxDiscount !== null
-            ? Number(data.maxDiscount)
-            : null,
-        usageLimit:
-          data.usageLimit !== undefined && data.usageLimit !== null
-            ? Number(data.usageLimit)
-            : 100,
-        usedCount: 0,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
+        code,
+        name,
+        rules: toJson(rules),
+        actions: toJson(actions),
+        constraints: toJson(constraints),
         status: VoucherStatus.ACTIVE,
       } as any,
     });
 
-    if (!applicableRoomTypeIds.includes('all')) {
-      await prisma.voucherRoomType.createMany({
-        data: applicableRoomTypeIds.map((roomTypeId: string) => ({
-          voucherId: voucher.id,
-          roomTypeId,
-        })) as any,
-        skipDuplicates: true,
-      });
-    }
-
-    return this.getById(hotelId, voucher.id, ownerId);
+    return formatVoucher(voucher);
   },
 
   async update(hotelId: string, voucherId: string, ownerId: string, data: any) {
@@ -187,67 +161,45 @@ export const voucherService = {
       throw makeError('Không tìm thấy voucher', 404);
     }
 
-    const applicableRoomTypeIds =
-      Array.isArray(data.applicableRoomTypeIds) &&
-      data.applicableRoomTypeIds.length > 0
-        ? data.applicableRoomTypeIds
-        : ['all'];
+    const updateData: any = {};
 
-    await validateRoomTypesBelongToHotel(hotelId, applicableRoomTypeIds);
+    if (data.code !== undefined) {
+      updateData.code = String(data.code).trim().toUpperCase();
+    }
 
-    await prisma.voucher.update({
+    if (data.name !== undefined) {
+      updateData.name = String(data.name).trim();
+    }
+
+    if (data.rules !== undefined) {
+      updateData.rules = toJson(Array.isArray(data.rules) ? data.rules : []);
+    }
+
+    if (data.actions !== undefined) {
+      updateData.actions = toJson(Array.isArray(data.actions) ? data.actions : []);
+    }
+
+    if (data.constraints !== undefined) {
+      updateData.constraints = toJson(
+        data.constraints && typeof data.constraints === 'object'
+          ? data.constraints
+          : {}
+      );
+ 
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+
+    const voucher = await prisma.voucher.update({
       where: {
         id: voucherId,
       },
-      data: {
-        code:
-          data.code !== undefined
-            ? String(data.code).trim().toUpperCase()
-            : undefined,
-        name:
-          data.name !== undefined
-            ? String(data.name).trim()
-            : undefined,
-        discountType:
-          data.discountType !== undefined ? data.discountType : undefined,
-        discountValue:
-          data.discountValue !== undefined
-            ? Number(data.discountValue)
-            : undefined,
-        minOrderValue:
-          data.minOrderValue !== undefined
-            ? Number(data.minOrderValue)
-            : undefined,
-        maxDiscount:
-          data.maxDiscount !== undefined
-            ? Number(data.maxDiscount)
-            : undefined,
-        usageLimit:
-          data.usageLimit !== undefined ? Number(data.usageLimit) : undefined,
-        startDate:
-          data.startDate !== undefined ? new Date(data.startDate) : undefined,
-        endDate:
-          data.endDate !== undefined ? new Date(data.endDate) : undefined,
-      } as any,
+      data: updateData,
     });
 
-    await prisma.voucherRoomType.deleteMany({
-      where: {
-        voucherId,
-      },
-    });
-
-    if (!applicableRoomTypeIds.includes('all')) {
-      await prisma.voucherRoomType.createMany({
-        data: applicableRoomTypeIds.map((roomTypeId: string) => ({
-          voucherId,
-          roomTypeId,
-        })) as any,
-        skipDuplicates: true,
-      });
-    }
-
-    return this.getById(hotelId, voucherId, ownerId);
+    return formatVoucher(voucher);
   },
 
   async remove(hotelId: string, voucherId: string, ownerId: string) {
@@ -272,4 +224,90 @@ export const voucherService = {
 
     return true;
   },
+
+  async applyVoucher(hotelId: string, userId: string, data: any) {
+    const safeData = data || {};
+
+    if (Array.isArray(safeData.codes) || Array.isArray(safeData.voucherCodes)) {
+      throw makeError('Mỗi đơn đặt phòng chỉ được áp dụng một voucher', 400);
+    }
+
+    const code = String(safeData.code || '').trim().toUpperCase();
+
+    if (!code) {
+      throw makeError('Vui lòng nhập mã voucher', 400);
+    }
+
+    const totalPrice = Number(safeData.totalPrice || 0);
+
+    if (totalPrice <= 0) {
+      throw makeError('Tổng tiền không hợp lệ', 400);
+    }
+
+    const voucher = await prisma.voucher.findFirst({
+      where: {
+        hotelId,
+        code,
+        status: VoucherStatus.ACTIVE,
+      },
+    });
+
+    if (!voucher) {
+      throw makeError('Voucher không tồn tại hoặc đã bị tắt', 404);
+    }
+
+    const hasPreviousBooking = false;
+
+    // Tạm thời cho test perUser.
+    // Sau này khi làm Booking/VoucherUsage thì lấy thật từ DB.
+    const userUsage = Number(safeData.userUsage || 0);
+
+    // Tạm thời cho test hạng khách.
+    // Sau này có thể tính từ số booking hoặc bảng loyalty.
+    const customerTier = String(safeData.customerTier || 'REGULAR').toUpperCase();
+
+    const context = {
+      totalPrice,
+      bookingType: safeData.bookingType,
+      roomTypeId: safeData.roomTypeId,
+      stayDays: Number(safeData.stayDays || 0),
+      stayHours: Number(safeData.stayHours || 0),
+      hasPreviousBooking,
+      userUsage,
+      customerTier,
+    };
+
+    const constraintResult = validateConstraints(
+      voucher.constraints || {},
+      context
+    );
+
+    if (!constraintResult.valid) {
+      throw makeError(constraintResult.reason || 'Voucher không hợp lệ', 400);
+    }
+
+    const ruleResult = validateRules(
+      voucher.rules || [],
+      context
+    );
+
+    if (!ruleResult.valid) {
+      throw makeError(ruleResult.reason || 'Voucher không áp dụng', 400);
+    }
+
+    const priceResult = applyActions(
+      voucher.actions || [],
+      totalPrice
+    );
+
+
+    return {
+      voucher: formatVoucher(voucher),
+      voucherId: voucher.id,
+      voucherCode: voucher.code,
+      ...priceResult,
+    };
+
+  }
+
 };

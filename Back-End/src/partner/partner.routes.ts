@@ -115,6 +115,11 @@ partnerRouter.post(
   asyncHandler((req, res) => voucherController.create(req as any, res))
 );
 
+partnerRouter.post(
+  '/hotels/:hotelId/vouchers/apply',
+  asyncHandler((req, res) => voucherController.apply(req as any, res))
+);
+
 partnerRouter.get(
   '/hotels/:hotelId/vouchers/:voucherId',
   asyncHandler((req, res) => voucherController.get(req as any, res))
@@ -129,7 +134,6 @@ partnerRouter.delete(
   '/hotels/:hotelId/vouchers/:voucherId',
   asyncHandler((req, res) => voucherController.remove(req as any, res))
 );
-
 // --- Bookings ---
 partnerRouter.get('/bookings', asyncHandler((req, res) => bookingController.listMyBookings(req as any, res)));
 partnerRouter.patch('/bookings/:id/status', asyncHandler((req, res) => bookingController.updateStatus(req as any, res)));

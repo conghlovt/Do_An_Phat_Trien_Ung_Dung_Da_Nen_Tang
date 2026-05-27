@@ -114,17 +114,33 @@ export interface Voucher {
   hotelId: string;
   code: string;
   name: string;
+  status: VoucherStatus;
+
+  // Engine fields mới
+  rules?: any[];
+  actions?: any[];
+  constraints?: {
+    usageLimit?: number;
+    usedCount?: number;
+    perUser?: number;
+    startDate?: string;
+    endDate?: string;
+    [key: string]: any;
+  };
+
+  // Compatibility fields cho UI cũ
   discountType: VoucherDiscountType;
   discountValue: number;
-  minOrderValue?: number;
-  maxDiscount?: number;
-  usageLimit?: number;
+  minOrderValue?: number | null;
+  maxDiscount?: number | null;
+  usageLimit?: number | null;
   usedCount: number;
-  startDate: string;
-  endDate: string;
-  status: VoucherStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+
   applicableRoomTypeIds: string[];
   roomTypes?: VoucherRoomType[];
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -132,14 +148,17 @@ export interface Voucher {
 export interface CreateVoucherInput {
   code: string;
   name: string;
-  discountType: VoucherDiscountType;
-  discountValue: number;
-  minOrderValue?: number;
-  maxDiscount?: number;
-  usageLimit?: number;
-  startDate: string;
-  endDate: string;
-  applicableRoomTypeIds: string[];
+  rules: any[];
+  actions: any[];
+  constraints: {
+    usageLimit?: number;
+    usedCount?: number;
+    perUser?: number;
+    startDate?: string;
+    endDate?: string;
+    [key: string]: any;
+  };
+  status?: VoucherStatus;
 }
 
 export type UpdateVoucherInput = Partial<CreateVoucherInput>;
