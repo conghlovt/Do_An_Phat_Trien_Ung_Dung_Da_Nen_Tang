@@ -2,6 +2,7 @@ import prisma from '../../login/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { AppError } from '../../shared/utils/app-error.util';
+import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
 import {
   ACTIVE_USER_STATUSES,
   BLOCKED_USER_STATUSES,
@@ -15,41 +16,83 @@ const PROTECTED_ADMIN_ROLES = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT']
 
 const asArray = <T>(items: (T | false | null | undefined)[]) => items.filter(Boolean) as T[];
 
+export type AdminUserListOptions = {
+  q?: string | undefined;
+  search?: string | undefined;
+  role?: string | undefined;
+  status?: string | undefined;
+  requesterRole: string;
+  page?: number | undefined;
+  limit?: number | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: SortOrder | undefined;
+  dateRange?: DateRange | undefined;
+  paginate?: boolean | undefined;
+};
+
+const userSortFields = new Set(['createdAt', 'updatedAt', 'email', 'username', 'role', 'status', 'lastLoginAt']);
+
+const buildUserWhere = (options: AdminUserListOptions): Prisma.UserWhereInput => {
+  const {
+    q,
+    search,
+    role,
+    status,
+    requesterRole,
+    dateRange,
+  } = options;
+  const query = String(search || q || '').trim();
+  const canViewProtectedUsers = ROOT_ADMIN_ROLES.includes(requesterRole);
+  const where: Prisma.UserWhereInput = {};
+
+  if (query) {
+    where.OR = [
+      { username: { contains: query, mode: 'insensitive' } },
+      { email: { contains: query, mode: 'insensitive' } },
+      { phone: { contains: query, mode: 'insensitive' } },
+      { role: { equals: query as any } },
+    ];
+  }
+
+  if (role) {
+    where.role = role as any;
+  } else if (!canViewProtectedUsers) {
+    where.role = { notIn: PROTECTED_ADMIN_ROLES as any };
+  }
+
+  if (role && !canViewProtectedUsers && PROTECTED_ADMIN_ROLES.includes(role)) {
+    where.id = '__forbidden_admin_role__';
+  }
+
+  if (status) {
+    if (isActiveUserStatus(status)) {
+      where.status = { in: [...ACTIVE_USER_STATUSES] as any };
+    } else if (isBlockedUserStatus(status)) {
+      where.status = { in: [...BLOCKED_USER_STATUSES] as any };
+    } else if (isValidUserStatus(status)) {
+      where.status = status as any;
+    }
+  }
+
+  if (dateRange?.from || dateRange?.to) {
+    where.createdAt = {
+      ...(dateRange.from ? { gte: dateRange.from } : {}),
+      ...(dateRange.to ? { lte: dateRange.to } : {}),
+    };
+  }
+
+  return where;
+};
+
+const buildUserOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
+  [userSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+});
+
 export const userService = {
-  getAllUsers: async (options: { q?: string; role?: string; status?: string; requesterRole: string; page?: number; limit?: number }) => {
-    const { q, role, status, requesterRole, page = 1, limit = 10 } = options;
-    const canViewProtectedUsers = ROOT_ADMIN_ROLES.includes(requesterRole);
+  getAllUsers: async (options: AdminUserListOptions) => {
+    const { page = 1, limit = 10, paginate = true } = options;
     const skip = (page - 1) * limit;
-
-    const where: Prisma.UserWhereInput = {};
-
-    if (q) {
-      where.OR = [
-        { username: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { role: { equals: q as any } },
-      ];
-    }
-
-    if (role) {
-      where.role = role as any;
-    } else if (!canViewProtectedUsers) {
-      where.role = { notIn: PROTECTED_ADMIN_ROLES as any };
-    }
-
-    if (role && !canViewProtectedUsers && PROTECTED_ADMIN_ROLES.includes(role)) {
-      where.id = '__forbidden_admin_role__';
-    }
-
-    if (status) {
-      if (isActiveUserStatus(status)) {
-        where.status = { in: [...ACTIVE_USER_STATUSES] as any };
-      } else if (isBlockedUserStatus(status)) {
-        where.status = { in: [...BLOCKED_USER_STATUSES] as any };
-      } else if (isValidUserStatus(status)) {
-        where.status = status as any;
-      }
-    }
+    const where = buildUserWhere(options);
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -60,16 +103,17 @@ export const userService = {
           username: true,
           role: true,
           status: true,
+          phone: true,
+          lastLoginAt: true,
           createdAt: true,
         },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
+        orderBy: buildUserOrderBy(options.sortBy, options.sortOrder) as any,
+        ...(paginate ? { skip, take: limit } : {}),
       }),
       prisma.user.count({ where }),
     ]);
 
-    return { users, total, page, limit };
+    return buildListResult('users', users, page, limit, total);
   },
 
   createUser: async (data: any, requesterRole: string) => {

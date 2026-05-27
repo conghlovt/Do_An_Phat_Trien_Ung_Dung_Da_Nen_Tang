@@ -1,17 +1,48 @@
 import apiInstance from '../../login/shared/api/api.instance';
 
-const params = (q?: string, page?: number, limit?: number, role?: string) => ({
-  params: {
-    ...(q ? { q } : {}),
-    ...(page ? { page } : {}),
-    ...(limit ? { limit } : {}),
-    ...(role ? { role } : {}),
+export type AdminQuery = Record<string, string | number | boolean | undefined | null>;
+
+const cleanParams = (query?: AdminQuery) =>
+  Object.fromEntries(
+    Object.entries(query || {}).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  );
+
+const params = (query?: AdminQuery | string, page?: number, limit?: number, role?: string) => {
+  if (typeof query === 'object' && query !== null) {
+    return { params: cleanParams(query) };
   }
-});
+
+  return {
+    params: cleanParams({
+      ...(query ? { search: query } : {}),
+      ...(page ? { page } : {}),
+      ...(limit ? { limit } : {}),
+      ...(role ? { role } : {}),
+    }),
+  };
+};
+
+const getDownloadFilename = (headers: any, fallback: string) => {
+  const disposition = headers?.['content-disposition'] || headers?.['Content-Disposition'];
+  const match = String(disposition || '').match(/filename="?([^"]+)"?/i);
+  return match?.[1] || fallback;
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 export const adminService = {
-  getStats: async () => {
-    const response = await apiInstance.get('/admin/stats');
+  getStats: async (query?: AdminQuery) => {
+    const response = await apiInstance.get('/admin/stats', params(query));
     return response.data.data;
   },
 
@@ -20,7 +51,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getUsers: async (query?: string, page?: number, limit?: number, role?: string) => {
+  getUsers: async (query?: AdminQuery | string, page?: number, limit?: number, role?: string) => {
     const response = await apiInstance.get('/admin/users', params(query, page, limit, role));
     return response.data.data;
   },
@@ -80,7 +111,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getVouchers: async (query?: string, page?: number, limit?: number) => {
+  getVouchers: async (query?: AdminQuery | string, page?: number, limit?: number) => {
     const response = await apiInstance.get('/admin/vouchers', params(query, page, limit));
     return response.data.data;
   },
@@ -100,7 +131,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getProperties: async (query?: string) => {
+  getProperties: async (query?: AdminQuery | string) => {
     const response = await apiInstance.get('/admin/properties', params(query));
     return response.data.data;
   },
@@ -120,7 +151,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getBookings: async (query?: string) => {
+  getBookings: async (query?: AdminQuery | string) => {
     const response = await apiInstance.get('/admin/bookings', params(query));
     return response.data.data;
   },
@@ -135,7 +166,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getReviews: async (query?: string) => {
+  getReviews: async (query?: AdminQuery | string) => {
     const response = await apiInstance.get('/admin/reviews', params(query));
     return response.data.data;
   },
@@ -150,7 +181,7 @@ export const adminService = {
     return response.data.data;
   },
 
-  getContent: async (query?: string) => {
+  getContent: async (query?: AdminQuery | string) => {
     const response = await apiInstance.get('/admin/content', params(query));
     return response.data.data;
   },
@@ -170,8 +201,26 @@ export const adminService = {
     return response.data.data;
   },
 
-  getFinance: async () => {
-    const response = await apiInstance.get('/admin/finance');
+  getFinance: async (query?: AdminQuery) => {
+    const response = await apiInstance.get('/admin/finance', params(query));
     return response.data.data;
-  }
+  },
+
+  exportResource: async (resource: string, query?: AdminQuery) => {
+    return apiInstance.get(`/admin/export/${resource}`, {
+      params: cleanParams(query),
+      responseType: 'blob',
+    });
+  },
+
+  downloadExport: async (resource: string, query?: AdminQuery, fallbackPrefix = resource) => {
+    const response = await adminService.exportResource(resource, query);
+    const fallback = `${fallbackPrefix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const filename = getDownloadFilename(response.headers, fallback);
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadBlob(blob, filename);
+    return { filename };
+  },
 };

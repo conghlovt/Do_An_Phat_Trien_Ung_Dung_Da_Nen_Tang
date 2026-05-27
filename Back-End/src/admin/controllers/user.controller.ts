@@ -1,17 +1,30 @@
 import { type Request, type Response } from 'express';
 import { userService } from '../services/user.service';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
+import {
+  getSearchQuery,
+  getStringQuery,
+  normalizeSortOrder,
+  parseDateRangeFromQuery,
+  parsePagination,
+} from '../utils/admin-query.util';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const q = String(req.query.q || '').trim();
-    const role = String(req.query.role || '').trim();
-    const status = String(req.query.status || '').trim();
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 10);
+    const { page, limit } = parsePagination(req);
     const requesterRole = (req as any).user?.role;
 
-    const result = await userService.getAllUsers({ q, role, status, requesterRole, page, limit });
+    const result = await userService.getAllUsers({
+      search: getSearchQuery(req),
+      role: getStringQuery(req, 'role'),
+      status: getStringQuery(req, 'status'),
+      requesterRole,
+      page,
+      limit,
+      sortBy: getStringQuery(req, 'sortBy'),
+      sortOrder: normalizeSortOrder(req.query.sortOrder),
+      dateRange: parseDateRangeFromQuery(req.query),
+    });
     return sendResponse(res, 200, 'Lấy danh sách người dùng thành công.', result);
   } catch (error) {
     return sendError(res, error);

@@ -1,6 +1,7 @@
 import prisma from '../../login/lib/prisma';
 import { Prisma, VoucherStatus } from '@prisma/client';
 import { normalizeArray, normalizeObject } from '../../partner/utils/voucher.engine';
+import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
 
 const toJson = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
@@ -8,6 +9,9 @@ const formatVoucher = (voucher: any) => {
   const rules = normalizeArray(voucher.rules);
   const actions = normalizeArray(voucher.actions);
   const constraints = normalizeObject(voucher.constraints);
+  const discountType = actions[0]?.type || 'fixed';
+  const discountValue = actions[0]?.value || 0;
+  const endDate = constraints.endDate || null;
 
   return {
     ...voucher,
@@ -15,44 +19,89 @@ const formatVoucher = (voucher: any) => {
     actions,
     constraints,
     // Compatibility for legacy frontend
-    discountType: actions[0]?.type || 'fixed',
-    discountValue: actions[0]?.value || 0,
+    discountType,
+    discountValue,
+    discount: discountValue,
+    type: discountType === 'fixed' ? 'FIXED' : 'PERCENTAGE',
     maxDiscount: actions[0]?.max || null,
     minOrderValue: rules.find((r: any) => r.type === 'minOrder')?.value || null,
     usageLimit: constraints.usageLimit || null,
     usedCount: constraints.usedCount || 0,
     startDate: constraints.startDate || null,
-    endDate: constraints.endDate || null,
+    endDate,
+    expiry: endDate,
     applicableRoomTypeIds: rules.find((r: any) => r.type === 'roomType')?.ids || ['all'],
   };
 };
 
+export type AdminVoucherListOptions = {
+  q?: string | undefined;
+  search?: string | undefined;
+  status?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: SortOrder | undefined;
+  dateRange?: DateRange | undefined;
+  paginate?: boolean | undefined;
+};
+
+const voucherSortFields = new Set(['createdAt', 'updatedAt', 'code', 'name', 'status']);
+
+const buildVoucherWhere = (options: AdminVoucherListOptions): Prisma.VoucherWhereInput => {
+  const query = String(options.search || options.q || '').trim();
+  const where: Prisma.VoucherWhereInput = {};
+
+  if (query) {
+    where.OR = [
+      { code: { contains: query, mode: 'insensitive' } },
+      { name: { contains: query, mode: 'insensitive' } },
+      { hotel: { name: { contains: query, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (options.status) {
+    where.status = options.status as any;
+  }
+
+  if (options.dateRange?.from || options.dateRange?.to) {
+    where.createdAt = {
+      ...(options.dateRange.from ? { gte: options.dateRange.from } : {}),
+      ...(options.dateRange.to ? { lte: options.dateRange.to } : {}),
+    };
+  }
+
+  return where;
+};
+
+const buildVoucherOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
+  [voucherSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+});
+
 export const voucherService = {
-  getAllVouchers: async (options: { q?: string; page?: number; limit?: number }) => {
-    const { q, page = 1, limit = 10 } = options;
+  getAllVouchers: async (options: AdminVoucherListOptions = {}) => {
+    const { page = 1, limit = 10, paginate = true } = options;
     const skip = (page - 1) * limit;
+    const where = buildVoucherWhere(options);
 
-    const where: Prisma.VoucherWhereInput = q
-      ? {
-          OR: [
-            { code: { contains: q, mode: 'insensitive' } },
-            { name: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {};
-
-    const [vouchers, total] = await Promise.all([
+    const [vouchers, total, hotels] = await Promise.all([
       prisma.voucher.findMany({
         where,
         include: { hotel: { select: { id: true, name: true } } },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
+        orderBy: buildVoucherOrderBy(options.sortBy, options.sortOrder) as any,
+        ...(paginate ? { skip, take: limit } : {}),
       }),
       prisma.voucher.count({ where }),
+      prisma.hotel.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
     ]);
 
-    return { vouchers: vouchers.map(formatVoucher), total, page, limit };
+    return {
+      ...buildListResult('vouchers', vouchers.map(formatVoucher), page, limit, total),
+      hotels,
+    };
   },
 
   createVoucher: async (data: any) => {
@@ -93,4 +142,4 @@ export const voucherService = {
   deleteVoucher: async (id: string) => {
     await prisma.voucher.delete({ where: { id } });
   },
-};
+};

@@ -38,6 +38,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
   
   // Modals State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -59,15 +61,21 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       if (role === 'staff') roleFilter = undefined; // Staff is a mix of roles, let server handle or filter here
       if (role === 'admin') roleFilter = 'admin';
 
-      const result = await adminService.getUsers(q, p, 10, roleFilter);
+      const result = await adminService.getUsers({
+        search: q,
+        page: p,
+        limit: 10,
+        role: roleFilter,
+        status: statusFilter,
+      });
       setUsers((result.users || []).map((user: any) => ({ ...user, status: normalizeDisplayStatus(user.status) })));
-      setTotalCount(result.total);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
       setLoading(false);
     }
-  }, [role]);
+  }, [role, statusFilter]);
 
   useEffect(() => {
     fetchUsers(searchQuery, page);
@@ -80,6 +88,29 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
 
   const handlePageChange = (p: number) => {
     setPage(p);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      let roleFilter = role;
+      if (role === 'staff') roleFilter = undefined;
+      if (role === 'admin') roleFilter = 'admin';
+      await adminService.downloadExport('users', {
+        search: searchQuery,
+        role: roleFilter,
+        status: statusFilter,
+      }, 'users');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleCreateUser = async () => {
@@ -263,6 +294,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
         columns={columns}
         data={users}
         onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        filterContent={
+          <View style={styles.filterRow}>
+            {['', 'ACTIVE', 'PENDING', 'BLOCKED'].map((status) => (
+              <TouchableOpacity
+                key={status || 'ALL'}
+                style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
+                onPress={() => handleStatusFilter(status)}
+              >
+                <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>
+                  {status || 'Tất cả'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
         actions={actions}
         serverSide
         loading={loading}
@@ -403,6 +451,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerActions: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 20 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
   createBtn: { 
     backgroundColor: '#3B82F6', 
     flexDirection: 'row', 

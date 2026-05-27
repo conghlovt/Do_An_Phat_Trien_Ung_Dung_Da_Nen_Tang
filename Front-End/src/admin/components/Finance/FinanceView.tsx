@@ -1,156 +1,127 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DataTable } from '../Management/DataTable';
 import { AlertCircle, CheckCircle2, DollarSign } from 'lucide-react-native';
 import { adminService } from '../../services/admin.service';
+import { ModuleAccess } from '../../utils/permissions';
 
-export const FinanceView = () => {
+const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: false, canApprove: true, canExport: false };
+
+export const FinanceView = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const [data, setData] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    fetchFinance();
-  }, []);
-
-  const fetchFinance = async () => {
+  const fetchFinance = useCallback(async () => {
     try {
       setLoading(true);
-      const records = await adminService.getFinance();
-      // Transform data if needed to match table format
-      const formatted = records.map((r: any) => ({
+      const result = await adminService.getFinance({
+        search: searchQuery,
+        status: statusFilter,
+        page,
+        limit: 10,
+      });
+      const records = result.finance || result.records || result.items || [];
+      setData(records.map((r: any) => ({
         ...r,
-        total: `$${r.totalRevenue.toLocaleString()}`,
-        fee: `$${r.platformFee.toLocaleString()}`,
-        net: `$${r.partnerNet.toLocaleString()}`,
-        status: r.status === 'COMPLETED' ? 'Đã hoàn tất' : r.status === 'PENDING' ? 'Chờ thanh toán' : 'Lỗi thanh toán',
-      }));
-      setData(formatted);
+        total: `${Number(r.totalRevenue || 0).toLocaleString('vi-VN')} VND`,
+        fee: `${Number(r.platformFee || 0).toLocaleString('vi-VN')} VND`,
+        net: `${Number(r.partnerNet || 0).toLocaleString('vi-VN')} VND`,
+      })));
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Fetch finance error:', error);
     } finally {
       setLoading(false);
     }
+  }, [page, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    fetchFinance();
+  }, [fetchFinance]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
   };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('finance', {
+        search: searchQuery,
+        status: statusFilter,
+      }, 'finance');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const columns = [
     { key: 'month', label: 'Kỳ đối soát' },
     { key: 'total', label: 'Tổng tiền khách trả' },
-    { key: 'fee', label: 'Phí nền tảng (10%)' },
-    { key: 'net', label: 'Tiền thực nhận đối tác' },
-    { 
-      key: 'status', 
+    { key: 'fee', label: 'Phí nền tảng' },
+    { key: 'net', label: 'Tiền đối tác nhận' },
+    {
+      key: 'status',
       label: 'Trạng thái',
       render: (status: string) => {
-        let bgColor = '#DEF7EC';
-        let textColor = '#03543F';
-        let Icon = CheckCircle2;
-        
-        if (status === 'Lỗi thanh toán') {
-          bgColor = '#FDE8E8';
-          textColor = '#9B1C1C';
-          Icon = AlertCircle;
-        } else if (status === 'Chờ thanh toán') {
-          bgColor = '#E1EFFE';
-          textColor = '#1E429F';
-          Icon = DollarSign;
-        }
-        
+        const isError = status === 'FAILED';
+        const isPending = status === 'PENDING';
+        const bgColor = isError ? '#FDE8E8' : isPending ? '#E1EFFE' : '#DEF7EC';
+        const textColor = isError ? '#9B1C1C' : isPending ? '#1E429F' : '#03543F';
+        const Icon = isError ? AlertCircle : isPending ? DollarSign : CheckCircle2;
         return (
           <View style={[styles.badge, { backgroundColor: bgColor }]}>
             <Icon size={14} color={textColor} />
             <Text style={[styles.badgeText, { color: textColor }]}>{status}</Text>
           </View>
         );
-      }
+      },
     },
-  ];
-
-  const actions = [
-    { label: 'Xác nhận', icon: CheckCircle2, color: '#10B981', onPress: (item: any) => console.log('Confirm', item) },
   ];
 
   return (
     <View style={styles.container}>
-      <View style={styles.alertContainer}>
-        <AlertCircle size={20} color="#B91C1C" />
-        <Text style={styles.alertText}>
-          Có 1 kỳ đối soát (Tháng 02/2024) đang gặp lỗi thanh toán. Cần can thiệp thủ công.
-        </Text>
-      </View>
-
-      <DataTable 
+      <DataTable
         title="Đối soát & Doanh thu"
         columns={columns}
         data={data}
-        onSearch={(q) => console.log('Searching', q)}
-        actions={actions}
+        onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={setPage}
+        filterContent={
+          <View style={styles.filterRow}>
+            {['', 'PENDING', 'COMPLETED', 'FAILED'].map((status) => (
+              <TouchableOpacity key={status || 'ALL'} style={[styles.filterChip, statusFilter === status && styles.filterChipActive]} onPress={() => { setStatusFilter(status); setPage(1); }}>
+                <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>{status || 'Tất cả'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
       />
-
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-        </View>
-      )}
-
-      <View style={styles.batchActions}>
-        <TouchableOpacity style={styles.batchBtn}>
-          <Text style={styles.batchBtnText}>Xác nhận thanh toán hàng loạt</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  alertContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FDE8E8',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#F8B4B4',
-  },
-  alertText: {
-    color: '#9B1C1C',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  batchActions: {
-    marginTop: 24,
-    alignItems: 'flex-end',
-  },
-  batchBtn: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  batchBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(248, 250, 252, 0.72)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 12, fontWeight: '700' },
 });

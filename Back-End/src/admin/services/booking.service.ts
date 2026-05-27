@@ -1,28 +1,81 @@
 import prisma from '../../login/lib/prisma';
+import { Prisma } from '@prisma/client';
 import {
   updateBookingStatusWithInventory,
 } from '../../shared/services/lodging-sync.service';
 import { decrementVoucherUsageByCode } from '../../shared/services/voucher-validation.service';
+import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
 
 const normalizeBooking = (booking: any) => ({
   ...booking,
   property: booking.property || booking.room?.property || null,
 });
 
+export type AdminBookingListOptions = {
+  q?: string | undefined;
+  search?: string | undefined;
+  status?: string | undefined;
+  paymentId?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: SortOrder | undefined;
+  dateRange?: DateRange | undefined;
+  paginate?: boolean | undefined;
+};
+
+const ALLOWED_STATUSES = new Set(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']);
+const bookingSortFields = new Set(['createdAt', 'updatedAt', 'checkIn', 'checkOut', 'totalPrice', 'status']);
+
+const buildBookingWhere = (options: AdminBookingListOptions): Prisma.BookingWhereInput => {
+  const query = String(options.search || options.q || '').trim();
+  const where: Prisma.BookingWhereInput = {};
+
+  if (query) {
+    where.OR = [
+      { id: { contains: query, mode: 'insensitive' } },
+      { paymentId: { contains: query, mode: 'insensitive' } },
+      { user: { username: { contains: query, mode: 'insensitive' } } },
+      { user: { email: { contains: query, mode: 'insensitive' } } },
+      { room: { name: { contains: query, mode: 'insensitive' } } },
+      { room: { property: { name: { contains: query, mode: 'insensitive' } } } },
+      { property: { name: { contains: query, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (options.status && ALLOWED_STATUSES.has(options.status)) {
+    where.status = options.status as any;
+  }
+
+  if (options.paymentId) {
+    where.paymentId = { contains: options.paymentId, mode: 'insensitive' };
+  }
+
+  if (options.dateRange?.from || options.dateRange?.to) {
+    where.createdAt = {
+      ...(options.dateRange.from ? { gte: options.dateRange.from } : {}),
+      ...(options.dateRange.to ? { lte: options.dateRange.to } : {}),
+    };
+  }
+
+  return where;
+};
+
+const buildBookingOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
+  [bookingSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+});
+
 export const bookingService = {
-  getAllBookings: async (options: { q?: string }) => {
-    const { q } = options;
-    const bookings = await prisma.booking.findMany({
-      where: q ? {
-        OR: [
-          { user: { username: { contains: q, mode: 'insensitive' } } },
-          { room: { name: { contains: q, mode: 'insensitive' } } },
-          { room: { property: { name: { contains: q, mode: 'insensitive' } } } },
-          { status: { equals: q as any } },
-        ],
-      } : {},
+  getAllBookings: async (options: AdminBookingListOptions = {}) => {
+    const { page = 1, limit = 10, paginate = true } = options;
+    const skip = (page - 1) * limit;
+    const where = buildBookingWhere(options);
+
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+      where,
       include: {
-        user: { select: { username: true, email: true } },
+        user: { select: { username: true, email: true, phone: true } },
         property: { select: { id: true, name: true, address: true } },
         room: {
           include: {
@@ -30,9 +83,13 @@ export const bookingService = {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
-    } as any);
-    return bookings.map(normalizeBooking);
+      orderBy: buildBookingOrderBy(options.sortBy, options.sortOrder) as any,
+      ...(paginate ? { skip, take: limit } : {}),
+    } as any),
+      prisma.booking.count({ where }),
+    ]);
+
+    return buildListResult('bookings', bookings.map(normalizeBooking), page, limit, total);
   },
 
   updateBookingStatus: async (id: string, status: string) => {

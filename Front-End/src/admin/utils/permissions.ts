@@ -115,6 +115,11 @@ export const normalizePermissions = (role?: string, permissions?: Partial<Permis
     Object.entries(rawActions as Record<string, unknown>).forEach(([rawActionId, value]) => {
       const actionId = normalizePermissionAction(rawActionId);
       if (!actionId) return;
+      if (rawActionId === 'edit') {
+        next[moduleId].create = Boolean(value);
+        next[moduleId].update = Boolean(value);
+        return;
+      }
       next[moduleId][actionId] = Boolean(value);
     });
   });
@@ -131,18 +136,16 @@ export const canAccess = (
   return Boolean(normalizedAction && permissions[moduleId]?.[normalizedAction]);
 };
 
-export const getModuleForTab = (tab: string): PermissionModule | 'overview' | 'roles' => {
-  if (tab === 'overview') return 'overview';
+export const getModuleForTab = (tab: string): PermissionModule | 'roles' => {
+  if (tab === 'overview') return 'dashboard';
   if (tab === 'roles') return 'roles';
 
   const moduleId = normalizePermissionModule(tab);
-  return moduleId || 'overview';
+  return moduleId || 'dashboard';
 };
 
 export const canViewTab = (permissions: PermissionMap, role: string | undefined, tab: string) => {
   const moduleId = getModuleForTab(tab);
-  
-  if (moduleId === 'overview') return true;
   
   // Hardcoded restriction for sensitive tabs under 'users' module
   if (['admins', 'staff'].includes(tab)) {

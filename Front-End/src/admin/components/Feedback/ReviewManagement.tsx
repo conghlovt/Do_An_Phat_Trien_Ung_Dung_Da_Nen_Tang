@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { DataTable } from '../Management/DataTable';
 import { Star, Edit, Trash2, CheckCircle, X } from 'lucide-react-native';
@@ -13,25 +13,58 @@ const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true
 export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const { isLight } = useAdminTheme();
   const [reviews, setReviews] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [editingReview, setEditingReview] = useState<any>(null);
   const [formData, setFormData] = useState({ rating: '5', comment: '', status: 'APPROVED', reply: '' });
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminService.getReviews();
-      setReviews(data || []);
+      const result = await adminService.getReviews({
+        search: searchQuery,
+        status: statusFilter,
+        rating: ratingFilter,
+        page,
+        limit: 10,
+      });
+      setReviews(result.reviews || result.items || []);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch reviews:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, ratingFilter, searchQuery, statusFilter]);
 
   useEffect(() => {
     fetchReviews();
-  }, []);
+  }, [fetchReviews]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('reviews', {
+        search: searchQuery,
+        status: statusFilter,
+        rating: ratingFilter,
+      }, 'reviews');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const openEditModal = (review: any) => {
     setEditingReview(review);
@@ -117,11 +150,40 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
     ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: isLight ? '#0F172A' : '#FFFFFF' }}>Đang tải đánh giá...</Text></View>;
-
   return (
     <View style={styles.container}>
-      <DataTable title="Quản lý đánh giá từ khách hàng" columns={columns} data={reviews} onSearch={() => {}} actions={actions} />
+      <DataTable
+        title="Quản lý đánh giá từ khách hàng"
+        columns={columns}
+        data={reviews}
+        onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        actions={actions}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={setPage}
+        filterContent={
+          <View style={styles.filterStack}>
+            <View style={styles.filterRow}>
+              {['', 'PENDING', 'APPROVED', 'HIDDEN'].map((status) => (
+                <TouchableOpacity key={status || 'ALL'} style={[styles.filterChip, statusFilter === status && styles.filterChipActive]} onPress={() => { setStatusFilter(status); setPage(1); }}>
+                  <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>{status || 'Tất cả'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.filterRow}>
+              {['', '1', '2', '3', '4', '5'].map((rating) => (
+                <TouchableOpacity key={rating || 'ALL_RATING'} style={[styles.filterChip, ratingFilter === rating && styles.filterChipActive]} onPress={() => { setRatingFilter(rating); setPage(1); }}>
+                  <Text style={[styles.filterChipText, ratingFilter === rating && styles.filterChipTextActive]}>{rating ? `${rating} sao` : 'Mọi sao'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        }
+      />
 
       <Modal visible={!!editingReview} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -164,6 +226,12 @@ export const ReviewManagement = ({ permissions = fullAccess }: { permissions?: M
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  filterStack: { gap: 10 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { backgroundColor: '#FFFFFF', width: '100%', maxWidth: 520, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#E2E8F0', ...Platform.select({ web: { boxShadow: '0 18px 36px rgba(15, 23, 42, 0.16)' } as any }) },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', paddingBottom: 20 },

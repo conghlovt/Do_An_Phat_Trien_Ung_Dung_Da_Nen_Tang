@@ -5,6 +5,7 @@ import {
   mapHotelStatusToPropertyStatus,
   syncHotelMirror,
 } from '../../shared/services/lodging-sync.service';
+import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
 
 const hotelInclude = {
   address: true,
@@ -72,53 +73,164 @@ const normalizeProperty = (property: Property & { owner: { username: string; ema
   propertyStatus: property.status,
 });
 
+export type AdminPropertyListOptions = {
+  q?: string | undefined;
+  search?: string | undefined;
+  status?: string | undefined;
+  city?: string | undefined;
+  propertyType?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
+  sortBy?: string | undefined;
+  sortOrder?: SortOrder | undefined;
+  dateRange?: DateRange | undefined;
+  paginate?: boolean | undefined;
+};
+
+const lodgingSortFields = new Set(['createdAt', 'updatedAt', 'name', 'status']);
+
+const normalizeHotelStatusFilter = (status?: string) => {
+  const value = String(status || '').trim().toLowerCase();
+  if (!value || value === 'all') return undefined;
+  if (value === 'active' || value === 'approved') return 'approved';
+  if (value === 'pending') return 'pending';
+  if (value === 'inactive' || value === 'suspended') return 'suspended';
+  if (value === 'rejected') return 'rejected';
+  if (value === 'draft') return 'draft';
+  return undefined;
+};
+
+const normalizeLegacyPropertyStatusFilter = (status?: string) => {
+  const value = String(status || '').trim().toLowerCase();
+  if (!value || value === 'all') return undefined;
+  if (value === 'active' || value === 'approved') return 'ACTIVE';
+  if (value === 'pending' || value === 'draft') return 'PENDING';
+  if (value === 'inactive' || value === 'suspended' || value === 'rejected') return 'INACTIVE';
+  return undefined;
+};
+
+const buildLodgingOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
+  [lodgingSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+});
+
+const buildHotelWhere = (options: AdminPropertyListOptions): Prisma.HotelWhereInput => {
+  const query = String(options.search || options.q || '').trim();
+  const where: Prisma.HotelWhereInput = {};
+  const status = normalizeHotelStatusFilter(options.status);
+
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } },
+      { owner: { username: { contains: query, mode: 'insensitive' } } },
+      { owner: { email: { contains: query, mode: 'insensitive' } } },
+      { address: { is: { fullAddress: { contains: query, mode: 'insensitive' } } } },
+      { address: { is: { addressLine: { contains: query, mode: 'insensitive' } } } },
+      { address: { is: { city: { contains: query, mode: 'insensitive' } } } },
+      { address: { is: { province: { contains: query, mode: 'insensitive' } } } },
+      { address: { is: { district: { contains: query, mode: 'insensitive' } } } },
+    ];
+  }
+
+  if (status) where.status = status as any;
+  if (options.propertyType) where.propertyType = String(options.propertyType).toLowerCase() as any;
+  if (options.city) {
+    where.address = {
+      is: {
+        OR: [
+          { city: { contains: options.city, mode: 'insensitive' } },
+          { province: { contains: options.city, mode: 'insensitive' } },
+        ],
+      },
+    } as any;
+  }
+  if (options.dateRange?.from || options.dateRange?.to) {
+    where.createdAt = {
+      ...(options.dateRange.from ? { gte: options.dateRange.from } : {}),
+      ...(options.dateRange.to ? { lte: options.dateRange.to } : {}),
+    };
+  }
+
+  return where;
+};
+
+const buildLegacyPropertyWhere = (
+  options: AdminPropertyListOptions,
+  mirroredHotelIds: string[],
+): Prisma.PropertyWhereInput => {
+  const query = String(options.search || options.q || '').trim();
+  const status = normalizeLegacyPropertyStatusFilter(options.status);
+  const where: Prisma.PropertyWhereInput = {
+    ...(mirroredHotelIds.length ? { id: { notIn: mirroredHotelIds } } : {}),
+  };
+
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: 'insensitive' } },
+      { address: { contains: query, mode: 'insensitive' } },
+      { city: { contains: query, mode: 'insensitive' } },
+      { type: { contains: query, mode: 'insensitive' } },
+      { owner: { username: { contains: query, mode: 'insensitive' } } },
+      { owner: { email: { contains: query, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (status) where.status = status as any;
+  if (options.city) where.city = { contains: options.city, mode: 'insensitive' };
+  if (options.propertyType) where.type = { contains: options.propertyType, mode: 'insensitive' };
+  if (options.dateRange?.from || options.dateRange?.to) {
+    where.createdAt = {
+      ...(options.dateRange.from ? { gte: options.dateRange.from } : {}),
+      ...(options.dateRange.to ? { lte: options.dateRange.to } : {}),
+    };
+  }
+
+  return where;
+};
+
 
 export const propertyService = {
-  getProperties: async (options: { q?: string }) => {
-    const { q } = options;
-    const hotelWhere = q
-      ? {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-            { address: { is: { fullAddress: { contains: q, mode: 'insensitive' } } } },
-            { address: { is: { city: { contains: q, mode: 'insensitive' } } } },
-            { address: { is: { district: { contains: q, mode: 'insensitive' } } } },
-          ],
-        }
-      : {};
+  getProperties: async (options: AdminPropertyListOptions = {}) => {
+    const { page = 1, limit = 10, paginate = true } = options;
+    const skip = (page - 1) * limit;
+    const windowSize = paginate ? skip + limit : undefined;
+    const hotelWhere = buildHotelWhere(options);
+    const allMirroredHotelIds = await prisma.hotel.findMany({ select: { id: true } });
+    const legacyWhere = buildLegacyPropertyWhere(options, allMirroredHotelIds.map((hotel) => hotel.id));
+    const orderBy = buildLodgingOrderBy(options.sortBy, options.sortOrder) as any;
 
-    const hotels = await prisma.hotel.findMany({
-      where: hotelWhere as any,
-      include: hotelInclude,
-      orderBy: { createdAt: 'desc' },
-    });
+    const [hotels, legacyProperties, hotelTotal, legacyTotal] = await Promise.all([
+      prisma.hotel.findMany({
+        where: hotelWhere as any,
+        include: hotelInclude,
+        orderBy,
+        ...(windowSize ? { take: windowSize } : {}),
+      }),
+      prisma.property.findMany({
+        where: legacyWhere,
+        include: {
+          owner: { select: { username: true, email: true } },
+        },
+        orderBy,
+        ...(windowSize ? { take: windowSize } : {}),
+      }),
+      prisma.hotel.count({ where: hotelWhere as any }),
+      prisma.property.count({ where: legacyWhere }),
+    ]);
 
-    const hotelIds = hotels.map((hotel: HotelWithInclude) => hotel.id);
-    const legacyProperties = await prisma.property.findMany({
-      where: {
-        ...(hotelIds.length ? { id: { notIn: hotelIds } } : {}),
-        ...(q
-          ? {
-              OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { address: { contains: q, mode: 'insensitive' } },
-                { city: { contains: q, mode: 'insensitive' } },
-                { type: { contains: q, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        owner: { select: { username: true, email: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return [
+    const items = [
       ...hotels.map(normalizeHotel),
       ...legacyProperties.map((p: any) => normalizeProperty(p)),
-    ];
+    ].sort((a: any, b: any) => {
+      const field = lodgingSortFields.has(String(options.sortBy || '')) ? String(options.sortBy) : 'createdAt';
+      const av = a[field] instanceof Date ? a[field].getTime() : String(a[field] || '');
+      const bv = b[field] instanceof Date ? b[field].getTime() : String(b[field] || '');
+      if (av === bv) return 0;
+      return options.sortOrder === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+
+    const pagedItems = paginate ? items.slice(skip, skip + limit) : items;
+    return buildListResult('properties', pagedItems, page, limit, hotelTotal + legacyTotal);
   },
 
   updateProperty: async (id: string, data: any) => {

@@ -7,17 +7,39 @@ import * as reviewController from './controllers/review.controller';
 import * as contentController from './controllers/content.controller';
 import * as permissionController from './controllers/permission.controller';
 import * as financeController from './controllers/finance.controller';
+import * as exportController from './controllers/export.controller';
+import type { NextFunction, Request, Response } from 'express';
 import { authenticate, authorize } from '../login/middlewares/auth.middleware';
 import { permissionGuard, requireRootAdmin } from './middlewares/admin-permission.middleware';
+import { sendResponse } from '../shared/utils/response.util';
 
 const router = Router();
 const ADMIN_ROLES = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];
+const EXPORT_RESOURCE_MODULES: Record<string, Parameters<typeof permissionGuard>[0]> = {
+  users: 'users',
+  properties: 'lodging',
+  hotels: 'lodging',
+  bookings: 'booking',
+  reviews: 'reviews',
+  vouchers: 'voucher',
+  finance: 'finance',
+  content: 'content',
+};
+
+const exportPermissionGuard = (req: Request, res: Response, next: NextFunction) => {
+  const moduleId = EXPORT_RESOURCE_MODULES[String(req.params.resource || '').toLowerCase()];
+  if (!moduleId) {
+    return sendResponse(res, 400, 'Unsupported export resource.', undefined, { code: 'EXPORT_RESOURCE_UNSUPPORTED' });
+  }
+  return permissionGuard(moduleId, 'export')(req as any, res, next);
+};
 
 router.use(authenticate, authorize(ADMIN_ROLES));
 
 // Stats for dashboard
 router.get('/stats', permissionGuard('dashboard', 'view'), financeController.getStats);
 router.get('/notifications', permissionGuard('notifications', 'view'), financeController.getNotifications);
+router.get('/export/:resource', exportPermissionGuard, exportController.exportResource);
 
 // User management
 router.get('/users', permissionGuard('users', 'view'), userController.getAllUsers);

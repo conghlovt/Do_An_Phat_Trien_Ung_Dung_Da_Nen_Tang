@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useAdminTheme } from '../AdminShell';
@@ -16,6 +16,8 @@ interface DataTableProps {
   onSearch: (query: string) => void;
   onFilterClick?: () => void;
   onExport?: (type: 'excel' | 'pdf') => void;
+  exporting?: boolean;
+  filterContent?: React.ReactNode;
   actions?: {
     label: string;
     icon: any;
@@ -37,6 +39,8 @@ export const DataTable: React.FC<DataTableProps> = ({
   onSearch,
   onFilterClick,
   onExport,
+  exporting,
+  filterContent,
   actions,
   serverSide,
   totalCount,
@@ -47,8 +51,10 @@ export const DataTable: React.FC<DataTableProps> = ({
   const { isLight } = useAdminTheme();
   const [internalPage, setInternalPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const didMountSearch = useRef(false);
   const itemsPerPage = 10;
   const hasActions = Boolean(actions?.length);
+  const canExport = Boolean(onExport);
 
   const currentPage = serverSide ? (externalPage || 1) : internalPage;
 
@@ -89,13 +95,23 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (serverSide) {
-      onSearch(query);
-    } else {
+    if (!serverSide) {
       setInternalPage(1);
       onSearch(query);
     }
   };
+
+  useEffect(() => {
+    if (!serverSide) return;
+    if (!didMountSearch.current) {
+      didMountSearch.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      onSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [onSearch, searchQuery, serverSide]);
 
   return (
     <View style={[styles.container, !isLight && styles.containerDark]}>
@@ -118,12 +134,20 @@ export const DataTable: React.FC<DataTableProps> = ({
             <Text style={[styles.iconBtnText, !isLight && styles.mutedTextDark]}>Bộ lọc</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.iconBtn, !isLight && styles.controlDark]} onPress={() => onExport?.('excel')}>
-            <Download size={18} color={isLight ? '#475569' : '#94A3B8'} />
-            <Text style={[styles.iconBtnText, !isLight && styles.mutedTextDark]}>Xuất Excel</Text>
-          </TouchableOpacity>
+          {canExport && (
+            <TouchableOpacity
+              style={[styles.iconBtn, !isLight && styles.controlDark, exporting && styles.iconBtnDisabled]}
+              disabled={exporting}
+              onPress={() => onExport?.('excel')}
+            >
+              <Download size={18} color={isLight ? '#475569' : '#94A3B8'} />
+              <Text style={[styles.iconBtnText, !isLight && styles.mutedTextDark]}>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
+      {filterContent ? <View style={[styles.filterContent, !isLight && styles.headerDark]}>{filterContent}</View> : null}
 
       <View style={styles.tableWrapper}>
         <View style={[styles.tableHeader, !isLight && styles.tableHeaderDark]}>
@@ -305,6 +329,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#475569',
+  },
+  iconBtnDisabled: {
+    opacity: 0.6,
+  },
+  filterContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   mutedTextDark: {
     color: '#94A3B8',

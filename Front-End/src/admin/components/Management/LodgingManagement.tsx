@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert, Modal, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { DataTable } from './DataTable';
 import { adminService } from '../../services/admin.service';
@@ -13,30 +13,62 @@ const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true
 export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const { isLight } = useAdminTheme();
   const [properties, setProperties] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [formData, setFormData] = useState({ name: '', address: '', type: 'Hotel', status: 'PENDING' });
 
-  const fetchProperties = async (q?: string) => {
+  const fetchProperties = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminService.getProperties(q);
-      setProperties(data || []);
+      const result = await adminService.getProperties({
+        search: searchQuery,
+        status: statusFilter,
+        propertyType: typeFilter,
+        city: cityFilter,
+        page,
+        limit: 10,
+      });
+      setProperties(result.properties || result.items || []);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch properties:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [cityFilter, page, searchQuery, statusFilter, typeFilter]);
 
   const handleSearch = (q: string) => {
-    fetchProperties(q);
+    setSearchQuery(q);
+    setPage(1);
   };
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+  }, [fetchProperties]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('properties', {
+        search: searchQuery,
+        status: statusFilter,
+        propertyType: typeFilter,
+        city: cityFilter,
+      }, 'properties');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const openEditModal = (property: any) => {
     setEditingProperty(property);
@@ -126,11 +158,37 @@ export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: 
     ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: isLight ? '#0F172A' : '#FFFFFF' }}>Đang tải dữ liệu lưu trú...</Text></View>;
-
   return (
     <View style={styles.container}>
-      <DataTable title="Quản lý cơ sở lưu trú" columns={columns} data={properties} onSearch={handleSearch} actions={actions} />
+      <DataTable
+        title="Quản lý cơ sở lưu trú"
+        columns={columns}
+        data={properties}
+        onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        actions={actions}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={setPage}
+        filterContent={
+          <View style={styles.filterStack}>
+            <View style={styles.filterRow}>
+              {['', 'approved', 'pending', 'rejected', 'suspended'].map((status) => (
+                <TouchableOpacity key={status || 'ALL'} style={[styles.filterChip, statusFilter === status && styles.filterChipActive]} onPress={() => { setStatusFilter(status); setPage(1); }}>
+                  <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>{status || 'Tất cả'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.dateRow}>
+              <TextInput style={styles.filterInput} placeholder="Thành phố" value={cityFilter} onChangeText={(value) => { setCityFilter(value); setPage(1); }} />
+              <TextInput style={styles.filterInput} placeholder="Loại: hotel/homestay" value={typeFilter} onChangeText={(value) => { setTypeFilter(value); setPage(1); }} />
+            </View>
+          </View>
+        }
+      />
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -171,6 +229,14 @@ export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: 
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  filterStack: { gap: 10 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
+  dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterInput: { minWidth: 180, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 12, height: 38, color: '#0F172A', ...Platform.select({ web: { outlineStyle: 'none' } as any }) } as any,
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start' },
   badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 },

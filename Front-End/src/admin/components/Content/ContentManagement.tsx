@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ScrollView, Platform } from 'react-native';
 import { DataTable } from '../Management/DataTable';
 import { Plus, Edit, Trash2, X } from 'lucide-react-native';
@@ -22,30 +22,56 @@ const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true
 export const ContentManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const { isLight } = useAdminTheme();
   const [posts, setPosts] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [formData, setFormData] = useState(emptyForm);
 
-  const fetchContent = async (q?: string) => {
+  const fetchContent = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminService.getContent(q);
-      setPosts(data || []);
+      const result = await adminService.getContent({
+        search: searchQuery,
+        status: statusFilter,
+        page,
+        limit: 10,
+      });
+      setPosts(result.content || result.items || []);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch content:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchQuery, statusFilter]);
 
   const handleSearch = (q: string) => {
-    fetchContent(q);
+    setSearchQuery(q);
+    setPage(1);
   };
 
   useEffect(() => {
     fetchContent();
-  }, []);
+  }, [fetchContent]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('content', {
+        search: searchQuery,
+        status: statusFilter,
+      }, 'content');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const openCreateModal = () => {
     setEditingPost(null);
@@ -112,8 +138,6 @@ export const ContentManagement = ({ permissions = fullAccess }: { permissions?: 
     ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: isLight ? '#0F172A' : '#FFFFFF' }}>Đang tải nội dung...</Text></View>;
-
   return (
     <View style={styles.container}>
       {permissions.canEdit && (
@@ -125,7 +149,29 @@ export const ContentManagement = ({ permissions = fullAccess }: { permissions?: 
         </View>
       )}
 
-      <DataTable title="Quản lý bài viết và nội dung" columns={columns} data={posts} onSearch={handleSearch} actions={actions} />
+      <DataTable
+        title="Quản lý bài viết và nội dung"
+        columns={columns}
+        data={posts}
+        onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        actions={actions}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={setPage}
+        filterContent={
+          <View style={styles.filterRow}>
+            {['', 'DRAFT', 'PUBLISHED', 'ARCHIVED'].map((status) => (
+              <TouchableOpacity key={status || 'ALL'} style={[styles.filterChip, statusFilter === status && styles.filterChipActive]} onPress={() => { setStatusFilter(status); setPage(1); }}>
+                <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>{status || 'Tất cả'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+      />
 
       <Modal visible={isModalOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -182,6 +228,11 @@ export const ContentManagement = ({ permissions = fullAccess }: { permissions?: 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerRow: { marginBottom: 20, alignItems: 'flex-end' },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
   addBtn: { backgroundColor: '#3B82F6', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
   addBtnText: { color: '#FFF', fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 20 },

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { DataTable } from './DataTable';
 import { adminService } from '../../services/admin.service';
 import { CheckCircle, Trash2, XCircle } from 'lucide-react-native';
@@ -7,33 +7,75 @@ import { confirmAction } from '../../utils/confirmAction';
 import { ModuleAccess } from '../../utils/permissions';
 import { useAdminTheme } from '../AdminShell';
 
-const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true };
+const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true, canExport: false };
+const statuses = ['', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
 
 export const BookingManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const { isLight } = useAdminTheme();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [exporting, setExporting] = useState(false);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminService.getBookings();
-      setBookings(data || []);
+      const result = await adminService.getBookings({
+        search: searchQuery,
+        status: statusFilter,
+        from: fromDate,
+        to: toDate,
+        page,
+        limit: 10,
+      });
+      setBookings(result.bookings || result.items || []);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch bookings:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fromDate, page, searchQuery, statusFilter, toDate]);
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('bookings', {
+        search: searchQuery,
+        status: statusFilter,
+        from: fromDate,
+        to: toDate,
+      }, 'bookings');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       await adminService.updateBookingStatus(id, status);
-      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status === 'CONFIRMED' ? 'Đã xác nhận' : 'Đã hủy'}`);
+      Alert.alert('Thành công', `Đã cập nhật trạng thái ${status}`);
       fetchBookings();
     } catch {
       Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
@@ -55,30 +97,20 @@ export const BookingManagement = ({ permissions = fullAccess }: { permissions?: 
 
   const columns = [
     { key: 'id', label: 'Mã đơn', render: (val: string) => <Text style={{ color: isLight ? '#64748B' : '#94A3B8', fontSize: 13 }}>#{val.substring(0, 8)}</Text> },
-    { key: 'user', label: 'Khách hàng', render: (val: any) => <Text style={{ color: isLight ? '#0F172A' : '#FFFFFF', fontWeight: '600' }}>{val?.username || 'Khách vãng lai'}</Text> },
+    { key: 'user', label: 'Khách hàng', render: (val: any) => <Text style={{ color: isLight ? '#0F172A' : '#FFFFFF', fontWeight: '600' }}>{val?.username || val?.email || 'Khách vãng lai'}</Text> },
     { key: 'property', label: 'Lưu trú', render: (val: any) => <Text style={{ color: isLight ? '#334155' : '#CBD5E1' }}>{val?.name || 'N/A'}</Text> },
     { key: 'checkIn', label: 'Check-in', render: (val: string) => <Text style={{ color: isLight ? '#64748B' : '#94A3B8' }}>{new Date(val).toLocaleDateString('vi-VN')}</Text> },
-    { key: 'totalPrice', label: 'Tổng tiền', render: (val: number) => <Text style={{ color: isLight ? '#2563EB' : '#60A5FA', fontWeight: 'bold' }}>{Number(val || 0).toLocaleString()} VND</Text> },
+    { key: 'totalPrice', label: 'Tổng tiền', render: (val: number) => <Text style={{ color: isLight ? '#2563EB' : '#60A5FA', fontWeight: 'bold' }}>{Number(val || 0).toLocaleString('vi-VN')} VND</Text> },
     {
       key: 'status',
       label: 'Trạng thái',
       render: (status: string) => {
-        let color = '#10B981';
-        let bgColor = 'rgba(16, 185, 129, 0.1)';
-
-        if (status === 'CANCELLED') {
-          color = '#EF4444';
-          bgColor = 'rgba(239, 68, 68, 0.1)';
-        } else if (status === 'PENDING') {
-          color = '#F59E0B';
-          bgColor = 'rgba(245, 158, 11, 0.1)';
-        }
-
+        const color = status === 'CANCELLED' ? '#EF4444' : status === 'PENDING' ? '#F59E0B' : status === 'COMPLETED' ? '#10B981' : '#3B82F6';
+        const bgColor = `${color}1A`;
+        const label = status === 'CONFIRMED' ? 'Đã xác nhận' : status === 'COMPLETED' ? 'Hoàn tất' : status === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý';
         return (
           <View style={[styles.badge, { backgroundColor: bgColor }]}>
-            <Text style={[styles.badgeText, { color }]}>
-              {status === 'CONFIRMED' ? 'Đã xác nhận' : status === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý'}
-            </Text>
+            <Text style={[styles.badgeText, { color }]}>{label}</Text>
           </View>
         );
       },
@@ -95,26 +127,55 @@ export const BookingManagement = ({ permissions = fullAccess }: { permissions?: 
     ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),
   ];
 
-  if (loading) return <View style={styles.container}><Text style={{ color: isLight ? '#0F172A' : '#FFFFFF' }}>Đang tải dữ liệu đặt phòng...</Text></View>;
-
   return (
     <View style={styles.container}>
-      <DataTable title="Quản lý đặt phòng hệ thống" columns={columns} data={bookings} onSearch={() => {}} actions={actions} />
+      <DataTable
+        title="Quản lý đặt phòng hệ thống"
+        columns={columns}
+        data={bookings}
+        onSearch={handleSearch}
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        actions={actions}
+        serverSide
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        onPageChange={setPage}
+        filterContent={
+          <View style={styles.filterStack}>
+            <View style={styles.filterRow}>
+              {statuses.map((status) => (
+                <TouchableOpacity
+                  key={status || 'ALL'}
+                  style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
+                  onPress={() => handleStatusFilter(status)}
+                >
+                  <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>{status || 'Tất cả'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.dateRow}>
+              <TextInput style={styles.dateInput} placeholder="Từ ngày YYYY-MM-DD" value={fromDate} onChangeText={(value) => { setFromDate(value); setPage(1); }} />
+              <TextInput style={styles.dateInput} placeholder="Đến ngày YYYY-MM-DD" value={toDate} onChangeText={(value) => { setToDate(value); setPage(1); }} />
+            </View>
+          </View>
+        }
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
+  filterStack: { gap: 10 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
+  dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dateInput: { minWidth: 180, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 12, height: 38, color: '#0F172A', ...Platform.select({ web: { outlineStyle: 'none' } as any }) } as any,
+  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
 });

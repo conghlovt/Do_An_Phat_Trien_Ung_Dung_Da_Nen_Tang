@@ -53,7 +53,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
 
   const getModulePermissions = useCallback((tab: string) => {
     const moduleId = getModuleForTab(tab);
-    if (moduleId === 'overview' || moduleId === 'roles') {
+    if (moduleId === 'roles') {
       return {
         canView: true,
         canCreate: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
@@ -104,7 +104,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
         return <PermissionMatrix currentUserRole={user?.role} onDirtyChange={setHasUnsavedPermissionChanges} />;
       case 'payment':
       case 'revenue':
-        return <FinanceView />;
+        return <FinanceView permissions={currentAccess} />;
       case 'users':
         return <UserManagement permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'customers':

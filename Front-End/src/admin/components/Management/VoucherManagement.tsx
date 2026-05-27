@@ -35,6 +35,8 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
@@ -43,16 +45,21 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
   const fetchVouchers = useCallback(async (q: string, p: number) => {
     setLoading(true);
     try {
-      const result = await adminService.getVouchers(q, p, 10);
+      const result = await adminService.getVouchers({
+        search: q,
+        page: p,
+        limit: 10,
+        status: statusFilter,
+      });
       setVouchers(result.vouchers || []);
       setHotels(result.hotels || []);
-      setTotalCount(result.total || 0);
+      setTotalCount(result.pagination?.total ?? result.total ?? 0);
     } catch (error) {
       console.error('Failed to fetch vouchers:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchVouchers(searchQuery, page);
@@ -65,6 +72,25 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
   const handlePageChange = (p: number) => {
     setPage(p);
+  };
+
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await adminService.downloadExport('vouchers', {
+        search: searchQuery,
+        status: statusFilter,
+      }, 'vouchers');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error?.response?.status === 403 ? 'Bạn không có quyền xuất dữ liệu' : 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const openCreateModal = () => {
@@ -183,6 +209,23 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
         columns={columns} 
         data={vouchers} 
         onSearch={handleSearch} 
+        onExport={permissions.canExport ? () => handleExport() : undefined}
+        exporting={exporting}
+        filterContent={
+          <View style={styles.filterRow}>
+            {['', 'ACTIVE', 'INACTIVE', 'EXPIRED'].map((status) => (
+              <TouchableOpacity
+                key={status || 'ALL'}
+                style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
+                onPress={() => handleStatusFilter(status)}
+              >
+                <Text style={[styles.filterChipText, statusFilter === status && styles.filterChipTextActive]}>
+                  {status || 'Tất cả'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
         actions={actions} 
         serverSide
         loading={loading}
@@ -312,6 +355,11 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerRow: { marginBottom: 20, alignItems: 'flex-end' },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  filterChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  filterChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: '#2563EB' },
   addBtn: {
     backgroundColor: '#3B82F6',
     flexDirection: 'row',

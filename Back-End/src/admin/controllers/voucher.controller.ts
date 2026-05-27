@@ -2,13 +2,26 @@ import { type Request, type Response } from 'express';
 import { voucherService } from '../services/voucher.service';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
 import { USER_MESSAGES } from '../../shared/utils/app-error.util';
+import {
+  getSearchQuery,
+  getStringQuery,
+  normalizeSortOrder,
+  parseDateRangeFromQuery,
+  parsePagination,
+} from '../utils/admin-query.util';
 
 export const getAllVouchers = async (req: Request, res: Response) => {
   try {
-    const q = String(req.query.q || '').trim();
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 10);
-    const result = await voucherService.getAllVouchers({ q, page, limit });
+    const { page, limit } = parsePagination(req);
+    const result = await voucherService.getAllVouchers({
+      search: getSearchQuery(req),
+      status: getStringQuery(req, 'status'),
+      page,
+      limit,
+      sortBy: getStringQuery(req, 'sortBy'),
+      sortOrder: normalizeSortOrder(req.query.sortOrder),
+      dateRange: parseDateRangeFromQuery(req.query),
+    });
     return sendResponse(res, 200, 'Lấy danh sách voucher thành công.', result);
   } catch (error) {
     return sendError(res, error);

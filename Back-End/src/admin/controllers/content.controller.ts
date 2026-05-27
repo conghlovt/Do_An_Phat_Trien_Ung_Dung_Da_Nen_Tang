@@ -2,11 +2,27 @@ import { type Request, type Response } from 'express';
 import { contentService } from '../services/content.service';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
 import { USER_MESSAGES } from '../../shared/utils/app-error.util';
+import {
+  getSearchQuery,
+  getStringQuery,
+  normalizeSortOrder,
+  parseDateRangeFromQuery,
+  parsePagination,
+} from '../utils/admin-query.util';
 
 export const getAllContent = async (req: Request, res: Response) => {
   try {
-    const q = String(req.query.q || '').trim();
-    const posts = await contentService.getAllContent({ q });
+    const { page, limit } = parsePagination(req);
+    const posts = await contentService.getAllContent({
+      search: getSearchQuery(req),
+      status: getStringQuery(req, 'status'),
+      category: getStringQuery(req, 'category'),
+      page,
+      limit,
+      sortBy: getStringQuery(req, 'sortBy'),
+      sortOrder: normalizeSortOrder(req.query.sortOrder),
+      dateRange: parseDateRangeFromQuery(req.query),
+    });
     return sendResponse(res, 200, 'Lấy danh sách bài viết thành công.', posts);
   } catch (error) {
     return sendError(res, error);

@@ -1,11 +1,28 @@
 import { type Request, type Response } from 'express';
 import { propertyService } from '../services/property.service';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
+import {
+  getSearchQuery,
+  getStringQuery,
+  normalizeSortOrder,
+  parseDateRangeFromQuery,
+  parsePagination,
+} from '../utils/admin-query.util';
 
 export const getProperties = async (req: Request, res: Response) => {
   try {
-    const q = String(req.query.q || '').trim();
-    const properties = await propertyService.getProperties({ q });
+    const { page, limit } = parsePagination(req);
+    const properties = await propertyService.getProperties({
+      search: getSearchQuery(req),
+      status: getStringQuery(req, 'status'),
+      city: getStringQuery(req, 'city'),
+      propertyType: getStringQuery(req, 'propertyType'),
+      page,
+      limit,
+      sortBy: getStringQuery(req, 'sortBy'),
+      sortOrder: normalizeSortOrder(req.query.sortOrder),
+      dateRange: parseDateRangeFromQuery(req.query),
+    });
     return sendResponse(res, 200, 'Lấy danh sách chỗ nghỉ thành công.', properties);
   } catch (error) {
     return sendError(res, error);
