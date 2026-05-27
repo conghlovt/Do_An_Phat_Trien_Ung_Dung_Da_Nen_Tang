@@ -12,13 +12,24 @@ export const getRolePermissions = async (_req: Request, res: Response) => {
   }
 };
 
+export const getRolePermission = async (req: Request, res: Response) => {
+  try {
+    const role = String(req.params.role);
+    const permissions = await permissionService.getRolePermission(role);
+    return sendResponse(res, 200, 'Lấy cấu hình phân quyền thành công.', permissions);
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
 export const updateRolePermissions = async (req: Request, res: Response) => {
   try {
     const role = String(req.params.role);
     const { permissions } = req.body;
-    if (!permissions || typeof permissions !== 'object') {
-      return sendResponse(res, 400, USER_MESSAGES.PERMISSION_PAYLOAD_REQUIRED);
+    if (!permissions || typeof permissions !== 'object' || Array.isArray(permissions)) {
+      return sendResponse(res, 400, USER_MESSAGES.PERMISSION_PAYLOAD_REQUIRED, undefined, { code: 'PERMISSION_PAYLOAD_REQUIRED' });
     }
+
     const updated = await permissionService.updateRolePermissions(role, permissions);
     return sendResponse(res, 200, 'Lưu cấu hình phân quyền thành công.', updated);
   } catch (error) {

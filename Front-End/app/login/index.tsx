@@ -31,7 +31,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, error } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
@@ -43,6 +43,10 @@ export default function LoginScreen() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
+
+  React.useEffect(() => {
+    if (error) setLoginError(error);
+  }, [error]);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoginError('');

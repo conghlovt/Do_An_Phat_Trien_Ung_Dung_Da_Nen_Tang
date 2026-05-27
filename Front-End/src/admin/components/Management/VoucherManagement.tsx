@@ -9,10 +9,18 @@ import { getErrorMessage } from '../../utils/errorMessage';
 import { useAdminTheme } from '../AdminShell';
 
 const emptyForm = {
+  hotelId: '',
   code: '',
+  name: '',
+  discountValue: '',
+  discountType: 'percent',
   discount: '',
   type: 'PERCENTAGE',
+  minOrderValue: '',
+  maxDiscount: '',
   usageLimit: '100',
+  startDate: '',
+  endDate: '',
   expiry: '',
   status: 'ACTIVE',
 };
@@ -22,6 +30,7 @@ const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true
 export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: ModuleAccess }) => {
   const { isLight } = useAdminTheme();
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [hotels, setHotels] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -36,6 +45,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
     try {
       const result = await adminService.getVouchers(q, p, 10);
       setVouchers(result.vouchers || []);
+      setHotels(result.hotels || []);
       setTotalCount(result.total || 0);
     } catch (error) {
       console.error('Failed to fetch vouchers:', error);
@@ -66,28 +76,41 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
   const openEditModal = (voucher: any) => {
     setEditingVoucher(voucher);
     setFormData({
+      hotelId: voucher.hotelId || '',
       code: voucher.code || '',
-      discount: String(voucher.discount ?? ''),
-      type: voucher.type || 'PERCENTAGE',
+      name: voucher.name || '',
+      discountValue: String(voucher.discountValue ?? voucher.discount ?? ''),
+      discountType: voucher.discountType || (voucher.type === 'FIXED' ? 'fixed' : 'percent'),
+      discount: String(voucher.discountValue ?? voucher.discount ?? ''),
+      type: voucher.discountType === 'fixed' || voucher.type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
+      minOrderValue: voucher.minOrderValue !== null && voucher.minOrderValue !== undefined ? String(voucher.minOrderValue) : '',
+      maxDiscount: voucher.maxDiscount !== null && voucher.maxDiscount !== undefined ? String(voucher.maxDiscount) : '',
       usageLimit: String(voucher.usageLimit ?? 100),
-      expiry: voucher.expiry ? new Date(voucher.expiry).toISOString().slice(0, 10) : '',
+      startDate: voucher.startDate ? new Date(voucher.startDate).toISOString().slice(0, 10) : '',
+      endDate: voucher.endDate ? new Date(voucher.endDate).toISOString().slice(0, 10) : '',
+      expiry: voucher.endDate ? new Date(voucher.endDate).toISOString().slice(0, 10) : '',
       status: voucher.status || (voucher.isActive ? 'ACTIVE' : 'INACTIVE'),
     });
     setIsModalOpen(true);
   };
 
   const handleSaveVoucher = async () => {
-    if (!formData.code || !formData.discount || !formData.expiry) {
+    if (!formData.hotelId || !formData.code || !(formData.discountValue || formData.discount) || !(formData.endDate || formData.expiry)) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ mã, mức giảm và ngày hết hạn');
       return;
     }
 
     const payload = {
+      hotelId: formData.hotelId,
       code: formData.code,
-      discount: Number(formData.discount),
-      type: formData.type,
+      name: formData.name || formData.code,
+      discountType: formData.discountType || (formData.type === 'FIXED' ? 'fixed' : 'percent'),
+      discountValue: Number(formData.discountValue || formData.discount),
+      minOrderValue: formData.minOrderValue ? Number(formData.minOrderValue) : null,
+      maxDiscount: formData.maxDiscount ? Number(formData.maxDiscount) : null,
       usageLimit: Number(formData.usageLimit || 100),
-      expiry: new Date(formData.expiry).toISOString(),
+      startDate: new Date(formData.startDate || new Date()).toISOString(),
+      endDate: new Date(formData.endDate || formData.expiry).toISOString(),
       status: formData.status,
     };
 
@@ -180,6 +203,27 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
             <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
+                <Text style={styles.label}>Khach san ap dung</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotelSelector}>
+                  {hotels.map((hotel) => (
+                    <TouchableOpacity
+                      key={hotel.id}
+                      style={[styles.hotelChip, formData.hotelId === hotel.id && styles.hotelChipActive]}
+                      onPress={() => setFormData({ ...formData, hotelId: hotel.id })}
+                    >
+                      <Text style={[styles.hotelChipText, formData.hotelId === hotel.id && styles.hotelChipTextActive]}>{hotel.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Hotel ID"
+                  placeholderTextColor="#94A3B8"
+                  value={formData.hotelId}
+                  onChangeText={(t) => setFormData({ ...formData, hotelId: t })}
+                />
+              </View>
+              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Mã Voucher</Text>
                 <TextInput
                   style={styles.input}
@@ -200,7 +244,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
                     placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
                     value={formData.discount}
-                    onChangeText={(t) => setFormData({ ...formData, discount: t })}
+                    onChangeText={(t) => setFormData({ ...formData, discount: t, discountValue: t })}
                   />
                 </View>
                 <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -216,7 +260,7 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
 
               <View style={styles.typeSelector}>
                 {['PERCENTAGE', 'FIXED'].map((type) => (
-                  <TouchableOpacity key={type} style={[styles.typeBtn, formData.type === type && styles.typeBtnActive]} onPress={() => setFormData({ ...formData, type })}>
+                  <TouchableOpacity key={type} style={[styles.typeBtn, formData.type === type && styles.typeBtnActive]} onPress={() => setFormData({ ...formData, type, discountType: type === 'FIXED' ? 'fixed' : 'percent' })}>
                     <Text style={[styles.typeBtnText, formData.type === type && styles.typeBtnTextActive]}>
                       {type === 'PERCENTAGE' ? 'Phần trăm (%)' : 'Số tiền cố định'}
                     </Text>
@@ -225,13 +269,22 @@ export const VoucherManagement = ({ permissions = fullAccess }: { permissions?: 
               </View>
 
               <View style={styles.inputGroup}>
+                <Text style={styles.label}>Ngay bat dau (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="2026-01-01"
+                  placeholderTextColor="#94A3B8"
+                  value={formData.startDate}
+                  onChangeText={(t) => setFormData({ ...formData, startDate: t })}
+                />
+
                 <Text style={styles.label}>Ngày hết hạn (YYYY-MM-DD)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="2026-12-31"
                   placeholderTextColor="#94A3B8"
                   value={formData.expiry}
-                  onChangeText={(t) => setFormData({ ...formData, expiry: t })}
+                  onChangeText={(t) => setFormData({ ...formData, expiry: t, endDate: t })}
                 />
               </View>
 
@@ -313,6 +366,11 @@ const styles = StyleSheet.create({
   } as any,
   row: { flexDirection: 'row', gap: 16 },
   typeSelector: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+  hotelSelector: { gap: 8, paddingBottom: 10 },
+  hotelChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC' },
+  hotelChipActive: { borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+  hotelChipText: { color: '#64748B', fontSize: 12, fontWeight: '700' },
+  hotelChipTextActive: { color: '#3B82F6' },
   typeBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1' },
   typeBtnActive: { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: '#3B82F6' },
   typeBtnText: { fontWeight: '600', color: '#64748B' },

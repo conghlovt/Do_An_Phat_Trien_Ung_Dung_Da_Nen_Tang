@@ -1,4 +1,4 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios';
+import axios, { create, type InternalAxiosRequestConfig } from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { tokenStorage } from '../storage/secure-token.storage';
@@ -58,7 +58,7 @@ const resolveBaseUrl = () => {
 
 export const BASE_URL = resolveBaseUrl();
 
-const apiInstance = axios.create({
+const apiInstance = create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -79,9 +79,66 @@ const isPublicAuthRequest = (url?: string) => {
 const clearClientSession = async () => {
   try {
     await useAuthStore.getState().clearAuth();
+    try {
+      const customerStore = await import('../../../customer/store/auth.store');
+      await customerStore.useAuthStore.getState().clearAuth();
+    } catch {
+      // Customer auth store is not always loaded.
+    }
   } catch {
     await tokenStorage.clearTokens();
   }
+};
+
+const BLOCKED_ACCOUNT_MESSAGE = 'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.';
+let forceLogoutPromise: Promise<void> | null = null;
+let hasForcedLogout = false;
+
+export const resetForceLogoutGuard = () => {
+  hasForcedLogout = false;
+  forceLogoutPromise = null;
+};
+
+export const getApiErrorCode = (error: any) => {
+  const data = error?.response?.data;
+  return data?.code || data?.internalCode || data?.error?.code || null;
+};
+
+export const getApiErrorMessage = (error: any) => {
+  const data = error?.response?.data;
+  return data?.message || data?.error?.message || error?.message || '';
+};
+
+export const isBlockedAuthError = (error: any) => {
+  const code = String(getApiErrorCode(error) || '');
+  const message = String(getApiErrorMessage(error) || '').toLowerCase();
+  return code === 'AUTH_USER_BLOCKED' || message.includes('bị chặn') || message.includes('bị khóa') || message.includes('blocked');
+};
+
+export const getBlockedAuthMessage = (error: any) => {
+  const message = getApiErrorMessage(error);
+  return message || BLOCKED_ACCOUNT_MESSAGE;
+};
+
+export const forceLogout = async (message = BLOCKED_ACCOUNT_MESSAGE) => {
+  if (hasForcedLogout) return forceLogoutPromise || Promise.resolve();
+
+  hasForcedLogout = true;
+  forceLogoutPromise = (async () => {
+    try {
+      await clearClientSession();
+    } finally {
+      useAuthStore.getState().setError(message);
+      try {
+        const customerStore = await import('../../../customer/store/auth.store');
+        customerStore.useAuthStore.getState().setError(message);
+      } catch {
+        // Customer auth store is not always loaded.
+      }
+    }
+  })();
+
+  return forceLogoutPromise;
 };
 
 // Interceptor to add token to headers
@@ -107,6 +164,17 @@ apiInstance.interceptors.response.use(
     const isRefreshRequest = originalRequest?.url?.includes('/auth/refresh-token');
     const shouldRefreshToken = !isRefreshRequest && !isPublicAuthRequest(originalRequest?.url);
 
+    if (isBlockedAuthError(error)) {
+      await forceLogout(getBlockedAuthMessage(error));
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 403) {
+      const message = getApiErrorMessage(error) || 'Bạn không có quyền thực hiện thao tác này.';
+      useAuthStore.getState().setError(message);
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && shouldRefreshToken) {
       originalRequest._retry = true;
       const refreshToken = await tokenStorage.getRefreshToken();
@@ -128,7 +196,11 @@ apiInstance.interceptors.response.use(
             return apiInstance(originalRequest);
           }
         } catch (refreshError) {
-          await clearClientSession();
+          if (isBlockedAuthError(refreshError)) {
+            await forceLogout(getBlockedAuthMessage(refreshError));
+          } else {
+            await clearClientSession();
+          }
           return Promise.reject(refreshError);
         }
       }

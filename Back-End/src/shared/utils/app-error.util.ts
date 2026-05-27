@@ -64,6 +64,20 @@ export const isAppError = (error: unknown): error is AppError => error instanceo
 export const toAppError = (error: unknown) => {
   if (isAppError(error)) return error;
 
+  if (
+    error instanceof Error &&
+    typeof (error as any).statusCode === 'number' &&
+    typeof (error as any).appCode === 'string'
+  ) {
+    const appCode = (error as any).appCode;
+    const internalCode = appCode in USER_MESSAGES ? (appCode as InternalCode) : 'INTERNAL_ERROR';
+
+    return new AppError((error as any).statusCode, internalCode, {
+      userMessage: error.message,
+      cause: error,
+    });
+  }
+
   return new AppError(500, 'INTERNAL_ERROR', {
     details: error instanceof Error ? error.message : error,
     cause: error,

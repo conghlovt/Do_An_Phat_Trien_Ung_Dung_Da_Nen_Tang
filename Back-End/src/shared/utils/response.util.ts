@@ -22,6 +22,7 @@ export type ApiSuccess<T = unknown> = {
 export type ApiError = {
   success: false;
   message: string;
+  code?: string;
   errors?: FieldErrors;
 };
 
@@ -32,7 +33,7 @@ export const sendResponse = <T>(
   httpStatus: number,
   message: string,
   data?: T,
-  options: { meta?: ApiMeta; errors?: FieldErrors } = {},
+  options: { meta?: ApiMeta; code?: string; errors?: FieldErrors } = {},
 ) => {
   const success = httpStatus >= 200 && httpStatus < 300;
 
@@ -49,6 +50,7 @@ export const sendResponse = <T>(
   const response: ApiError = {
     success: false,
     message,
+    ...(options.code ? { code: options.code } : {}),
     ...(options.errors ? { errors: options.errors } : {}),
   };
   return res.status(httpStatus).json(response);
@@ -70,7 +72,10 @@ export const sendError = (res: Response, error: unknown) => {
     appError.httpStatus,
     appError.userMessage,
     undefined,
-    appError.errors ? { errors: appError.errors } : {},
+    {
+      code: appError.internalCode,
+      ...(appError.errors ? { errors: appError.errors } : {}),
+    },
   );
 };
 

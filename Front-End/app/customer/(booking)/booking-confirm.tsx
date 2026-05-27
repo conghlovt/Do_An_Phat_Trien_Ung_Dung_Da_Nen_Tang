@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -23,7 +27,7 @@ import { useAuth } from '@/src/customer/hooks/useAuth';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { getParamText } from '@/src/customer/navigation/routeParams';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
-import { customerBookingsStorage } from '@/src/customer/utils/customerBookings';
+import { bookingsApi, checkoutVouchersApi, type CheckoutVoucher } from '@/src/customer/api/bookings.api';
 import { getBookingDurationLabel } from '@/src/customer/utils/roomDisplay';
 
 const PRIMARY = '#85c2a4';
@@ -45,6 +49,10 @@ type BookingPoint = {
 function formatMoney(value?: string) {
   const amount = Number(value) || 0;
   return `${amount.toLocaleString('vi-VN')}đ`;
+}
+
+function formatCurrency(value: number) {
+  return `${Math.max(0, Math.round(value)).toLocaleString('vi-VN')}Ä‘`;
 }
 
 function parseBookingPoint(value?: string): BookingPoint {
@@ -70,6 +78,16 @@ function parseBookingPoint(value?: string): BookingPoint {
     dateText: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`,
     date,
   };
+}
+
+function toBookingIso(point: BookingPoint) {
+  if (!point.date) return null;
+  const [hours, minutes] = point.time.split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+
+  const date = new Date(point.date);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
 }
 
 function formatCancellationDeadline(checkIn: BookingPoint) {
@@ -111,13 +129,25 @@ export default function BookingConfirmScreen() {
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
+  const [voucherModalOpen, setVoucherModalOpen] = useState(false);
+  const [vouchers, setVouchers] = useState<CheckoutVoucher[]>([]);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [selectedVoucher, setSelectedVoucher] = useState<CheckoutVoucher | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
   const isWebLayout = Platform.OS === 'web' && width >= 768;
 
   const hotelName = getParamText(params.hotelName) || 'Khách sạn';
+  const hotelId = getParamText(params.hotelId) || '';
+  const roomId = getParamText(params.roomId) || '';
   const roomName = getParamText(params.roomName) || 'STANDARD ROOM';
   const hotelAddress = getParamText(params.hotelAddress) || 'Địa chỉ khách sạn đang cập nhật';
   const roomImage = getParamText(params.roomImage) || DEFAULT_ROOM_IMAGE;
+  const subtotal = Number(getParamText(params.price)) || 0;
   const price = formatMoney(getParamText(params.price));
+  const totalPrice = formatCurrency(subtotal - discountAmount);
   const bookingType = getParamText(params.bookingType) || 'Theo giờ';
   const durationLabel = getBookingDurationLabel(bookingType, getParamText(params.hours));
   const checkIn = useMemo(() => parseBookingPoint(getParamText(params.checkIn)), [params.checkIn]);
@@ -126,29 +156,82 @@ export default function BookingConfirmScreen() {
   const customerName = user?.username || 'Joyer.673';
   const customerPhone = 'Chưa cập nhật';
 
+  useEffect(() => {
+    if (!hotelId || !roomId || !subtotal) return;
+
+    let active = true;
+    setVoucherLoading(true);
+    setVoucherError('');
+
+    checkoutVouchersApi.list(hotelId, { roomTypeId: roomId, subtotal })
+      .then((items) => {
+        if (active) setVouchers(items);
+      })
+      .catch(() => {
+        if (active) setVoucherError('Khong the tai danh sach uu dai.');
+      })
+      .finally(() => {
+        if (active) setVoucherLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [hotelId, roomId, subtotal]);
+
+  const applyVoucher = async (code: string) => {
+    if (!code.trim() || applyingVoucher) return;
+
+    setApplyingVoucher(true);
+    setVoucherError('');
+    try {
+      const result = await checkoutVouchersApi.validate(hotelId, {
+        code,
+        roomTypeId: roomId,
+        subtotal,
+      });
+      setSelectedVoucher(result.voucher);
+      setDiscountAmount(result.discount);
+      setVoucherModalOpen(false);
+    } catch (error: any) {
+      setVoucherError(error?.response?.data?.message || 'Ma uu dai khong hop le.');
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
   const handleConfirmBooking = async () => {
     if (saving) return;
 
     setSaving(true);
     try {
-      const booking = await customerBookingsStorage.add({
-        hotelId: getParamText(params.hotelId) || '',
-        hotelName,
-        hotelAddress,
-        hotelImage: getParamText(params.hotelImage),
-        roomId: getParamText(params.roomId),
-        roomName,
-        roomImage,
-        price,
+      const checkInIso = toBookingIso(checkIn);
+      const checkOutIsoInitial = toBookingIso(checkOut);
+
+      if (!hotelId || !roomId || !checkInIso || !checkOutIsoInitial) {
+        Alert.alert('Lá»—i', 'Thieu thong tin dat phong.');
+        return;
+      }
+
+      let checkOutIso = checkOutIsoInitial;
+      if (new Date(checkOutIso) <= new Date(checkInIso)) {
+        const nextCheckout = new Date(checkOutIso);
+        nextCheckout.setDate(nextCheckout.getDate() + 1);
+        checkOutIso = nextCheckout.toISOString();
+      }
+
+      const booking = await bookingsApi.create({
+        hotelId,
+        roomTypeId: roomId,
         bookingType,
-        checkIn: getParamText(params.checkIn) || `${checkIn.time}, ${checkIn.dateText}`,
-        checkOut: getParamText(params.checkOut) || `${checkOut.time}, ${checkOut.dateText}`,
-        hours: getParamText(params.hours),
-        customerName,
-        customerPhone,
+        checkIn: checkInIso,
+        checkOut: checkOutIso,
+        voucherCode: selectedVoucher?.code,
       });
       setConfirmedBookingId(booking.id);
       setConfirmed(true);
+    } catch (error: any) {
+      Alert.alert('Lá»—i', error?.response?.data?.message || 'Khong the tao booking.');
     } finally {
       setSaving(false);
     }
@@ -261,10 +344,13 @@ export default function BookingConfirmScreen() {
         <View style={[styles.band, isWebLayout && styles.webBand]} />
 
         <View style={[styles.section, isWebLayout && styles.webSection]}>
-          <Pressable style={styles.actionRow}>
+          <Pressable style={styles.actionRow} onPress={() => setVoucherModalOpen(true)}>
             <View style={styles.rowLabelWrap}>
               <Tag size={20} color={PRIMARY} fill={PRIMARY_FILL} />
+              <View>
               <Text style={styles.actionTitle}>Ưu đãi</Text>
+                {selectedVoucher && <Text style={styles.voucherAppliedText}>{selectedVoucher.code} - {formatCurrency(discountAmount)}</Text>}
+              </View>
             </View>
             <ChevronRight size={24} color={PRIMARY} strokeWidth={2.6} />
           </Pressable>
@@ -278,9 +364,15 @@ export default function BookingConfirmScreen() {
             <Text style={styles.paymentLabel}>Tiền phòng</Text>
             <Text style={styles.paymentValue}>{price}</Text>
           </View>
+          {discountAmount > 0 && (
+            <View style={styles.paymentLine}>
+              <Text style={styles.paymentLabel}>Giam gia</Text>
+              <Text style={styles.discountValue}>- {formatCurrency(discountAmount)}</Text>
+            </View>
+          )}
           <View style={styles.paymentLine}>
             <Text style={styles.totalTitle}>Tổng thanh toán</Text>
-            <Text style={styles.totalTitle}>{price}</Text>
+            <Text style={styles.totalTitle}>{totalPrice}</Text>
           </View>
         </View>
 
@@ -321,13 +413,67 @@ export default function BookingConfirmScreen() {
         <View style={styles.bottomSummaryRow}>
           <View>
             <Text style={styles.bottomLabel}>Tổng thanh toán</Text>
-            <Text style={styles.bottomPrice}>{price}</Text>
+            <Text style={styles.bottomPrice}>{totalPrice}</Text>
           </View>
           <Pressable style={[styles.bookButton, saving && styles.bookButtonDisabled]} onPress={handleConfirmBooking} disabled={saving}>
             <Text style={styles.bookButtonText}>{saving ? 'Đang lưu...' : 'Đặt phòng'}</Text>
           </Pressable>
         </View>
       </View>
+
+      <Modal visible={voucherModalOpen} transparent animationType="fade" onRequestClose={() => setVoucherModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.voucherModal, isWebLayout && styles.webVoucherModal]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chon uu dai</Text>
+              <Pressable onPress={() => setVoucherModalOpen(false)}>
+                <Text style={styles.modalClose}>Dong</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.voucherInputRow}>
+              <TextInput
+                style={styles.voucherInput}
+                value={voucherCodeInput}
+                onChangeText={setVoucherCodeInput}
+                autoCapitalize="characters"
+                placeholder="Nhap ma uu dai"
+                placeholderTextColor="#9ca3af"
+              />
+              <Pressable
+                style={[styles.applyVoucherBtn, applyingVoucher && styles.bookButtonDisabled]}
+                onPress={() => applyVoucher(voucherCodeInput)}
+                disabled={applyingVoucher}
+              >
+                <Text style={styles.applyVoucherText}>{applyingVoucher ? 'Dang ap dung' : 'Ap dung'}</Text>
+              </Pressable>
+            </View>
+
+            {voucherError ? <Text style={styles.voucherError}>{voucherError}</Text> : null}
+
+            {voucherLoading ? (
+              <View style={styles.voucherLoadingRow}>
+                <ActivityIndicator color={PRIMARY} />
+                <Text style={styles.voucherMuted}>Dang tai uu dai...</Text>
+              </View>
+            ) : vouchers.length ? (
+              <ScrollView style={styles.voucherList}>
+                {vouchers.map((voucher) => (
+                  <Pressable key={voucher.id} style={styles.voucherItem} onPress={() => applyVoucher(voucher.code)}>
+                    <View>
+                      <Text style={styles.voucherCode}>{voucher.code}</Text>
+                      <Text style={styles.voucherName}>{voucher.name}</Text>
+                    </View>
+                    <Text style={styles.voucherDiscount}>-{formatCurrency(voucher.discount)}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.voucherMuted}>Khong co uu dai phu hop.</Text>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -569,6 +715,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  voucherAppliedText: {
+    color: PRIMARY,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
   paymentLine: {
     minHeight: 64,
     flexDirection: 'row',
@@ -588,6 +740,11 @@ const styles = StyleSheet.create({
   paymentValue: {
     color: TEXT_DARK,
     fontSize: 16,
+  },
+  discountValue: {
+    color: PRIMARY,
+    fontSize: 16,
+    fontWeight: '800',
   },
   totalTitle: {
     color: TEXT_DARK,
@@ -743,5 +900,116 @@ const styles = StyleSheet.create({
   successGhostText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 18,
+  },
+  voucherModal: {
+    width: '100%',
+    maxHeight: '82%',
+    borderRadius: 18,
+    backgroundColor: SURFACE,
+    padding: 20,
+  },
+  webVoucherModal: {
+    maxWidth: 560,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: TEXT_DARK,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  modalClose: {
+    color: PRIMARY,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  voucherInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  voucherInput: {
+    flex: 1,
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    color: TEXT_DARK,
+  },
+  applyVoucherBtn: {
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  applyVoucherText: {
+    color: SURFACE,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  voucherError: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  voucherLoadingRow: {
+    minHeight: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  voucherMuted: {
+    color: TEXT_MUTED,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  voucherList: {
+    maxHeight: 360,
+  },
+  voucherItem: {
+    minHeight: 74,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  voucherCode: {
+    color: TEXT_DARK,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  voucherName: {
+    color: TEXT_MUTED,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  voucherDiscount: {
+    color: PRIMARY,
+    fontSize: 15,
+    fontWeight: '900',
   },
 });

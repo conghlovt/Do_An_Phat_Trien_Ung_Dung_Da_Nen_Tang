@@ -14,7 +14,7 @@ import {
   Shield, X, Wifi, Wind, Tv, Bath, Coffee, Car,
 } from 'lucide-react-native';
 import ImageWithFallback from '@/src/customer/components/ImageWithFallback';
-import type { Hotel } from '@/src/customer/api/hotels.api';
+import { hotelsApi, type Hotel, type HotelReview } from '@/src/customer/api/hotels.api';
 import { useCustomerHotelsStore } from '@/src/customer/store/hotels.store';
 import { viewedHotelsStorage } from '@/src/customer/utils/viewedHotels';
 import { getParamNumber, getParamText } from '@/src/customer/navigation/routeParams';
@@ -81,6 +81,7 @@ export default function HotelDetailScreen() {
   const [currentImage, setCurrentImage] = useState(0);
   const [liked, setLiked] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [hotelReviews, setHotelReviews] = useState<HotelReview[]>([]);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Booking state from previous screen
@@ -129,6 +130,21 @@ export default function HotelDetailScreen() {
     return () => clearCurrentHotel();
   }, [clearCurrentHotel, fallbackHotel, fetchHotel, hotelId]);
 
+  useEffect(() => {
+    let active = true;
+    hotelsApi.getReviews(hotelId)
+      .then((response) => {
+        if (active) setHotelReviews(response.data.reviews || []);
+      })
+      .catch(() => {
+        if (active) setHotelReviews([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [hotelId]);
+
   const hotel = useMemo(() => currentHotel ? enrichHotel(currentHotel) : null, [currentHotel]);
 
   useEffect(() => {
@@ -148,6 +164,7 @@ export default function HotelDetailScreen() {
   }
 
   const images = hotel.images || [hotel.image];
+  const displayReviews = hotelReviews.length ? hotelReviews : HOTEL_REVIEWS;
 
   return (
     <View style={[styles.container, isWebLayout && styles.webContainer, { backgroundColor: currentTheme.background }]}>
@@ -259,7 +276,7 @@ export default function HotelDetailScreen() {
           </View>
           {/* Review cards */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
-            {HOTEL_REVIEWS.map(r => (
+            {displayReviews.map(r => (
               <View key={r.id} style={[styles.reviewCard, { backgroundColor: currentTheme.background }]}>
                 <View style={styles.reviewHeader}>
                   <View style={styles.avatar}><Text style={styles.avatarText}>👤</Text></View>
@@ -446,7 +463,7 @@ export default function HotelDetailScreen() {
             <Pressable onPress={() => setShowAllReviews(false)}><X size={24} color={currentTheme.text} /></Pressable>
           </View>
           <FlatList
-            data={HOTEL_REVIEWS}
+            data={displayReviews}
             keyExtractor={r => String(r.id)}
             contentContainerStyle={{ padding: 16, gap: 12 }}
             renderItem={({ item: r }) => (

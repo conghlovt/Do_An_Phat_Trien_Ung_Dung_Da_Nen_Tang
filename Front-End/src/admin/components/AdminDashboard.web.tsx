@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { AdminShell } from './AdminShell';
 import { DashboardOverview } from './Overview/DashboardOverview';
 import { BookingManagement } from './Management/BookingManagement';
@@ -28,6 +28,7 @@ interface AdminDashboardProps {
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [permissions, setPermissions] = useState<PermissionMap>(() => getDefaultPermissions(user?.role));
+  const [hasUnsavedPermissionChanges, setHasUnsavedPermissionChanges] = useState(false);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -55,21 +56,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     if (moduleId === 'overview' || moduleId === 'roles') {
       return {
         canView: true,
+        canCreate: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
         canEdit: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
         canDelete: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
         canApprove: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
+        canExport: user?.role === 'SUPER_ADMIN' || user?.role === 'admin',
       };
     }
 
     return {
       canView: canAccess(permissions, moduleId, 'view'),
-      canEdit: canAccess(permissions, moduleId, 'edit'),
+      canCreate: canAccess(permissions, moduleId, 'create'),
+      canEdit: canAccess(permissions, moduleId, 'update'),
       canDelete: canAccess(permissions, moduleId, 'delete'),
       canApprove: canAccess(permissions, moduleId, 'approve'),
+      canExport: canAccess(permissions, moduleId, 'export'),
     };
   }, [permissions, user?.role]);
 
   const currentAccess = useMemo(() => getModulePermissions(activeTab), [activeTab, getModulePermissions]);
+
+  const requestTabChange = useCallback((nextTab: string) => {
+    if (activeTab === 'roles' && hasUnsavedPermissionChanges) {
+      const shouldLeave = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.confirm('Bạn có thay đổi phân quyền chưa lưu. Rời trang này?')
+        : true;
+      if (!shouldLeave) return;
+      setHasUnsavedPermissionChanges(false);
+    }
+
+    setActiveTab(nextTab);
+  }, [activeTab, hasUnsavedPermissionChanges]);
 
   const renderContent = () => {
     if (!canViewTab(permissions, user?.role, activeTab)) {
@@ -84,20 +101,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
       case 'lodging':
         return <LodgingManagement permissions={currentAccess} />;
       case 'roles':
-        return <PermissionMatrix currentUserRole={user?.role} />;
+        return <PermissionMatrix currentUserRole={user?.role} onDirtyChange={setHasUnsavedPermissionChanges} />;
       case 'payment':
       case 'revenue':
         return <FinanceView />;
       case 'users':
-        return <UserManagement permissions={currentAccess} currentUserRole={user?.role} />;
+        return <UserManagement permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'customers':
-        return <UserManagement role="customer" permissions={currentAccess} currentUserRole={user?.role} />;
+        return <UserManagement role="customer" permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'partners':
-        return <UserManagement role="partner" permissions={getModulePermissions('partners')} currentUserRole={user?.role} />;
+        return <UserManagement role="partner" permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'staff':
-        return <UserManagement role="staff" permissions={currentAccess} currentUserRole={user?.role} />;
+        return <UserManagement role="staff" permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'admins':
-        return <UserManagement role="admin" permissions={currentAccess} currentUserRole={user?.role} />;
+        return <UserManagement role="admin" permissions={currentAccess} currentUserRole={user?.role} currentUserId={user?.id} />;
       case 'voucher':
         return <VoucherManagement permissions={currentAccess} />;
       case 'reviews':
@@ -117,7 +134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }
     <AdminShell 
       user={user} 
       activeTab={activeTab} 
-      setActiveTab={setActiveTab}
+      setActiveTab={requestTabChange}
       onLogout={onLogout}
       permissions={permissions}
     >

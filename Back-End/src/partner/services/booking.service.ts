@@ -1,19 +1,46 @@
 import prisma from '../../login/lib/prisma';
-import { NotFoundError, ForbiddenError } from '../../shared/errors/AppError';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../../shared/errors/AppError';
 import type { BookingStatus } from '@prisma/client';
+import { updateBookingStatusWithInventory } from '../../shared/services/lodging-sync.service';
+import { decrementVoucherUsageByCode } from '../../shared/services/voucher-validation.service';
+
+const ALLOWED_STATUSES = new Set(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']);
+
+const normalizeBooking = (booking: any) => ({
+  id: booking.id,
+  checkIn: booking.checkIn.toISOString(),
+  checkOut: booking.checkOut.toISOString(),
+  totalPrice: booking.totalPrice,
+  status: booking.status,
+  user: {
+    username: booking.user?.username || 'Khach hang',
+    phone: booking.user?.phone || null,
+  },
+  room: {
+    name: booking.room?.name || 'Phong tieu chuan',
+  },
+  property: {
+    id: booking.property?.id || booking.room?.property?.id,
+    name: booking.property?.name || booking.room?.property?.name || 'Co so luu tru',
+  },
+});
 
 export class BookingService {
   /**
-   * Lấy danh sách đặt phòng thuộc cơ sở lưu trú của Partner
+   * Lấy danh sách đặt phòng thuộc các khách sạn/cơ sở của Partner
    */
   async listByPartner(partnerId: string, status?: string) {
     const whereClause: any = {
-      property: {
-        ownerId: partnerId,
-      },
+      OR: [
+        { hotel: { ownerId: partnerId } },
+        { property: { ownerId: partnerId } },
+      ],
     };
 
     if (status && status !== 'ALL') {
+      if (!ALLOWED_STATUSES.has(status)) {
+        throw new BadRequestError('Trang thai booking khong hop le', 'VALIDATION_ERROR');
+      }
       whereClause.status = status as BookingStatus;
     }
 
@@ -21,43 +48,31 @@ export class BookingService {
       where: whereClause,
       include: {
         user: {
-          select: {
-            username: true,
-            email: true,
-            phone: true,
-          },
+          select: { username: true, email: true, phone: true },
+        },
+        roomType: {
+          select: { name: true },
         },
         room: {
-          select: {
-            name: true,
-          },
-        },
-        property: {
-          select: {
-            name: true,
-          },
+          select: { name: true },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    return bookings.map((booking: any) => ({
-      id: booking.id,
-      checkIn: booking.checkIn?.toISOString?.() || booking.checkIn,
-      checkOut: booking.checkOut?.toISOString?.() || booking.checkOut,
-      totalPrice: Number(booking.totalPrice || 0),
-      status: booking.status,
+    // Chuẩn hóa cấu trúc trả về cho Frontend Partner
+    return bookings.map((b) => ({
+      id: b.id,
+      checkIn: b.checkIn.toISOString(),
+      checkOut: b.checkOut.toISOString(),
+      totalPrice: b.totalPrice,
+      status: b.status,
       user: {
-        username: booking.user?.username || 'Khách hàng',
-        phone: booking.user?.phone || null,
+        username: b.user?.username || 'Khách hàng',
+        phone: b.user?.phone || null,
       },
       room: {
-        name: booking.room?.name || 'Phòng tiêu chuẩn',
-      },
-      property: {
-        name: booking.property?.name || 'Cơ sở lưu trú',
+        name: b.roomType?.name || b.room?.name || 'Phòng tiêu chuẩn',
       },
     }));
   }
@@ -65,80 +80,52 @@ export class BookingService {
   /**
    * Cập nhật trạng thái đơn đặt phòng
    */
-  async updateStatus(
-    bookingId: string,
-    partnerId: string,
-    status: BookingStatus
-  ) {
+  async updateStatus(bookingId: string, partnerId: string, status: BookingStatus) {
+    // 1. Kiểm tra booking có tồn tại và thuộc quyền quản lý của partner
     const booking = await prisma.booking.findUnique({
       where: {
         id: bookingId,
       },
       include: {
-        property: {
-          select: {
-            ownerId: true,
-          },
-        },
+        hotel: { select: { ownerId: true } },
+        property: { select: { ownerId: true } },
       },
     });
 
     if (!booking) {
-      throw new NotFoundError(
-        'Không tìm thấy đơn đặt phòng',
-        'BOOKING_NOT_FOUND'
-      );
+      throw new NotFoundError('Không tìm thấy đơn đặt phòng', 'BOOKING_NOT_FOUND');
     }
 
-    const isOwner = booking.property?.ownerId === partnerId;
+    const isOwner =
+      booking.hotel?.ownerId === partnerId || booking.property?.ownerId === partnerId;
 
     if (!isOwner) {
       throw new ForbiddenError('Bạn không có quyền cập nhật đơn đặt phòng này');
     }
 
+    // 2. Cập nhật trạng thái
     const updated = await prisma.booking.update({
-      where: {
-        id: bookingId,
-      },
-      data: {
-        status,
-      },
+      where: { id: bookingId },
+      data: { status },
       include: {
-        user: {
-          select: {
-            username: true,
-            email: true,
-            phone: true,
-          },
-        },
-        room: {
-          select: {
-            name: true,
-          },
-        },
-        property: {
-          select: {
-            name: true,
-          },
-        },
+        user: { select: { username: true, email: true, phone: true } },
+        roomType: { select: { name: true } },
+        room: { select: { name: true } },
       },
     });
 
     return {
       id: updated.id,
-      checkIn: updated.checkIn?.toISOString?.() || updated.checkIn,
-      checkOut: updated.checkOut?.toISOString?.() || updated.checkOut,
-      totalPrice: Number(updated.totalPrice || 0),
+      checkIn: updated.checkIn.toISOString(),
+      checkOut: updated.checkOut.toISOString(),
+      totalPrice: updated.totalPrice,
       status: updated.status,
       user: {
         username: updated.user?.username || 'Khách hàng',
         phone: updated.user?.phone || null,
       },
       room: {
-        name: updated.room?.name || 'Phòng tiêu chuẩn',
-      },
-      property: {
-        name: updated.property?.name || 'Cơ sở lưu trú',
+        name: updated.roomType?.name || updated.room?.name || 'Phòng tiêu chuẩn',
       },
     };
   }

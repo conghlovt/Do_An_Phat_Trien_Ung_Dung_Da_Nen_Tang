@@ -23,8 +23,18 @@ export const updateProperty = async (req: Request, res: Response) => {
 };
 
 export const updatePropertyStatus = async (req: Request, res: Response) => {
-  req.body = { status: req.body.status };
-  return updateProperty(req, res);
+  try {
+    const id = String(req.params.id);
+    const property = await propertyService.updatePropertyStatus(
+      id,
+      req.body.status,
+      (req as any).user?.id,
+      req.body.rejectionReason,
+    );
+    return sendResponse(res, 200, 'Cap nhat trang thai co so luu tru thanh cong.', property);
+  } catch (error) {
+    return sendError(res, error);
+  }
 };
 
 export const deleteProperty = async (req: Request, res: Response) => {

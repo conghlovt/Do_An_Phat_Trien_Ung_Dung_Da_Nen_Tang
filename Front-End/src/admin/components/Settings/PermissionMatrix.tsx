@@ -1,62 +1,117 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
-import { Shield, Check, X } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { Check, Save, Shield, UsersRound, X } from 'lucide-react-native';
 import { adminService } from '../../services/admin.service';
-import { ROOT_ADMIN_ROLES } from '../../utils/permissions';
+import {
+  ADMIN_CONFIG_ROLES,
+  PERMISSION_ACTIONS,
+  PERMISSION_MODULES,
+  PermissionAction,
+  PermissionMap,
+  ROOT_ADMIN_ROLES,
+  createPermissionMap,
+  getDefaultPermissions,
+  normalizePermissions,
+} from '../../utils/permissions';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAdminTheme } from '../AdminShell';
 
-const MODULES = [
-  { id: 'revenue', name: 'Doanh thu' },
-  { id: 'booking', name: 'Đặt phòng' },
-  { id: 'lodging', name: 'Lưu trú' },
-  { id: 'users', name: 'Người dùng' },
-  { id: 'partners', name: 'Đối tác' },
-  { id: 'finance', name: 'Đối soát' },
-  { id: 'voucher', name: 'Voucher' },
-  { id: 'reviews', name: 'Đánh giá' },
-  { id: 'content', name: 'Nội dung' },
-];
+type PermissionMatrixProps = {
+  currentUserRole?: string;
+  onDirtyChange?: (dirty: boolean) => void;
+};
 
-const ACTIONS = [
-  { id: 'view', name: 'Xem' },
-  { id: 'edit', name: 'Sửa' },
-  { id: 'delete', name: 'Xóa' },
-  { id: 'approve', name: 'Duyệt' },
-];
+const ROLE_LABELS: Record<string, { name: string; description: string }> = {
+  SUPER_ADMIN: { name: 'Super Admin', description: 'Toàn quyền hệ thống' },
+  admin: { name: 'Admin', description: 'Quản trị hệ thống' },
+  OPERATOR: { name: 'Vận hành', description: 'Xử lý lưu trú, đặt phòng, nội dung' },
+  ACCOUNTANT: { name: 'Kế toán', description: 'Theo dõi tài chính và doanh thu' },
+  staff: { name: 'Nhân viên', description: 'Quyền nội bộ giới hạn' },
+  partner: { name: 'Partner/Host', description: 'Chủ khách sạn/homestay' },
+  customer: { name: 'Customer/User', description: 'Người dùng đặt phòng' },
+};
 
-const ROLES = [
-  { id: 'SUPER_ADMIN', name: 'Quản trị tối cao' },
-  { id: 'OPERATOR', name: 'Nhân viên vận hành' },
-  { id: 'ACCOUNTANT', name: 'Kế toán' },
-];
+const MODULE_LABELS: Record<string, string> = {
+  dashboard: 'Dashboard',
+  users: 'Quản lý người dùng',
+  lodging: 'Quản lý khách sạn/homestay',
+  rooms: 'Quản lý phòng',
+  booking: 'Quản lý đặt phòng',
+  voucher: 'Quản lý voucher',
+  reviews: 'Quản lý đánh giá',
+  content: 'Quản lý nội dung',
+  finance: 'Quản lý tài chính',
+  notifications: 'Quản lý thông báo',
+};
 
-const createEmptyPermissions = () =>
-  MODULES.reduce((acc, module) => {
-    acc[module.id] = ACTIONS.reduce((actionAcc, action) => {
-      actionAcc[action.id] = false;
-      return actionAcc;
-    }, {} as Record<string, boolean>);
+const ACTION_LABELS: Record<PermissionAction, string> = {
+  view: 'Xem',
+  create: 'Thêm',
+  update: 'Sửa',
+  delete: 'Xóa',
+  approve: 'Duyệt',
+  export: 'Xuất dữ liệu',
+};
+
+const emptyByRole = () =>
+  ADMIN_CONFIG_ROLES.reduce((acc, role) => {
+    acc[role] = getDefaultPermissions(role);
     return acc;
-  }, {} as Record<string, Record<string, boolean>>);
+  }, {} as Record<string, PermissionMap>);
 
-export const PermissionMatrix = ({ currentUserRole }: { currentUserRole?: string }) => {
+const clonePermissions = (permissions: Record<string, PermissionMap>) =>
+  JSON.parse(JSON.stringify(permissions)) as Record<string, PermissionMap>;
+
+export const PermissionMatrix = ({ currentUserRole, onDirtyChange }: PermissionMatrixProps) => {
   const { isLight } = useAdminTheme();
   const [selectedRole, setSelectedRole] = useState('SUPER_ADMIN');
-  const [permissionsByRole, setPermissionsByRole] = useState<Record<string, Record<string, Record<string, boolean>>>>({});
+  const [permissionsByRole, setPermissionsByRole] = useState<Record<string, PermissionMap>>(() => emptyByRole());
+  const [savedPermissionsByRole, setSavedPermissionsByRole] = useState<Record<string, PermissionMap>>(() => emptyByRole());
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const currentPermissions = permissionsByRole[selectedRole] || createPermissionMap(false);
+  const canManagePermissions = ROOT_ADMIN_ROLES.includes(currentUserRole || '');
+  const dirty = useMemo(
+    () => JSON.stringify(permissionsByRole) !== JSON.stringify(savedPermissionsByRole),
+    [permissionsByRole, savedPermissionsByRole],
+  );
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !dirty) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirty]);
 
   const fetchPermissions = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await adminService.getPermissions();
-      const next = (data || []).reduce((acc: any, item: any) => {
-        acc[item.role] = item.permissions || createEmptyPermissions();
-        return acc;
-      }, {});
+      const data = await adminService.getRolePermissions();
+      const next = emptyByRole();
+
+      (data || []).forEach((item: any) => {
+        if (item?.role) {
+          next[item.role] = normalizePermissions(item.role, item.permissions);
+        }
+      });
+
       setPermissionsByRole(next);
-    } catch (error) {
-      console.error('Failed to fetch permissions:', error);
+      setSavedPermissionsByRole(clonePermissions(next));
+    } catch (fetchError) {
+      setError(getErrorMessage(fetchError, 'Không thể tải cấu hình phân quyền.'));
     } finally {
       setLoading(false);
     }
@@ -66,263 +121,282 @@ export const PermissionMatrix = ({ currentUserRole }: { currentUserRole?: string
     fetchPermissions();
   }, []);
 
-  const currentPermissions = permissionsByRole[selectedRole] || createEmptyPermissions();
-  const canManagePermissions = ROOT_ADMIN_ROLES.includes(currentUserRole || '');
+  const confirmDiscardChanges = () => {
+    if (!dirty) return true;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return window.confirm('Bạn có thay đổi phân quyền chưa lưu. Bỏ thay đổi?');
+    }
+    return true;
+  };
 
-  const togglePermission = (moduleId: string, actionId: string) => {
-    if (!canManagePermissions) return;
+  const handleSelectRole = (role: string) => {
+    if (role === selectedRole) return;
+    if (!confirmDiscardChanges()) return;
+    setPermissionsByRole(clonePermissions(savedPermissionsByRole));
+    setSelectedRole(role);
+    setNotice(null);
+  };
 
-    setPermissionsByRole((prev) => ({
-      ...prev,
-      [selectedRole]: {
-        ...(prev[selectedRole] || createEmptyPermissions()),
-        [moduleId]: {
-          ...((prev[selectedRole] || createEmptyPermissions())[moduleId] || {}),
-          [actionId]: !currentPermissions[moduleId]?.[actionId],
+  const togglePermission = (moduleId: string, actionId: PermissionAction) => {
+    if (!canManagePermissions || saving) return;
+    setNotice(null);
+
+    setPermissionsByRole((prev) => {
+      const rolePermissions = prev[selectedRole] || createPermissionMap(false);
+      return {
+        ...prev,
+        [selectedRole]: {
+          ...rolePermissions,
+          [moduleId]: {
+            ...rolePermissions[moduleId as keyof PermissionMap],
+            [actionId]: !rolePermissions[moduleId as keyof PermissionMap]?.[actionId],
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const handleSave = async () => {
-    if (!canManagePermissions) {
-      Alert.alert('Lỗi', 'Chỉ Super Admin mới được lưu cấu hình phân quyền');
-      return;
-    }
+    if (!canManagePermissions || saving || !dirty) return;
 
+    setSaving(true);
+    setError(null);
+    setNotice(null);
     try {
-      await adminService.updatePermissions(selectedRole, currentPermissions);
-      Alert.alert('Thành công', `Đã lưu cấu hình quyền cho ${selectedRole}`);
-      fetchPermissions();
-    } catch (error) {
-      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể lưu phân quyền.'));
+      const updated = await adminService.updateRolePermissions(selectedRole, currentPermissions);
+      const normalized = normalizePermissions(selectedRole, updated?.permissions || currentPermissions);
+      const next = {
+        ...permissionsByRole,
+        [selectedRole]: normalized,
+      };
+
+      setPermissionsByRole(next);
+      setSavedPermissionsByRole(clonePermissions(next));
+      setNotice(`Đã lưu phân quyền cho ${ROLE_LABELS[selectedRole]?.name || selectedRole}.`);
+    } catch (saveError) {
+      setError(getErrorMessage(saveError, 'Không thể lưu cấu hình phân quyền.'));
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) return <View style={[styles.container, !isLight && styles.containerDark]}><Text style={[styles.title, !isLight && styles.textLight]}>Đang tải cấu hình quyền...</Text></View>;
-  if (!canManagePermissions) {
-    return <View style={[styles.container, !isLight && styles.containerDark]}><Text style={[styles.title, !isLight && styles.textLight]}>Bạn không có quyền cấu hình phân quyền.</Text></View>;
-  }
+  const renderSkeleton = () => (
+    <View style={[styles.panel, !isLight && styles.panelDark]}>
+      <ActivityIndicator size="small" color="#2563EB" />
+      <Text style={[styles.stateText, !isLight && styles.textLight]}>Đang tải cấu hình phân quyền...</Text>
+    </View>
+  );
+
+  if (loading) return renderSkeleton();
 
   return (
-    <View style={[styles.container, !isLight && styles.containerDark]}>
-      <View style={styles.header}>
-        <Shield size={24} color="#3B82F6" />
-        <Text style={[styles.title, !isLight && styles.textLight]}>Quản lý phân quyền</Text>
-      </View>
-
-      <View style={[styles.roleTabs, !isLight && styles.roleTabsDark]}>
-        {ROLES.map((role) => (
-          <TouchableOpacity
-            key={role.id}
-            style={[
-              styles.roleTab,
-              selectedRole === role.id && styles.roleTabActive,
-              !isLight && selectedRole === role.id && styles.roleTabActiveDark,
-            ]}
-            onPress={() => setSelectedRole(role.id)}
-          >
-            <Text style={[styles.roleTabText, selectedRole === role.id && styles.roleTabTextActive]}>{role.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={[styles.matrixContainer, !isLight && styles.matrixContainerDark]}>
-        <View style={[styles.matrixHeader, !isLight && styles.matrixHeaderDark]}>
-          <View style={[styles.matrixCell, { flex: 2 }]}>
-            <Text style={[styles.columnLabel, !isLight && styles.columnLabelDark]}>Module</Text>
+    <View style={styles.container}>
+      <View style={[styles.summary, !isLight && styles.panelDark]}>
+        <View style={styles.summaryTitle}>
+          <Shield size={22} color="#2563EB" />
+          <View>
+            <Text style={[styles.title, !isLight && styles.textLight]}>Quản lý phân quyền</Text>
+            <Text style={styles.subtitle}>Chọn role và bật/tắt quyền theo từng module chức năng.</Text>
           </View>
-          {ACTIONS.map((action) => (
-            <View key={action.id} style={[styles.matrixCell, { flex: 1 }]}>
-              <Text style={[styles.columnLabel, !isLight && styles.columnLabelDark]}>{action.name}</Text>
-            </View>
-          ))}
+        </View>
+        {!canManagePermissions && (
+          <View style={styles.warningPill}>
+            <Text style={styles.warningText}>Chỉ Super Admin/Admin được lưu thay đổi</Text>
+          </View>
+        )}
+      </View>
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+      {notice ? (
+        <View style={styles.noticeBox}>
+          <Text style={styles.noticeText}>{notice}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.workspace}>
+        <View style={[styles.rolePanel, !isLight && styles.panelDark]}>
+          <Text style={[styles.sectionLabel, !isLight && styles.mutedTextDark]}>Nhóm vai trò</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {ADMIN_CONFIG_ROLES.length ? ADMIN_CONFIG_ROLES.map((role) => {
+              const active = role === selectedRole;
+              const config = ROLE_LABELS[role] || { name: role, description: role };
+
+              return (
+                <TouchableOpacity
+                  key={role}
+                  style={[styles.roleItem, !isLight && styles.roleItemDark, active && styles.roleItemActive]}
+                  onPress={() => handleSelectRole(role)}
+                >
+                  <View style={[styles.roleIcon, active && styles.roleIconActive]}>
+                    <UsersRound size={16} color={active ? '#FFF' : '#64748B'} />
+                  </View>
+                  <View style={styles.roleCopy}>
+                    <Text style={[styles.roleName, !isLight && styles.textLight, active && styles.roleNameActive]}>{config.name}</Text>
+                    <Text style={styles.roleDescription}>{config.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.stateText}>Chưa có role để cấu hình.</Text>
+              </View>
+            )}
+          </ScrollView>
         </View>
 
-        <ScrollView>
-          {MODULES.map((module) => (
-            <View key={module.id} style={[styles.matrixRow, !isLight && styles.matrixRowDark]}>
-              <View style={[styles.matrixCell, { flex: 2 }]}>
-                <Text style={[styles.moduleName, !isLight && styles.moduleNameDark]}>{module.name}</Text>
+        <View style={[styles.matrixPanel, !isLight && styles.panelDark]}>
+          <View style={styles.matrixHeaderBar}>
+            <View>
+              <Text style={[styles.matrixTitle, !isLight && styles.textLight]}>{ROLE_LABELS[selectedRole]?.name || selectedRole}</Text>
+              <Text style={styles.subtitle}>{ROLE_LABELS[selectedRole]?.description}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.saveButton, (!dirty || saving || !canManagePermissions) && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={!dirty || saving || !canManagePermissions}
+            >
+              {saving ? <ActivityIndicator size="small" color="#FFF" /> : <Save size={16} color="#FFF" />}
+              <Text style={styles.saveButtonText}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator>
+            <View style={styles.matrixTable}>
+              <View style={[styles.matrixRow, styles.matrixHeadRow, !isLight && styles.matrixHeadRowDark]}>
+                <View style={[styles.moduleCell, styles.headerCell]}>
+                  <Text style={[styles.headerText, !isLight && styles.mutedTextDark]}>Module</Text>
+                </View>
+                {PERMISSION_ACTIONS.map((action) => (
+                  <View key={action} style={[styles.actionCell, styles.headerCell]}>
+                    <Text style={[styles.headerText, !isLight && styles.mutedTextDark]}>{ACTION_LABELS[action]}</Text>
+                  </View>
+                ))}
               </View>
 
-              {ACTIONS.map((action) => {
-                const isActive = currentPermissions[module.id]?.[action.id];
-                return (
-                  <TouchableOpacity key={action.id} style={[styles.matrixCell, { flex: 1 }]} onPress={() => togglePermission(module.id, action.id)}>
-                    <View style={[styles.checkbox, !isLight && styles.checkboxDark, isActive && styles.checkboxActive]}>
-                      {isActive ? <Check size={14} color="#FFF" /> : <X size={14} color={isLight ? '#CBD5E1' : '#64748B'} />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+              {PERMISSION_MODULES.map((moduleId) => (
+                <View key={moduleId} style={[styles.matrixRow, !isLight && styles.matrixRowDark]}>
+                  <View style={styles.moduleCell}>
+                    <Text style={[styles.moduleText, !isLight && styles.textLight]}>{MODULE_LABELS[moduleId]}</Text>
+                  </View>
+                  {PERMISSION_ACTIONS.map((action) => {
+                    const active = Boolean(currentPermissions[moduleId]?.[action]);
+                    return (
+                      <TouchableOpacity
+                        key={`${moduleId}-${action}`}
+                        style={styles.actionCell}
+                        onPress={() => togglePermission(moduleId, action)}
+                        disabled={!canManagePermissions || saving}
+                      >
+                        <View style={[styles.checkbox, !isLight && styles.checkboxDark, active && styles.checkboxActive]}>
+                          {active ? <Check size={14} color="#FFF" /> : <X size={14} color={isLight ? '#CBD5E1' : '#64748B'} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Lưu cấu hình</Text>
-        </TouchableOpacity>
+          </ScrollView>
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { gap: 16 },
+  summary: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 30,
-  },
-  containerDark: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  textLight: {
-    color: '#FFFFFF',
-  },
-  roleTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    padding: 4,
     borderRadius: 12,
-    marginBottom: 30,
-    gap: 4,
-  },
-  roleTabsDark: {
-    backgroundColor: '#0F172A',
-  },
-  roleTab: {
-    flex: 1,
-    paddingVertical: 12,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderRadius: 10,
+    gap: 16,
   },
-  roleTabActive: {
+  summaryTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  title: { fontSize: 20, fontWeight: '800', color: '#0F172A' },
+  subtitle: { fontSize: 13, color: '#64748B', marginTop: 4 },
+  warningPill: { backgroundColor: '#FEF3C7', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  warningText: { color: '#92400E', fontSize: 12, fontWeight: '700' },
+  workspace: { flexDirection: 'row', gap: 16, alignItems: 'stretch' },
+  panel: {
     backgroundColor: '#FFF',
-    ...Platform.select({
-      web: { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)' } as any,
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-    }),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 220,
   },
-  roleTabActiveDark: {
-    backgroundColor: '#1E293B',
-    ...Platform.select({
-      web: { boxShadow: 'none' } as any,
-      default: {
-        shadowOpacity: 0,
-      },
-    }),
+  panelDark: { backgroundColor: '#1E293B', borderColor: '#334155' },
+  rolePanel: {
+    width: 300,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: 720,
   },
-  roleTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  roleTabTextActive: {
-    color: '#3B82F6',
-  },
-  matrixContainer: {
+  sectionLabel: { color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 12 },
+  roleItem: { flexDirection: 'row', gap: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: 'transparent', marginBottom: 8 },
+  roleItemDark: { borderColor: 'transparent' },
+  roleItemActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
+  roleIcon: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  roleIconActive: { backgroundColor: '#2563EB' },
+  roleCopy: { flex: 1 },
+  roleName: { color: '#0F172A', fontSize: 14, fontWeight: '800' },
+  roleNameActive: { color: '#1D4ED8' },
+  roleDescription: { color: '#64748B', fontSize: 12, marginTop: 3, lineHeight: 16 },
+  matrixPanel: {
+    flex: 1,
+    backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     overflow: 'hidden',
   },
-  matrixContainerDark: {
-    borderColor: '#334155',
-  },
-  matrixHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  matrixHeaderDark: {
-    backgroundColor: '#0F172A',
-    borderBottomColor: '#334155',
-  },
-  matrixRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  matrixRowDark: {
-    borderBottomColor: '#334155',
-  },
-  matrixCell: {
-    padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  columnLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-  },
-  columnLabelDark: {
-    color: '#94A3B8',
-  },
-  moduleName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    alignSelf: 'flex-start',
-  },
-  moduleNameDark: {
-    color: '#E2E8F0',
-  },
+  matrixHeaderBar: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
+  matrixTitle: { color: '#0F172A', fontSize: 18, fontWeight: '800' },
+  matrixTable: { minWidth: 860 },
+  matrixRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', minHeight: 58 },
+  matrixRowDark: { borderBottomColor: '#334155' },
+  matrixHeadRow: { backgroundColor: '#F8FAFC' },
+  matrixHeadRowDark: { backgroundColor: '#0F172A' },
+  moduleCell: { width: 260, justifyContent: 'center', paddingHorizontal: 16 },
+  actionCell: { width: 100, alignItems: 'center', justifyContent: 'center', padding: 10 },
+  headerCell: { paddingVertical: 14 },
+  headerText: { color: '#64748B', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', textAlign: 'center' },
+  moduleText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: '#CBD5E1',
     backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  checkboxDark: {
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
-  },
-  checkboxActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  footer: {
-    marginTop: 30,
-    alignItems: 'flex-end',
-  },
-  saveBtn: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  saveBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
+  checkboxDark: { backgroundColor: '#0F172A', borderColor: '#334155' },
+  checkboxActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  saveButton: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#2563EB', borderRadius: 10, paddingHorizontal: 16, height: 42 },
+  saveButtonDisabled: { opacity: 0.55 },
+  saveButtonText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  errorBox: { borderRadius: 10, padding: 12, backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA' },
+  errorText: { color: '#B91C1C', fontWeight: '700' },
+  noticeBox: { borderRadius: 10, padding: 12, backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#BBF7D0' },
+  noticeText: { color: '#166534', fontWeight: '700' },
+  emptyState: { padding: 24, alignItems: 'center' },
+  stateText: { color: '#64748B', fontSize: 14, marginTop: 10 },
+  textLight: { color: '#FFF' },
+  mutedTextDark: { color: '#94A3B8' },
 });

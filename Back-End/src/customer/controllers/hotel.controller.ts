@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import * as hotelService from '../services/hotels.service';
 import * as roomService from '../services/room.service';
 import * as availabilityService from '../services/availability.service';
+import { customerBookingService } from '../services/booking.service';
 import type { HotelQueryParams } from '../models/hotel.model';
 import type { AvailabilityQueryParams } from '../models/room.model';
 
@@ -58,6 +59,16 @@ export const getHotelAvailability = async (req: Request, res: Response, next: Ne
       req.query as AvailabilityQueryParams
     );
     res.json({ data: slots });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/customer/hotels/:id/reviews
+export const getHotelReviews = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const reviews = await customerBookingService.listApprovedReviewsByHotel(req.params.id as string);
+    res.json({ data: { reviews } });
   } catch (error) {
     next(error);
   }

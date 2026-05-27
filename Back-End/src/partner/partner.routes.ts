@@ -29,6 +29,7 @@ const publicRouter = Router();
 // Auth
 publicRouter.post('/auth/register', validate(registerSchema), asyncHandler((req, res) => authController.register(req, res)));
 publicRouter.post('/auth/login', validate(loginSchema), asyncHandler((req, res) => authController.login(req, res)));
+publicRouter.get('/auth/me', authenticate, asyncHandler((req, res) => authController.me(req, res)));
 publicRouter.post('/auth/refresh-token', validate(refreshTokenSchema), asyncHandler((req, res) => authController.refreshToken(req, res)));
 publicRouter.post('/auth/logout', asyncHandler((req, res) => authController.logout(req, res)));
 publicRouter.post('/auth/forgot-password', validate(forgotPasswordSchema), asyncHandler((req, res) => authController.forgotPassword(req, res)));

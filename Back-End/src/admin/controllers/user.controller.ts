@@ -6,11 +6,12 @@ export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const q = String(req.query.q || '').trim();
     const role = String(req.query.role || '').trim();
+    const status = String(req.query.status || '').trim();
     const page = Number(req.query.page || 1);
     const limit = Number(req.query.limit || 10);
     const requesterRole = (req as any).user?.role;
 
-    const result = await userService.getAllUsers({ q, role, requesterRole, page, limit });
+    const result = await userService.getAllUsers({ q, role, status, requesterRole, page, limit });
     return sendResponse(res, 200, 'Lấy danh sách người dùng thành công.', result);
   } catch (error) {
     return sendError(res, error);
@@ -54,8 +55,33 @@ export const updateUserStatus = async (req: Request, res: Response) => {
     const id = String(req.params.id);
     const { status } = req.body;
     const requesterRole = (req as any).user?.role;
-    const user = await userService.updateUserStatus(id, status, requesterRole);
+    const requesterId = (req as any).user?.id;
+    const user = await userService.updateUserStatus(id, status, requesterRole, requesterId);
     return sendResponse(res, 200, 'Cập nhật trạng thái người dùng thành công.', user);
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const blockUser = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const requesterRole = (req as any).user?.role;
+    const requesterId = (req as any).user?.id;
+    const user = await userService.blockUser(id, requesterRole, requesterId);
+    return sendResponse(res, 200, 'Đã khóa tài khoản người dùng.', user);
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const unblockUser = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const requesterRole = (req as any).user?.role;
+    const requesterId = (req as any).user?.id;
+    const user = await userService.unblockUser(id, requesterRole, requesterId);
+    return sendResponse(res, 200, 'Đã mở khóa tài khoản người dùng.', user);
   } catch (error) {
     return sendError(res, error);
   }

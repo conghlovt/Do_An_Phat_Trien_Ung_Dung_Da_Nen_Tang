@@ -42,3 +42,8 @@ export const refreshToken = async (token: string): Promise<{ accessToken: string
   );
   return res.data.data;
 };
+
+export const getCurrentUser = async (): Promise<AuthResponse['user']> => {
+  const res = await apiInstance.get<ApiResponse<{ user: AuthResponse['user'] }>>(`${BASE}/me`);
+  return res.data.data.user;
+};

@@ -5,7 +5,9 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
+  Alert,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -20,6 +22,7 @@ import {
   Headphones,
   Hotel,
   MoreVertical,
+  Star,
   X,
 } from 'lucide-react-native';
 import ImageWithFallback from '@/src/customer/components/ImageWithFallback';
@@ -30,6 +33,7 @@ import {
   customerBookingsStorage,
   type CustomerBooking,
 } from '@/src/customer/utils/customerBookings';
+import { bookingsApi } from '@/src/customer/api/bookings.api';
 import { getBookingDurationLabel } from '@/src/customer/utils/roomDisplay';
 
 const PRIMARY = '#85c2a4';
@@ -45,6 +49,19 @@ type ParsedBookingPoint = {
 };
 
 function parseBookingPoint(value?: string): ParsedBookingPoint {
+  if (value) {
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const dateText = `${String(parsedDate.getDate()).padStart(2, '0')}/${String(parsedDate.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        date: parsedDate,
+        dateText,
+        displayDate: `${dateText}/${parsedDate.getFullYear()}`,
+        time: `${String(parsedDate.getHours()).padStart(2, '0')}:${String(parsedDate.getMinutes()).padStart(2, '0')}`,
+      };
+    }
+  }
+
   const fallbackYear = new Date().getFullYear();
   const match = value?.match(/(\d{1,2}:\d{2}).*?(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/);
 
@@ -93,6 +110,9 @@ export default function BookingDetailScreen() {
   const [booking, setBooking] = useState<CustomerBooking | null>(null);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -122,17 +142,37 @@ export default function BookingDetailScreen() {
     [booking?.bookingType, booking?.hours],
   );
   const cancellationDeadline = useMemo(() => getCancellationDeadline(checkIn), [checkIn]);
-  const isCancelled = booking?.status === 'Đã huỷ';
+  const isCancelled = booking?.rawStatus === 'CANCELLED' || String(booking?.status) === 'Đã huỷ' || booking?.status === 'Da huy';
 
   const cancelBooking = async () => {
     if (!booking || isCancelling || isCancelled) return;
 
     setIsCancelling(true);
     try {
-      const updatedBooking = await customerBookingsStorage.updateStatus(booking.id, 'Đã huỷ');
+      const updatedBooking = await customerBookingsStorage.updateStatus(booking.id, 'Da huy');
       if (updatedBooking) setBooking(updatedBooking);
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const submitReview = async () => {
+    if (!booking || isSubmittingReview) return;
+
+    setIsSubmittingReview(true);
+    try {
+      await bookingsApi.createReview(booking.id, {
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+      });
+      const updatedBooking = await customerBookingsStorage.getById(booking.id);
+      if (updatedBooking) setBooking(updatedBooking);
+      setReviewComment('');
+      Alert.alert('Thanh cong', 'Danh gia da duoc gui va dang cho duyet.');
+    } catch (error: any) {
+      Alert.alert('Loi', error?.response?.data?.message || 'Khong the gui danh gia.');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -297,6 +337,44 @@ export default function BookingDetailScreen() {
             <Text style={[styles.policyText, { color: currentTheme.textSecondary }]}>
               Xem thêm <Text style={styles.policyLink}>Điều khoản và Chính sách</Text> đặt phòng.
             </Text>
+            {(booking.rawStatus === 'COMPLETED' || booking.review) && (
+              <View style={styles.reviewBox}>
+                <Text style={[styles.reviewBoxTitle, { color: currentTheme.text }]}>Danh gia luu tru</Text>
+                {booking.review ? (
+                  <View>
+                    <View style={styles.reviewStarsRow}>
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star key={index} size={20} color={index < booking.review!.rating ? PRIMARY : '#CBD5E1'} fill={index < booking.review!.rating ? PRIMARY : 'transparent'} />
+                      ))}
+                    </View>
+                    <Text style={[styles.reviewStatusText, { color: currentTheme.textSecondary }]}>Trang thai: {booking.review.status}</Text>
+                    {!!booking.review.comment && <Text style={[styles.policyText, { color: currentTheme.textSecondary }]}>{booking.review.comment}</Text>}
+                  </View>
+                ) : (
+                  <View>
+                    <View style={styles.reviewStarsRow}>
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Pressable key={index} onPress={() => setReviewRating(index + 1)}>
+                          <Star size={24} color={index < reviewRating ? PRIMARY : '#CBD5E1'} fill={index < reviewRating ? PRIMARY : 'transparent'} />
+                        </Pressable>
+                      ))}
+                    </View>
+                    <TextInput
+                      style={[styles.reviewInput, { color: currentTheme.text, borderColor: currentTheme.border }]}
+                      value={reviewComment}
+                      onChangeText={setReviewComment}
+                      placeholder="Chia se trai nghiem cua ban"
+                      placeholderTextColor={currentTheme.textSecondary}
+                      multiline
+                    />
+                    <Pressable style={[styles.submitReviewBtn, isSubmittingReview && styles.cancelBtnDisabled]} onPress={submitReview} disabled={isSubmittingReview}>
+                      <Text style={styles.submitReviewText}>{isSubmittingReview ? 'Dang gui...' : 'Gui danh gia'}</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            )}
+
             <Pressable
               style={[styles.cancelBtn, (isCancelled || isCancelling) && styles.cancelBtnDisabled]}
               onPress={cancelBooking}
@@ -685,6 +763,50 @@ const styles = StyleSheet.create({
     color: PRIMARY,
     fontWeight: '900',
     textDecorationLine: 'underline',
+  },
+  reviewBox: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 16,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  reviewBoxTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 12,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  reviewStatusText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  reviewInput: {
+    minHeight: 88,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  submitReviewBtn: {
+    minHeight: 48,
+    borderRadius: 24,
+    backgroundColor: PRIMARY,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitReviewText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
   },
   cancelBtn: {
     minHeight: 56,

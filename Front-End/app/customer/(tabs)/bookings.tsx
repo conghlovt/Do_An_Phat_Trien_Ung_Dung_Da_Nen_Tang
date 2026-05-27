@@ -13,6 +13,14 @@ const PRIMARY = '#85c2a4';
 const MUTED_STATUS = '#6b7280';
 
 function parseBookingPoint(value: string) {
+  const parsedDate = new Date(value);
+  if (!Number.isNaN(parsedDate.getTime())) {
+    return {
+      time: `${String(parsedDate.getHours()).padStart(2, '0')}:${String(parsedDate.getMinutes()).padStart(2, '0')}`,
+      date: `${String(parsedDate.getDate()).padStart(2, '0')}/${String(parsedDate.getMonth() + 1).padStart(2, '0')}`,
+    };
+  }
+
   const match = value.match(/(\d{1,2}:\d{2}).*?(\d{1,2})\/(\d{1,2})(?:\/\d{4})?/);
   if (!match) return { date: '--/--', time: '--:--' };
 
@@ -52,6 +60,9 @@ export default function BookingsScreen() {
       customerBookingsStorage.getAll()
         .then((items) => {
           if (isActive) setBookings(items);
+        })
+        .catch(() => {
+          if (isActive) setBookings([]);
         })
         .finally(() => {
           if (isActive) setIsLoading(false);
@@ -123,7 +134,7 @@ export default function BookingsScreen() {
                     Mã đặt phòng: {booking.code}
                   </Text>
                   <View style={styles.bookingStatusWrap}>
-                    <Text style={[styles.bookingStatus, booking.status === 'Đã huỷ' && styles.bookingStatusMuted]}>
+                    <Text style={[styles.bookingStatus, (booking.rawStatus === 'CANCELLED' || String(booking.status) === 'Đã huỷ' || booking.status === 'Da huy') && styles.bookingStatusMuted]}>
                       {booking.status}
                     </Text>
                     <Pressable hitSlop={10}>
@@ -150,7 +161,7 @@ export default function BookingsScreen() {
                       <Hotel size={18} color={PRIMARY} />
                       <Text style={[styles.priceText, { color: currentTheme.text }]}>{booking.price}</Text>
                     </View>
-                    {booking.status === 'Đã huỷ' && (
+                    {(booking.rawStatus === 'CANCELLED' || String(booking.status) === 'Đã huỷ' || booking.status === 'Da huy') && (
                       <Pressable style={styles.rebookBtn}>
                         <Text style={styles.rebookText}>Đặt lại</Text>
                       </Pressable>

@@ -67,10 +67,10 @@ export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       await adminService.updatePropertyStatus(id, status);
-      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng'}`);
+      Alert.alert('Thành công', 'Đã cập nhật trạng thái duyệt cơ sở lưu trú');
       fetchProperties();
-    } catch {
-      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể cập nhật trạng thái'));
     }
   };
 
@@ -95,21 +95,17 @@ export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: 
       key: 'status',
       label: 'Trạng thái',
       render: (status: string) => {
-        let color = '#10B981';
-        let bgColor = 'rgba(16, 185, 129, 0.1)';
-
-        if (status === 'INACTIVE') {
-          color = '#EF4444';
-          bgColor = 'rgba(239, 68, 68, 0.1)';
-        } else if (status === 'PENDING') {
-          color = '#F59E0B';
-          bgColor = 'rgba(245, 158, 11, 0.1)';
-        }
+        const normalized = String(status || '').toLowerCase();
+        const isApproved = normalized === 'approved' || normalized === 'active';
+        const isInactive = ['rejected', 'suspended', 'inactive'].includes(normalized);
+        const color = isApproved ? '#10B981' : isInactive ? '#EF4444' : '#F59E0B';
+        const bgColor = isApproved ? 'rgba(16, 185, 129, 0.1)' : isInactive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+        const label = isApproved ? 'Đã duyệt' : normalized === 'rejected' ? 'Từ chối' : normalized === 'suspended' ? 'Tạm ngưng' : 'Chờ duyệt';
 
         return (
           <View style={[styles.badge, { backgroundColor: bgColor }]}>
             <Text style={[styles.badgeText, { color }]}>
-              {status === 'ACTIVE' ? 'Hoạt động' : status === 'INACTIVE' ? 'Tạm ngưng' : 'Chờ duyệt'}
+              {label}
             </Text>
           </View>
         );
@@ -122,8 +118,9 @@ export const LodgingManagement = ({ permissions = fullAccess }: { permissions?: 
     ...(permissions.canEdit ? [{ label: 'Sửa', icon: Edit, color: '#3B82F6', onPress: (item: any) => openEditModal(item) }] : []),
     ...(permissions.canApprove || permissions.canEdit
       ? [
-          { label: 'Kích hoạt', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'ACTIVE') },
-          { label: 'Tạm ngưng', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'INACTIVE') },
+          { label: 'Duyệt', icon: CheckCircle, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'approved') },
+          { label: 'Từ chối', icon: XCircle, color: '#EF4444', onPress: (item: any) => handleUpdateStatus(item.id, 'rejected') },
+          { label: 'Tạm ngưng', icon: XCircle, color: '#F59E0B', onPress: (item: any) => handleUpdateStatus(item.id, 'suspended') },
         ]
       : []),
     ...(permissions.canDelete ? [{ label: 'Xóa', icon: Trash2, color: '#EF4444', onPress: (item: any) => handleDelete(item.id) }] : []),

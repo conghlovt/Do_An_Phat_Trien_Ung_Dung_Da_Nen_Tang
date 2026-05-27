@@ -3,6 +3,24 @@
 # MinIO Console: http://localhost:9001 (login: minioadmin/minioadmin)
 
 services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: staybuddy-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: Do_an_da_nen_tang
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Do_an_da_nen_tang"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   # MinIO Object Storage — S3-compatible, self-hosted
   minio:
     image: minio/minio:latest
@@ -19,4 +37,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres_data:
   minio_data:

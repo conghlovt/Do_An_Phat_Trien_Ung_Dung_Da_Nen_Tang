@@ -1,6 +1,7 @@
 import { type AuthResponse } from '../types/auth.types';
 import apiInstance from '../shared/api/api.instance';
 import { type ApiSuccess } from '../shared/types/api.types';
+import { tokenStorage } from '../shared/storage/secure-token.storage';
 
 export const login = async ({ email, password }: any): Promise<AuthResponse> => {
   const response = await apiInstance.post<ApiSuccess<AuthResponse>>('/auth/login', {
@@ -11,7 +12,8 @@ export const login = async ({ email, password }: any): Promise<AuthResponse> => 
 };
 
 export const logout = async (): Promise<void> => {
-  await apiInstance.post('/auth/logout');
+  const refreshToken = await tokenStorage.getRefreshToken();
+  await apiInstance.post('/auth/logout', refreshToken ? { refreshToken } : {});
 };
 
 
@@ -25,6 +27,11 @@ export const refreshToken = async (token: string): Promise<{ accessToken: string
     refreshToken: token,
   });
   return response.data.data;
+};
+
+export const getCurrentUser = async (): Promise<AuthResponse['user']> => {
+  const response = await apiInstance.get<ApiSuccess<{ user: AuthResponse['user'] }>>('/auth/me');
+  return response.data.data.user;
 };
 
 export const forgotPassword = async (email: string): Promise<void> => {

@@ -23,6 +23,15 @@ export type {
 
 export type { BookingType } from '@/src/customer/types/hotels.types';
 
+export interface HotelReview {
+  id: string | number;
+  name: string;
+  rating: number;
+  text: string;
+  tag?: string;
+  createdAt?: string;
+}
+
 const BASE = '/api/customer/hotels';
 
 export const hotelsApi = {
@@ -80,6 +89,12 @@ export const hotelsApi = {
 
   getOfficeInfo: async (): Promise<{ data: OfficeInfo }> => {
     const res = await apiInstance.get<{ data: OfficeInfo }>(`${BASE}/office/info`);
+    return res.data;
+  },
+
+  getReviews: async (hotelId: number | string): Promise<{ data: { reviews: HotelReview[] } }> => {
+    const id = String(hotelId);
+    const res = await apiInstance.get<{ data: { reviews: HotelReview[] } }>(`${BASE}/${id}/reviews`);
     return res.data;
   },
 };

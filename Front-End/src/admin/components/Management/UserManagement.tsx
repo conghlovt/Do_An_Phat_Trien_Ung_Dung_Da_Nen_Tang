@@ -12,12 +12,26 @@ interface UserManagementProps {
   role?: 'customer' | 'partner' | 'admin' | 'staff';
   permissions?: ModuleAccess;
   currentUserRole?: string;
+  currentUserId?: string;
 }
 
 const fullAccess: ModuleAccess = { canView: true, canEdit: true, canDelete: true, canApprove: true };
 const protectedRoles = ['admin', 'SUPER_ADMIN', 'OPERATOR', 'ACCOUNTANT'];
+const activeStatuses = ['ACTIVE', 'active'];
+const pendingStatuses = ['PENDING'];
+const blockedStatuses = ['BLOCKED', 'inactive', 'banned'];
 
-export const UserManagement: React.FC<UserManagementProps> = ({ role, permissions = fullAccess, currentUserRole }) => {
+const isActiveStatus = (status?: string) => activeStatuses.includes(String(status || ''));
+const isPendingStatus = (status?: string) => pendingStatuses.includes(String(status || ''));
+const isBlockedStatus = (status?: string) => blockedStatuses.includes(String(status || ''));
+const normalizeDisplayStatus = (status?: string) => {
+  if (isActiveStatus(status)) return 'ACTIVE';
+  if (isPendingStatus(status)) return 'PENDING';
+  if (isBlockedStatus(status)) return 'BLOCKED';
+  return status || '';
+};
+
+export const UserManagement: React.FC<UserManagementProps> = ({ role, permissions = fullAccess, currentUserRole, currentUserId }) => {
   const { isLight } = useAdminTheme();
   const [users, setUsers] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -46,7 +60,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       if (role === 'admin') roleFilter = 'admin';
 
       const result = await adminService.getUsers(q, p, 10, roleFilter);
-      setUsers(result.users);
+      setUsers((result.users || []).map((user: any) => ({ ...user, status: normalizeDisplayStatus(user.status) })));
       setTotalCount(result.total);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -111,18 +125,44 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
     }
   };
 
-  const handleUpdateStatus = async (id: string, status: string) => {
+  const handleBlockUser = async (user: any) => {
     if (!permissions.canApprove) {
-      Alert.alert('Lỗi', 'Bạn không có quyền phê duyệt/khóa người dùng');
+      Alert.alert('Lỗi', 'Bạn không có quyền khóa người dùng');
+      return;
+    }
+    if (user.id === currentUserId) {
+      Alert.alert('Lỗi', 'Bạn không thể tự khóa tài khoản của chính mình');
+      return;
+    }
+    if (user.role === 'SUPER_ADMIN' && currentUserRole !== 'SUPER_ADMIN') {
+      Alert.alert('Lỗi', 'Chỉ Super Admin mới được quản lý tài khoản Super Admin');
+      return;
+    }
+
+    const confirmed = await confirmAction('Xác nhận khóa', `Khóa tài khoản ${user.username || user.email}? Người dùng sẽ bị đăng xuất.`);
+    if (!confirmed) return;
+
+    try {
+      await adminService.blockUser(user.id);
+      Alert.alert('Thành công', 'Đã khóa tài khoản người dùng');
+      fetchUsers(searchQuery, page);
+    } catch (error) {
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể khóa tài khoản.'));
+    }
+  };
+
+  const handleUnblockUser = async (user: any) => {
+    if (!permissions.canApprove) {
+      Alert.alert('Lỗi', 'Bạn không có quyền mở khóa người dùng');
       return;
     }
 
     try {
-      await adminService.updateUserStatus(id, status);
-      Alert.alert('Thành công', `Đã chuyển trạng thái sang ${status}`);
+      await adminService.unblockUser(user.id);
+      Alert.alert('Thành công', 'Đã mở khóa tài khoản người dùng');
       fetchUsers(searchQuery, page);
     } catch (error) {
-      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể cập nhật trạng thái.'));
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể mở khóa tài khoản.'));
     }
   };
 
@@ -200,8 +240,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({ role, permission
       : []),
     ...(permissions.canApprove 
       ? [
-          { label: 'Phê duyệt', icon: Check, color: '#10B981', onPress: (item: any) => handleUpdateStatus(item.id, 'ACTIVE') },
-          { label: 'Khóa tài khoản', icon: Ban, color: '#EF4444', onPress: (item: any) => handleUpdateStatus(item.id, 'BLOCKED') },
+          { label: 'Phê duyệt', icon: Check, color: '#10B981', onPress: (item: any) => handleUnblockUser(item) },
+          { label: 'Khóa tài khoản', icon: Ban, color: '#EF4444', onPress: (item: any) => handleBlockUser(item) },
         ] 
       : []),
   ];

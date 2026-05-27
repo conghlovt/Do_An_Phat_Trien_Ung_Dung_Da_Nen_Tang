@@ -1,5 +1,6 @@
 import { useAuthStore } from '../store/auth.store';
 import { login as loginApi, logout as logoutApi, register as registerApi } from '../api/auth.api';
+import { resetForceLogoutGuard } from '@/src/login/shared/api/api.instance';
 
 export const useAuth = () => {
   const { user, accessToken, isAuthenticated, isLoading, error, setAuth, clearAuth, restoreSession } =
@@ -11,6 +12,7 @@ export const useAuth = () => {
     try {
       const res = await loginApi(email, password);
       await setAuth(res);
+      resetForceLogoutGuard();
       return res;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Đăng nhập thất bại';
@@ -41,6 +43,7 @@ export const useAuth = () => {
     try {
       const res = await registerApi({ email, password, username, role });
       await setAuth(res);
+      resetForceLogoutGuard();
       return res;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Đăng ký thất bại';

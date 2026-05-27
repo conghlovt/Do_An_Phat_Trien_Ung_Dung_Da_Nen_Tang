@@ -45,13 +45,38 @@ export const adminService = {
     return response.data.data;
   },
 
+  blockUser: async (id: string) => {
+    const response = await apiInstance.put(`/admin/users/${id}/block`);
+    return response.data.data;
+  },
+
+  unblockUser: async (id: string) => {
+    const response = await apiInstance.put(`/admin/users/${id}/unblock`);
+    return response.data.data;
+  },
+
+  getRolePermissions: async () => {
+    const response = await apiInstance.get('/admin/roles/permissions');
+    return response.data.data;
+  },
+
+  getRolePermission: async (role: string) => {
+    const response = await apiInstance.get(`/admin/roles/${role}/permissions`);
+    return response.data.data;
+  },
+
   getPermissions: async () => {
-    const response = await apiInstance.get('/admin/permissions');
+    const response = await apiInstance.get('/admin/roles/permissions');
+    return response.data.data;
+  },
+
+  updateRolePermissions: async (role: string, permissions: any) => {
+    const response = await apiInstance.put(`/admin/roles/${role}/permissions`, { permissions });
     return response.data.data;
   },
 
   updatePermissions: async (role: string, permissions: any) => {
-    const response = await apiInstance.put(`/admin/permissions/${role}`, { permissions });
+    const response = await apiInstance.put(`/admin/roles/${role}/permissions`, { permissions });
     return response.data.data;
   },
 

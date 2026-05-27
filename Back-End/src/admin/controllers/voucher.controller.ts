@@ -17,8 +17,8 @@ export const getAllVouchers = async (req: Request, res: Response) => {
 
 export const createVoucher = async (req: Request, res: Response) => {
   try {
-    const { code, discount, type, expiry, endDate } = req.body;
-    if (!code || discount === undefined || !type || !(expiry || endDate)) {
+    const { code, hotelId, discount, discountValue, type, discountType, expiry, startDate, endDate } = req.body;
+    if (!hotelId || !code || (discount === undefined && discountValue === undefined) || !(type || discountType) || !(expiry || endDate) || !startDate) {
       return sendResponse(res, 400, USER_MESSAGES.VOUCHER_REQUIRED_FIELDS);
     }
     const voucher = await voucherService.createVoucher(req.body);

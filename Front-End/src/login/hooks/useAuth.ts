@@ -1,6 +1,7 @@
 import { useAuthStore } from '../store/auth.store';
 import { login as loginApi, logout as logoutApi, register as registerApi } from '../api/auth.api';
 import { getApiErrorMessage } from '../shared/api/api-error.util';
+import { resetForceLogoutGuard } from '../shared/api/api.instance';
 
 export const useAuth = () => {
   const { user, accessToken, isAuthenticated, isLoading, error, setAuth, clearAuth, restoreSession } = useAuthStore();
@@ -10,6 +11,7 @@ export const useAuth = () => {
       useAuthStore.getState().setIsLoading(true);
       const res = await loginApi({ email, password });
       await setAuth(res);
+      resetForceLogoutGuard();
       return res;
     } catch (err) {
       useAuthStore.getState().setError(getApiErrorMessage(err, 'Không thể đăng nhập. Vui lòng thử lại.'));

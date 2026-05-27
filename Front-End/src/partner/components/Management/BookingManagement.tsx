@@ -8,11 +8,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
-  Dimensions,
   useWindowDimensions,
 } from 'react-native';
 import {
-  ClipboardList, Clock, CheckCircle, LogIn, Trophy, XCircle,
+  ClipboardList, Clock, CheckCircle, Trophy, XCircle,
   User, Phone, BedDouble, Calendar, Banknote,
 } from 'lucide-react-native';
 import { partnerService } from '../../services/partner.service';
@@ -30,7 +29,6 @@ const FILTERS: { key: BookingStatus | 'ALL'; label: string; Icon: React.ElementT
   { key: 'ALL', label: 'Tất cả', Icon: ClipboardList },
   { key: 'PENDING', label: 'Chờ duyệt', Icon: Clock },
   { key: 'CONFIRMED', label: 'Đã xác nhận', Icon: CheckCircle },
-  { key: 'CHECKED_IN', label: 'Đã nhận phòng', Icon: LogIn },
   { key: 'COMPLETED', label: 'Hoàn thành', Icon: Trophy },
   { key: 'CANCELLED', label: 'Đã hủy', Icon: XCircle },
 ];
@@ -38,7 +36,6 @@ const FILTERS: { key: BookingStatus | 'ALL'; label: string; Icon: React.ElementT
 const STATUS_CONFIG: Record<BookingStatus, { color: string; bg: string; label: string; Icon: React.ElementType }> = {
   PENDING:    { color: '#F59E0B', bg: '#FFFBEB', label: 'Chờ duyệt',      Icon: Clock },
   CONFIRMED:  { color: '#0D9488', bg: '#F0FDFA', label: 'Đã xác nhận',    Icon: CheckCircle },
-  CHECKED_IN: { color: '#6366F1', bg: '#EEF2FF', label: 'Đã nhận phòng',  Icon: LogIn },
   COMPLETED:  { color: '#22C55E', bg: '#F0FDF4', label: 'Hoàn thành',     Icon: Trophy },
   CANCELLED:  { color: '#EF4444', bg: '#FEF2F2', label: 'Đã hủy',        Icon: XCircle },
 };
@@ -163,7 +160,7 @@ const BookingCard = ({
   );
 };
 
-/** Luồng: PENDING → (Xác nhận / Từ chối) → CONFIRMED → (Nhận phòng) → CHECKED_IN → (Hoàn thành) → COMPLETED */
+/** Luong: PENDING -> CONFIRMED/CANCELLED -> COMPLETED */
 function renderActions(
   booking: Booking,
   onAction: (id: string, status: BookingStatus) => void,
@@ -195,11 +192,11 @@ function renderActions(
     return (
       <View style={s.actionRow}>
         <ActionButton
-          label="Nhận phòng"
-          color="#6366F1"
-          bgColor="#EEF2FF"
-          Icon={LogIn}
-          onPress={() => onAction(id, 'CHECKED_IN')}
+          label="Hoàn thành"
+          color="#22C55E"
+          bgColor="#F0FDF4"
+          Icon={Trophy}
+          onPress={() => onAction(id, 'COMPLETED')}
         />
         <ActionButton
           label="Hủy đơn"
@@ -207,20 +204,6 @@ function renderActions(
           bgColor="#FEF2F2"
           Icon={XCircle}
           onPress={() => onAction(id, 'CANCELLED')}
-        />
-      </View>
-    );
-  }
-
-  if (status === 'CHECKED_IN') {
-    return (
-      <View style={s.actionRow}>
-        <ActionButton
-          label="Hoàn thành"
-          color="#22C55E"
-          bgColor="#F0FDF4"
-          Icon={Trophy}
-          onPress={() => onAction(id, 'COMPLETED')}
         />
       </View>
     );
@@ -266,7 +249,6 @@ export function BookingManagement() {
       await partnerService.updateBookingStatus(id, status);
       const statusLabels: Record<string, string> = {
         CONFIRMED: 'Đã xác nhận đơn đặt phòng',
-        CHECKED_IN: 'Đã nhận phòng thành công',
         COMPLETED: 'Đơn đã hoàn thành',
         CANCELLED: 'Đã hủy đơn đặt phòng',
       };
