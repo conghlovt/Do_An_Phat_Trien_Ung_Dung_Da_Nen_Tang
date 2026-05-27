@@ -526,6 +526,7 @@ enum UserStatus {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  CHECKED_IN
   CANCELLED
   COMPLETED
 }
