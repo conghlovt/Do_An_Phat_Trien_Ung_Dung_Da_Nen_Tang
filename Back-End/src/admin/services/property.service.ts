@@ -1,9 +1,18 @@
+import { Prisma, type Hotel, type Property, type HotelAddress } from '@prisma/client';
 import prisma from '../../login/lib/prisma';
 import { AppError } from '../../shared/utils/app-error.util';
 import {
   mapHotelStatusToPropertyStatus,
   syncHotelMirror,
 } from '../../shared/services/lodging-sync.service';
+
+const hotelInclude = {
+  address: true,
+  owner: { select: { username: true, email: true } },
+  _count: { select: { roomTypes: true } },
+} satisfies Prisma.HotelInclude;
+
+type HotelWithInclude = Prisma.HotelGetPayload<{ include: typeof hotelInclude }>;
 
 const makeNotFoundError = (message: string) =>
   new AppError(404, 'RESOURCE_NOT_FOUND', { userMessage: message });
@@ -28,7 +37,7 @@ const normalizePropertyTypeInput = (type?: string) => {
   return 'hotel';
 };
 
-const getHotelAddressText = (hotel: any) =>
+const getHotelAddressText = (hotel: HotelWithInclude) =>
   hotel.address?.fullAddress ||
   hotel.address?.addressLine ||
   [hotel.address?.ward, hotel.address?.district, hotel.address?.city, hotel.address?.province]
@@ -36,10 +45,10 @@ const getHotelAddressText = (hotel: any) =>
     .join(', ') ||
   hotel.name;
 
-const getHotelCity = (hotel: any) =>
+const getHotelCity = (hotel: HotelWithInclude) =>
   hotel.address?.city || hotel.address?.province || 'Chua cap nhat';
 
-const normalizeHotel = (hotel: any) => ({
+const normalizeHotel = (hotel: HotelWithInclude) => ({
   id: hotel.id,
   name: hotel.name,
   description: hotel.description,
@@ -49,7 +58,7 @@ const normalizeHotel = (hotel: any) => ({
   status: hotel.status,
   propertyStatus: mapHotelStatusToPropertyStatus(hotel.status),
   source: 'hotel',
-  roomCount: hotel._count?.roomTypes ?? hotel.roomTypes?.length ?? 0,
+  roomCount: (hotel as any)._count?.roomTypes ?? (hotel as any).roomTypes?.length ?? 0,
   totalRooms: hotel.totalRooms,
   rejectionReason: hotel.rejectionReason,
   approvedAt: hotel.approvedAt,
@@ -57,17 +66,12 @@ const normalizeHotel = (hotel: any) => ({
   owner: hotel.owner,
 });
 
-const normalizeProperty = (property: any) => ({
+const normalizeProperty = (property: Property & { owner: { username: string; email: string } }) => ({
   ...property,
   source: 'property',
   propertyStatus: property.status,
 });
 
-const hotelInclude = {
-  address: true,
-  owner: { select: { username: true, email: true } },
-  _count: { select: { roomTypes: true } },
-};
 
 export const propertyService = {
   getProperties: async (options: { q?: string }) => {
@@ -90,7 +94,7 @@ export const propertyService = {
       orderBy: { createdAt: 'desc' },
     });
 
-    const hotelIds = hotels.map((hotel) => hotel.id);
+    const hotelIds = hotels.map((hotel: HotelWithInclude) => hotel.id);
     const legacyProperties = await prisma.property.findMany({
       where: {
         ...(hotelIds.length ? { id: { notIn: hotelIds } } : {}),
@@ -104,23 +108,23 @@ export const propertyService = {
               ],
             }
           : {}),
-      } as any,
+      },
       include: {
         owner: { select: { username: true, email: true } },
       },
       orderBy: { createdAt: 'desc' },
-    } as any);
+    });
 
     return [
       ...hotels.map(normalizeHotel),
-      ...legacyProperties.map(normalizeProperty),
+      ...legacyProperties.map((p: any) => normalizeProperty(p)),
     ];
   },
 
   updateProperty: async (id: string, data: any) => {
     const hotel = await prisma.hotel.findUnique({ where: { id }, include: { address: true } });
     if (hotel) {
-      const updatedHotel = await prisma.$transaction(async (tx) => {
+      const updatedHotel = await prisma.$transaction(async (tx: any) => {
         await tx.hotel.update({
           where: { id },
           data: {
@@ -162,13 +166,14 @@ export const propertyService = {
           } as any);
         }
 
-        await syncHotelMirror(tx, id);
+        await syncHotelMirror(tx as any, id);
         return tx.hotel.findUnique({
           where: { id },
           include: hotelInclude,
         });
       });
 
+      if (!updatedHotel) throw makeNotFoundError('Khong tim thay khach san sau khi cap nhat.');
       return normalizeHotel(updatedHotel);
     }
 
@@ -198,7 +203,7 @@ export const propertyService = {
     const hotel = await prisma.hotel.findUnique({ where: { id } });
 
     if (hotel) {
-      const updatedHotel = await prisma.$transaction(async (tx) => {
+      const updatedHotel = await prisma.$transaction(async (tx: any) => {
         await tx.hotel.update({
           where: { id },
           data: {
@@ -209,13 +214,14 @@ export const propertyService = {
           } as any,
         });
 
-        await syncHotelMirror(tx, id);
+        await syncHotelMirror(tx as any, id);
         return tx.hotel.findUnique({
           where: { id },
           include: hotelInclude,
         });
       });
 
+      if (!updatedHotel) throw makeNotFoundError('Khong tim thay khach san sau khi cap nhat.');
       return normalizeHotel(updatedHotel);
     }
 
@@ -232,12 +238,12 @@ export const propertyService = {
   deleteProperty: async (id: string) => {
     const hotel = await prisma.hotel.findUnique({ where: { id } });
     if (hotel) {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         await tx.hotel.update({
           where: { id },
           data: { status: 'suspended' },
         });
-        await syncHotelMirror(tx, id);
+        await syncHotelMirror(tx as any, id);
       });
       return;
     }
@@ -245,7 +251,7 @@ export const propertyService = {
     const property = await prisma.property.findUnique({ where: { id } });
     if (!property) throw makeNotFoundError('Khong tim thay co so luu tru.');
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       const rooms = await tx.room.findMany({ where: { propertyId: id }, select: { id: true } });
       const roomIds = rooms.map((room: any) => room.id);
       const bookings = roomIds.length

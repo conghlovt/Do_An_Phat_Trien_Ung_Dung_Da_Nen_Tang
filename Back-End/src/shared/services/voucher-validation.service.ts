@@ -1,4 +1,12 @@
 import { AppError } from '../utils/app-error.util';
+import {
+  applyActions,
+  validateConstraints,
+  validateRules,
+  normalizeArray,
+  normalizeObject,
+} from '../../partner/utils/voucher.engine';
+import prisma from '../../login/lib/prisma';
 
 type Tx = any;
 
@@ -10,74 +18,36 @@ const makeNotFoundError = (message: string) =>
 
 const normalizeCode = (code?: string | null) => String(code || '').trim().toUpperCase();
 
-export const calculateVoucherDiscount = (voucher: any, subtotal: number) => {
-  const discountType = String(voucher.discountType || '').toLowerCase();
-  const discountValue = Number(voucher.discountValue || 0);
-  const rawDiscount =
-    discountType === 'percent' || discountType === 'percentage'
-      ? Math.floor((subtotal * discountValue) / 100)
-      : discountValue;
+export const formatVoucherForCustomer = (voucher: any, subtotal?: number) => {
+  const rules = normalizeArray(voucher.rules);
+  const actions = normalizeArray(voucher.actions);
+  const constraints = normalizeObject(voucher.constraints);
 
-  const cappedDiscount =
-    voucher.maxDiscount !== null && voucher.maxDiscount !== undefined
-      ? Math.min(rawDiscount, Number(voucher.maxDiscount))
-      : rawDiscount;
+  const priceResult = subtotal !== undefined ? applyActions(actions, subtotal) : null;
 
-  return Math.max(0, Math.min(subtotal, cappedDiscount));
-};
-
-const isVoucherDateActive = (voucher: any, now = new Date()) =>
-  voucher.startDate <= now && voucher.endDate >= now;
-
-const isVoucherApplicableToRoomType = (voucher: any, roomTypeId?: string | null | undefined) => {
-  const roomTypes = voucher.roomTypes || [];
-  if (!roomTypes.length) return true;
-  if (!roomTypeId) return false;
-  return roomTypes.some((item: any) => item.roomTypeId === roomTypeId);
-};
-
-const assertVoucherUsable = (
-  voucher: any,
-  params: { roomTypeId?: string | null | undefined; subtotal: number; now?: Date },
-) => {
-  if (voucher.status !== 'ACTIVE') {
-    throw makeValidationError('Voucher khong hoat dong.');
-  }
-  if (!isVoucherDateActive(voucher, params.now)) {
-    throw makeValidationError('Voucher da het han hoac chua den thoi gian su dung.');
-  }
-  if (Number(voucher.usedCount || 0) >= Number(voucher.usageLimit || 0)) {
-    throw makeValidationError('Voucher da het luot su dung.');
-  }
-  if (voucher.minOrderValue !== null && voucher.minOrderValue !== undefined && params.subtotal < Number(voucher.minOrderValue)) {
-    throw makeValidationError('Tong tien chua dat dieu kien ap dung voucher.');
-  }
-  if (!isVoucherApplicableToRoomType(voucher, params.roomTypeId)) {
-    throw makeValidationError('Voucher khong ap dung cho loai phong nay.');
-  }
-};
-
-export const normalizeVoucherForCustomer = (voucher: any, subtotal?: number) => {
-  const discount = subtotal !== undefined ? calculateVoucherDiscount(voucher, subtotal) : 0;
   return {
     id: voucher.id,
     hotelId: voucher.hotelId,
     code: voucher.code,
     name: voucher.name,
-    discountType: voucher.discountType,
-    discountValue: voucher.discountValue,
-    minOrderValue: voucher.minOrderValue,
-    maxDiscount: voucher.maxDiscount,
-    usageLimit: voucher.usageLimit,
-    usedCount: voucher.usedCount,
-    startDate: voucher.startDate,
-    endDate: voucher.endDate,
     status: voucher.status,
-    applicableRoomTypeIds: voucher.roomTypes?.length
-      ? voucher.roomTypes.map((item: any) => item.roomTypeId)
-      : ['all'],
-    discount,
-    finalTotal: subtotal !== undefined ? Math.max(0, subtotal - discount) : undefined,
+    rules,
+    actions,
+    constraints,
+
+    // Legacy fields for backward compatibility
+    discountType: actions[0]?.type || 'fixed',
+    discountValue: actions[0]?.value || 0,
+    maxDiscount: actions[0]?.max || null,
+    minOrderValue: rules.find((r: any) => r.type === 'minOrder')?.value || null,
+    usageLimit: constraints.usageLimit || null,
+    usedCount: constraints.usedCount || 0,
+    startDate: constraints.startDate || null,
+    endDate: constraints.endDate || null,
+    applicableRoomTypeIds: rules.find((r: any) => r.type === 'roomType')?.ids || ['all'],
+
+    discount: priceResult?.discount || 0,
+    finalTotal: priceResult?.finalPrice ?? subtotal,
   };
 };
 
@@ -85,32 +55,26 @@ export const listUsableVouchers = async (
   tx: Tx,
   params: { hotelId: string; roomTypeId?: string | null | undefined; subtotal: number },
 ) => {
-  const now = new Date();
   const vouchers = await tx.voucher.findMany({
     where: {
       hotelId: params.hotelId,
       status: 'ACTIVE',
-      startDate: { lte: now },
-      endDate: { gte: now },
     },
-    include: { roomTypes: true },
     orderBy: { createdAt: 'desc' },
-  } as any);
+  });
+
+  const context = {
+    totalPrice: params.subtotal,
+    roomTypeId: params.roomTypeId || undefined,
+  };
 
   return vouchers
-    .filter((voucher: any) => {
-      try {
-        assertVoucherUsable(voucher, {
-          roomTypeId: params.roomTypeId,
-          subtotal: params.subtotal,
-          now,
-        });
-        return true;
-      } catch {
-        return false;
-      }
+    .filter((v: any) => {
+      const cValid = validateConstraints(v.constraints, context).valid;
+      const rValid = validateRules(v.rules, context).valid;
+      return cValid && rValid;
     })
-    .map((voucher: any) => normalizeVoucherForCustomer(voucher, params.subtotal));
+    .map((v: any) => formatVoucherForCustomer(v, params.subtotal));
 };
 
 export const validateVoucher = async (
@@ -120,51 +84,68 @@ export const validateVoucher = async (
     code: string;
     roomTypeId?: string | null | undefined;
     subtotal: number;
+    bookingType?: string;
+    stayDays?: number;
+    stayHours?: number;
+    userUsage?: number;
+    hasPreviousBooking?: boolean;
+    customerTier?: string;
   },
 ) => {
   const code = normalizeCode(params.code);
-  if (!code) {
-    throw makeValidationError('Vui long nhap ma voucher.');
-  }
+  if (!code) throw makeValidationError('Vui lòng nhập mã voucher.');
 
   const voucher = await tx.voucher.findFirst({
-    where: {
-      hotelId: params.hotelId,
-      code,
-    },
-    include: { roomTypes: true },
+    where: { hotelId: params.hotelId, code },
   });
 
-  if (!voucher) {
-    throw makeNotFoundError('Khong tim thay voucher.');
-  }
+  if (!voucher) throw makeNotFoundError('Không tìm thấy voucher.');
 
-  assertVoucherUsable(voucher, {
-    roomTypeId: params.roomTypeId,
-    subtotal: params.subtotal,
-  });
+  const context = {
+    totalPrice: params.subtotal,
+    roomTypeId: params.roomTypeId || undefined,
+    bookingType: params.bookingType,
+    stayDays: params.stayDays,
+    stayHours: params.stayHours,
+    userUsage: params.userUsage,
+    hasPreviousBooking: params.hasPreviousBooking,
+    customerTier: params.customerTier,
+  };
 
-  const discount = calculateVoucherDiscount(voucher, params.subtotal);
+  const cResult = validateConstraints(voucher.constraints, context);
+  if (!cResult.valid) throw makeValidationError(cResult.reason || 'Voucher không hợp lệ.');
+
+  const rResult = validateRules(voucher.rules, context);
+  if (!rResult.valid) throw makeValidationError(rResult.reason || 'Điều kiện voucher không thỏa mãn.');
+
+  const priceResult = applyActions(voucher.actions, params.subtotal);
+
   return {
     voucher,
-    discount,
-    finalTotal: Math.max(0, params.subtotal - discount),
-    normalized: normalizeVoucherForCustomer(voucher, params.subtotal),
+    discount: priceResult.discount,
+    finalTotal: priceResult.finalPrice,
+    normalized: formatVoucherForCustomer(voucher, params.subtotal),
   };
 };
 
-export const incrementVoucherUsage = async (tx: Tx, voucherId: string, usageLimit: number) => {
-  const updated = await tx.voucher.updateMany({
-    where: {
-      id: voucherId,
-      usedCount: { lt: usageLimit },
-    },
-    data: { usedCount: { increment: 1 } },
-  } as any);
+export const incrementVoucherUsage = async (tx: Tx, voucherId: string) => {
+  const voucher = await tx.voucher.findUnique({ where: { id: voucherId } });
+  if (!voucher) return;
 
-  if (updated.count !== 1) {
-    throw makeValidationError('Voucher da het luot su dung.');
+  const constraints = normalizeObject(voucher.constraints);
+  const usageLimit = Number(constraints.usageLimit || 999999);
+  const usedCount = Number(constraints.usedCount || 0);
+
+  if (usedCount >= usageLimit) {
+    throw makeValidationError('Voucher đã hết lượt sử dụng.');
   }
+
+  const updatedConstraints = { ...constraints, usedCount: usedCount + 1 };
+
+  await tx.voucher.update({
+    where: { id: voucherId },
+    data: { constraints: updatedConstraints as any },
+  });
 };
 
 export const decrementVoucherUsageByCode = async (
@@ -175,12 +156,19 @@ export const decrementVoucherUsageByCode = async (
   const normalizedCode = normalizeCode(code);
   if (!normalizedCode) return;
 
-  await tx.voucher.updateMany({
-    where: {
-      hotelId,
-      code: normalizedCode,
-      usedCount: { gt: 0 },
-    },
-    data: { usedCount: { decrement: 1 } },
+  const voucher = await tx.voucher.findFirst({
+    where: { hotelId, code: normalizedCode },
+  });
+
+  if (!voucher) return;
+
+  const constraints = normalizeObject(voucher.constraints);
+  const usedCount = Math.max(0, Number(constraints.usedCount || 0) - 1);
+  const updatedConstraints = { ...constraints, usedCount };
+
+  await tx.voucher.update({
+    where: { id: voucher.id },
+    data: { constraints: updatedConstraints as any },
   });
 };
+

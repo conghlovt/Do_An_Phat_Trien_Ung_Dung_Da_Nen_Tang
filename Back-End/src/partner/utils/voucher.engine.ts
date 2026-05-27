@@ -1,36 +1,37 @@
 type VoucherRule = {
   type: string;
   value?: any;
-  min?: number;
-  max?: number;
-  ids?: string[];
-  values?: string[];
+  min?: number | undefined;
+  max?: number | undefined;
+  ids?: string[] | undefined;
+  values?: string[] | undefined;
 };
 
 type VoucherAction = {
   type: string;
   value: number;
-  max?: number;
+  max?: number | undefined;
 };
 
 type VoucherConstraints = {
-  usageLimit?: number;
-  usedCount?: number;
-  startDate?: string;
-  endDate?: string;
-  perUser?: number;
+  usageLimit?: number | undefined;
+  usedCount?: number | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  perUser?: number | undefined;
 };
 
 type VoucherContext = {
   totalPrice: number;
-  bookingType?: string;
-  roomTypeId?: string;
-  stayDays?: number;
-  stayHours?: number;
-  hasPreviousBooking?: boolean;
-  userUsage?: number;
-  customerTier?: string;  
+  bookingType?: string | undefined;
+  roomTypeId?: string | undefined;
+  stayDays?: number | undefined;
+  stayHours?: number | undefined;
+  hasPreviousBooking?: boolean | undefined;
+  userUsage?: number | undefined;
+  customerTier?: string | undefined;  
 };
+
 
 export function normalizeArray(value: unknown): any[] {
   return Array.isArray(value) ? value : [];

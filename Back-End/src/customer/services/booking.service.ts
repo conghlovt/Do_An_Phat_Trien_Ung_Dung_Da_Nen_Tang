@@ -120,7 +120,7 @@ export const customerBookingService = {
           subtotal,
           code: String(data.voucherCode),
         });
-        await incrementVoucherUsage(tx, voucherResult.voucher.id, Number(voucherResult.voucher.usageLimit || 0));
+        await incrementVoucherUsage(tx, voucherResult.voucher.id);
         totalPrice = voucherResult.finalTotal;
         voucherCode = voucherResult.voucher.code;
       }

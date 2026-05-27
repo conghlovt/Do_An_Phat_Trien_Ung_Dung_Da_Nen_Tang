@@ -31,10 +31,7 @@ export class BookingService {
    */
   async listByPartner(partnerId: string, status?: string) {
     const whereClause: any = {
-      OR: [
-        { hotel: { ownerId: partnerId } },
-        { property: { ownerId: partnerId } },
-      ],
+      property: { ownerId: partnerId },
     };
 
     if (status && status !== 'ALL') {
@@ -49,9 +46,6 @@ export class BookingService {
       include: {
         user: {
           select: { username: true, email: true, phone: true },
-        },
-        roomType: {
-          select: { name: true },
         },
         room: {
           select: { name: true },
@@ -72,7 +66,7 @@ export class BookingService {
         phone: b.user?.phone || null,
       },
       room: {
-        name: b.roomType?.name || b.room?.name || 'Phòng tiêu chuẩn',
+        name: b.room?.name || 'Phòng tiêu chuẩn',
       },
     }));
   }
@@ -87,7 +81,6 @@ export class BookingService {
         id: bookingId,
       },
       include: {
-        hotel: { select: { ownerId: true } },
         property: { select: { ownerId: true } },
       },
     });
@@ -96,8 +89,7 @@ export class BookingService {
       throw new NotFoundError('Không tìm thấy đơn đặt phòng', 'BOOKING_NOT_FOUND');
     }
 
-    const isOwner =
-      booking.hotel?.ownerId === partnerId || booking.property?.ownerId === partnerId;
+    const isOwner = booking.property?.ownerId === partnerId;
 
     if (!isOwner) {
       throw new ForbiddenError('Bạn không có quyền cập nhật đơn đặt phòng này');
@@ -109,7 +101,6 @@ export class BookingService {
       data: { status },
       include: {
         user: { select: { username: true, email: true, phone: true } },
-        roomType: { select: { name: true } },
         room: { select: { name: true } },
       },
     });
@@ -125,7 +116,7 @@ export class BookingService {
         phone: updated.user?.phone || null,
       },
       room: {
-        name: updated.roomType?.name || updated.room?.name || 'Phòng tiêu chuẩn',
+        name: updated.room?.name || 'Phòng tiêu chuẩn',
       },
     };
   }
