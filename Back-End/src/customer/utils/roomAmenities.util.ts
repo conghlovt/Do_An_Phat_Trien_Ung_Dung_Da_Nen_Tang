@@ -70,6 +70,7 @@ export const attachRoomAmenities = async <T extends { id: string }>(hotels: T[])
       },
       select: {
         id: true,
+        propertyType: true,
         hotelAmenities: {
           select: {
             amenity: {
@@ -98,9 +99,12 @@ export const attachRoomAmenities = async <T extends { id: string }>(hotels: T[])
   ]);
 
   const hotelAmenityMap = new Map<string, Set<string>>();
+  const hotelPropertyTypeMap = new Map<string, string>();
   const roomAmenityMap = new Map<string, Set<string>>();
 
   hotelAmenities.forEach((hotel) => {
+    hotelPropertyTypeMap.set(hotel.id, hotel.propertyType);
+
     if (!hotelAmenityMap.has(hotel.id)) {
       hotelAmenityMap.set(hotel.id, new Set());
     }
@@ -120,6 +124,7 @@ export const attachRoomAmenities = async <T extends { id: string }>(hotels: T[])
 
   return hotels.map((hotel) => ({
     ...hotel,
+    propertyType: hotelPropertyTypeMap.get(hotel.id),
     amenities: Array.from(hotelAmenityMap.get(hotel.id) ?? []),
     roomAmenities: Array.from(roomAmenityMap.get(hotel.id) ?? []),
   }));

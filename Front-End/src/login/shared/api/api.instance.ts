@@ -1,20 +1,21 @@
-import axios, { create, type InternalAxiosRequestConfig } from 'axios';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-import { tokenStorage } from '../storage/secure-token.storage';
-import { type ApiSuccess } from '../types/api.types';
-import { useAuthStore } from '../../store/auth.store';
+import axios, { create, type InternalAxiosRequestConfig } from "axios";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { tokenStorage } from "../storage/secure-token.storage";
+import { type ApiSuccess } from "../types/api.types";
+import { useAuthStore } from "../../store/auth.store";
 
-const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
-const API_PATH = process.env.EXPO_PUBLIC_API_PATH || '/api';
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5000";
+const API_PATH = process.env.EXPO_PUBLIC_API_PATH || "/api";
 
-const normalizePath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
+const normalizePath = (path: string) =>
+  path.startsWith("/") ? path : `/${path}`;
 
 const getHostFromUri = (uri?: string | null) => {
   if (!uri) return null;
 
-  const withoutProtocol = uri.replace(/^[a-z]+:\/\//i, '');
-  return withoutProtocol.split('/')[0]?.split(':')[0] || null;
+  const withoutProtocol = uri.replace(/^[a-z]+:\/\//i, "");
+  return withoutProtocol.split("/")[0]?.split(":")[0] || null;
 };
 
 const getExpoHost = () => {
@@ -36,22 +37,24 @@ const getExpoHost = () => {
 };
 
 const getWebHost = () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return window.location.hostname || null;
 };
 
 const getDefaultApiHost = () => {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     const webHost = getWebHost();
-    if (webHost && webHost !== '0.0.0.0') return webHost;
+    if (webHost && webHost !== "0.0.0.0") return webHost;
   }
 
-  return getExpoHost() || (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
+  return (
+    getExpoHost() || (Platform.OS === "android" ? "10.0.2.2" : "localhost")
+  );
 };
 
 const resolveBaseUrl = () => {
   const envBaseUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  if (envBaseUrl) return envBaseUrl.replace(/\/$/, '');
+  if (envBaseUrl) return envBaseUrl.replace(/\/$/, "");
 
   return `http://${getDefaultApiHost()}:${API_PORT}${normalizePath(API_PATH)}`;
 };
@@ -61,7 +64,7 @@ export const BASE_URL = resolveBaseUrl();
 const apiInstance = create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -69,7 +72,12 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
+const PUBLIC_AUTH_PATHS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+];
 
 const isPublicAuthRequest = (url?: string) => {
   if (!url) return false;
@@ -79,18 +87,13 @@ const isPublicAuthRequest = (url?: string) => {
 const clearClientSession = async () => {
   try {
     await useAuthStore.getState().clearAuth();
-    try {
-      const customerStore = await import('../../../customer/store/auth.store');
-      await customerStore.useAuthStore.getState().clearAuth();
-    } catch {
-      // Customer auth store is not always loaded.
-    }
   } catch {
     await tokenStorage.clearTokens();
   }
 };
 
-const BLOCKED_ACCOUNT_MESSAGE = 'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.';
+const BLOCKED_ACCOUNT_MESSAGE =
+  "Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.";
 let forceLogoutPromise: Promise<void> | null = null;
 let hasForcedLogout = false;
 
@@ -106,13 +109,18 @@ export const getApiErrorCode = (error: any) => {
 
 export const getApiErrorMessage = (error: any) => {
   const data = error?.response?.data;
-  return data?.message || data?.error?.message || error?.message || '';
+  return data?.message || data?.error?.message || error?.message || "";
 };
 
 export const isBlockedAuthError = (error: any) => {
-  const code = String(getApiErrorCode(error) || '');
-  const message = String(getApiErrorMessage(error) || '').toLowerCase();
-  return code === 'AUTH_USER_BLOCKED' || message.includes('bị chặn') || message.includes('bị khóa') || message.includes('blocked');
+  const code = String(getApiErrorCode(error) || "");
+  const message = String(getApiErrorMessage(error) || "").toLowerCase();
+  return (
+    code === "AUTH_USER_BLOCKED" ||
+    message.includes("bị chặn") ||
+    message.includes("bị khóa") ||
+    message.includes("blocked")
+  );
 };
 
 export const getBlockedAuthMessage = (error: any) => {
@@ -129,12 +137,6 @@ export const forceLogout = async (message = BLOCKED_ACCOUNT_MESSAGE) => {
       await clearClientSession();
     } finally {
       useAuthStore.getState().setError(message);
-      try {
-        const customerStore = await import('../../../customer/store/auth.store');
-        customerStore.useAuthStore.getState().setError(message);
-      } catch {
-        // Customer auth store is not always loaded.
-      }
     }
   })();
 
@@ -153,7 +155,7 @@ apiInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Interceptor to handle token expiration
@@ -161,8 +163,11 @@ apiInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config as RetriableRequestConfig | undefined;
-    const isRefreshRequest = originalRequest?.url?.includes('/auth/refresh-token');
-    const shouldRefreshToken = !isRefreshRequest && !isPublicAuthRequest(originalRequest?.url);
+    const isRefreshRequest = originalRequest?.url?.includes(
+      "/auth/refresh-token",
+    );
+    const shouldRefreshToken =
+      !isRefreshRequest && !isPublicAuthRequest(originalRequest?.url);
 
     if (isBlockedAuthError(error)) {
       await forceLogout(getBlockedAuthMessage(error));
@@ -170,18 +175,27 @@ apiInstance.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
-      const message = getApiErrorMessage(error) || 'Bạn không có quyền thực hiện thao tác này.';
+      const message =
+        getApiErrorMessage(error) ||
+        "Bạn không có quyền thực hiện thao tác này.";
       useAuthStore.getState().setError(message);
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && shouldRefreshToken) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      shouldRefreshToken
+    ) {
       originalRequest._retry = true;
       const refreshToken = await tokenStorage.getRefreshToken();
 
       if (refreshToken) {
         try {
-          const response = await axios.post<ApiSuccess<{ accessToken: string; refreshToken?: string }>>(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+          const response = await axios.post<
+            ApiSuccess<{ accessToken: string; refreshToken?: string }>
+          >(`${BASE_URL}/auth/refresh-token`, { refreshToken });
           const accessToken = response.data?.data?.accessToken;
           const nextRefreshToken = response.data?.data?.refreshToken;
 
@@ -213,7 +227,7 @@ apiInstance.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiInstance;

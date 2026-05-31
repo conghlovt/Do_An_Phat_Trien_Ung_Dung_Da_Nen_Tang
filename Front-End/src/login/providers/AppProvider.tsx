@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { getCurrentUser as getLoginCurrentUser } from '../api/auth.api';
-import { getCurrentUser as getCustomerCurrentUser } from '../../customer/api/auth.api';
 import { useAuthStore as useLoginAuthStore } from '../store/auth.store';
-import { useAuthStore as useCustomerAuthStore } from '../../customer/store/auth.store';
 import { forceLogout, getBlockedAuthMessage, isBlockedAuthError } from '../shared/api/api.instance';
 
 const SESSION_POLL_INTERVAL_MS = 20_000;
@@ -18,7 +16,7 @@ const getInitialActiveState = () => {
   return AppState.currentState === 'active';
 };
 
-export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -26,10 +24,8 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
     isAuthenticated: isLoginAuthenticated,
     isLoading: isLoginLoading,
   } = useLoginAuthStore();
-  const isCustomerAuthenticated = useCustomerAuthStore((state) => state.isAuthenticated);
   const [isAppActive, setIsAppActive] = useState(getInitialActiveState);
   const checkingRef = useRef(false);
-  const isAuthenticated = isLoginAuthenticated || isCustomerAuthenticated;
 
   useEffect(() => {
     restoreSession();
@@ -58,18 +54,12 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   const checkSession = useCallback(async () => {
     if (!isAppActive || checkingRef.current) return;
 
-    const isCustomerRoute = pathname.startsWith('/customer');
     const hasLoginSession = useLoginAuthStore.getState().isAuthenticated;
-    const hasCustomerSession = useCustomerAuthStore.getState().isAuthenticated;
-    if (isCustomerRoute ? !hasCustomerSession : !hasLoginSession) return;
+    if (!hasLoginSession) return;
 
     checkingRef.current = true;
     try {
-      if (isCustomerRoute) {
-        await getCustomerCurrentUser();
-      } else {
-        await getLoginCurrentUser();
-      }
+      await getLoginCurrentUser();
     } catch (error: any) {
       const status = error?.response?.status;
       if (isBlockedAuthError(error)) {
@@ -85,7 +75,7 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
   }, [isAppActive, pathname, router]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isAppActive) return;
+    if (!isLoginAuthenticated || !isAppActive) return;
 
     void checkSession();
     const intervalId = setInterval(() => {
@@ -93,12 +83,12 @@ export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children })
     }, SESSION_POLL_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, [checkSession, isAppActive, isAuthenticated]);
+  }, [checkSession, isAppActive, isLoginAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isAppActive) return;
+    if (!isLoginAuthenticated || !isAppActive) return;
     void checkSession();
-  }, [checkSession, isAppActive, isAuthenticated, pathname]);
+  }, [checkSession, isAppActive, isLoginAuthenticated, pathname]);
 
   return <>{children}</>;
 };

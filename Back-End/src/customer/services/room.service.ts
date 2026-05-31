@@ -1,10 +1,15 @@
 import prisma from '../../login/lib/prisma';
-import type { Room } from '../models/room.model';
+import type { Room, RoomQueryParams } from '../models/room.model';
 import { findHotelById } from './hotels.service';
+import { getRemainingRooms, parseBookingRange } from '../utils/roomAvailability.util';
 
-export const findRoomsByHotelId = async (hotelId: string): Promise<Room[]> => {
+export const findRoomsByHotelId = async (
+  hotelId: string,
+  params: RoomQueryParams = {},
+): Promise<Room[]> => {
   // Xác nhận khách sạn tồn tại
   await findHotelById(hotelId);
+  const bookingRange = parseBookingRange(params);
 
   // Lấy danh sách loại phòng thật từ DB theo Hotel
   const roomTypes = await prisma.roomType.findMany({
@@ -34,7 +39,7 @@ export const findRoomsByHotelId = async (hotelId: string): Promise<Room[]> => {
     },
   });
 
-  return roomTypes.map((roomType: any) => {
+  return Promise.all(roomTypes.map(async (roomType: any) => {
     const coverImages = roomType.media
       .filter((item: any) => item.mediaType === 'image')
       .map((item: any) => item.imageUrl)
@@ -45,6 +50,12 @@ export const findRoomsByHotelId = async (hotelId: string): Promise<Room[]> => {
     const price = firstPolicy ? Number(firstPolicy.basePrice) : 0;
 
     const amenities = roomType.roomTypeAmenities.map((item: any) => item.amenity.name);
+    const remainingRooms = await getRemainingRooms(
+      prisma,
+      roomType.id,
+      roomType.totalUnits,
+      bookingRange,
+    );
 
     return {
       id: roomType.id,
@@ -58,9 +69,9 @@ export const findRoomsByHotelId = async (hotelId: string): Promise<Room[]> => {
       originalPrice: price,
       discountPercent: 0,
       flashSale: false,
-      remainingRooms: roomType.totalUnits,
+      remainingRooms,
       paymentType: 'all',
       amenities,
     };
-  });
+  }));
 };

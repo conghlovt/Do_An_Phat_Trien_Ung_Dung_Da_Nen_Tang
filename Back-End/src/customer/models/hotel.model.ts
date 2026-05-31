@@ -14,6 +14,7 @@ export interface Hotel {
   image: string;
   badge: string;
   tags: string[];
+  propertyType?: 'hotel' | 'homestay' | 'resort' | 'motel' | 'apartment';
   createdAt: Date;
   updatedAt: Date;
   amenities?: string[];
@@ -21,6 +22,7 @@ export interface Hotel {
 }
 
 export interface HotelQueryParams {
+  keyword?: string;
   tag?: string;
   sort?: 'relevant' | 'rating' | 'price-asc' | 'price-desc';
   minPrice?: string;

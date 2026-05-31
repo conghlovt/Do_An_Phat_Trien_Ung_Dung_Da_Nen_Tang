@@ -27,6 +27,7 @@ model User {
   reviews               Review[]
   customerMessages      CustomerMessage[]
   customerNotifications CustomerNotification[]
+  customerViewedHotels  CustomerViewedHotel[]
   uploadedFiles         FileObject[]
   hotelImages           HotelImage[]
   hotelVideos           HotelVideo[]
@@ -72,23 +73,69 @@ model Room {
 }
 
 model Booking {
-  id          String        @id @default(uuid())
-  userId      String
-  propertyId  String
-  roomId      String
-  checkIn     DateTime
-  checkOut    DateTime
-  guests      Int           @default(1)
-  totalPrice  Float
-  voucherCode String?
-  status      BookingStatus @default(PENDING)
-  paymentId   String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  property    Property      @relation(fields: [propertyId], references: [id])
-  room        Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviews     Review[]
+  id            String        @id @default(uuid())
+  bookingCode   String?       @unique @map("booking_code")
+  userId        String
+  propertyId    String?
+  roomId        String?
+  hotelId       String?       @map("hotel_id")
+  roomTypeId    String?       @map("room_type_id")
+  checkIn       DateTime
+  checkOut      DateTime
+  guests        Int           @default(1)
+  totalPrice    Float
+  voucherCode   String?
+  bookingType   BookingType?  @map("booking_type")
+  durationValue Int?          @map("duration_value")
+  customerName  String?       @map("customer_name")
+  customerPhone String?       @map("customer_phone")
+  status        BookingStatus @default(PENDING)
+  paymentId     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  hotel         Hotel?        @relation(fields: [hotelId], references: [id])
+  payments      Payment[]
+  property      Property?     @relation(fields: [propertyId], references: [id])
+  room          Room?         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomType      RoomType?     @relation(fields: [roomTypeId], references: [id])
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews       Review[]
+
+  @@index([userId, createdAt])
+  @@index([hotelId])
+  @@index([roomTypeId])
+}
+
+model Payment {
+  id                 String        @id @default(uuid())
+  bookingId          String        @map("booking_id")
+  method             PaymentMethod @default(VIETQR)
+  status             PaymentStatus @default(PENDING)
+  attemptNo          Int           @default(1) @map("attempt_no")
+  paymentCode        String        @unique @map("payment_code")
+  amount             Int
+  content            String
+  bankCode           String        @map("bank_code")
+  bankName           String?       @map("bank_name")
+  accountNumber      String        @map("account_number")
+  accountName        String        @map("account_name")
+  vietQrUrl          String        @map("vietqr_url") @db.Text
+  referenceCode      String?       @unique @map("reference_code")
+  sepayTransactionId Int?          @unique @map("sepay_transaction_id")
+  sepayPayload       Json?         @map("sepay_payload")
+  failureReason      String?       @map("failure_reason")
+  failureMessage     String?       @map("failure_message")
+  expiresAt          DateTime      @map("expires_at")
+  graceExpiresAt     DateTime      @map("grace_expires_at")
+  expiredAt          DateTime?     @map("expired_at")
+  paidAt             DateTime?     @map("paid_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  booking            Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("payments")
 }
 
 model Review {
@@ -107,32 +154,28 @@ model Review {
 }
 
 model Voucher {
-  id        String   @id @default(uuid())
-  hotelId   String?  @map("hotel_id")
+  id      String  @id @default(uuid())
+  hotelId String? @map("hotel_id")
 
-  code      String
-  name      String
+  code String
+  name String
 
   // CORE ENGINE
   rules       Json
   actions     Json
   constraints Json
 
-  status    VoucherStatus @default(ACTIVE)
+  status VoucherStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hotel     Hotel? @relation(fields: [hotelId], references: [id])
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
 
   @@unique([hotelId, code])
   @@index([code])
   @@index([status])
 }
-
-
-
-
 
 model Finance {
   id           String   @id @default(uuid())
@@ -219,6 +262,8 @@ model Hotel {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   address            HotelAddress?
+  bankAccounts       HotelBankAccount[]
+  bookings           Booking[]
   hotelAmenities     HotelAmenity[]
   images             HotelImage[]
   videos             HotelVideo[]
@@ -233,6 +278,23 @@ model Hotel {
   @@index([avgRating])
   @@index([isFeatured])
   @@map("hotels")
+}
+
+model HotelBankAccount {
+  id            String   @id @default(uuid())
+  hotelId       String   @map("hotel_id")
+  bankCode      String   @map("bank_code")
+  bankName      String?  @map("bank_name")
+  accountNumber String   @map("account_number")
+  accountName   String   @map("account_name")
+  template      String   @default("compact2")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  hotel         Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId, isActive])
+  @@map("hotel_bank_accounts")
 }
 
 model HotelAddress {
@@ -334,11 +396,29 @@ model RoomType {
   roomTypeAmenities RoomTypeAmenity[]
   hotel             Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   roomUnits         RoomUnit[]
+  bookings          Booking[]
 
   @@unique([hotelId, slug])
   @@index([hotelId])
   @@index([status])
   @@map("room_types")
+}
+
+model PaymentWebhookLog {
+  id                 String   @id @default(uuid())
+  provider           String   @default("sepay")
+  paymentId          String?  @map("payment_id")
+  eventType          String?  @map("event_type")
+  referenceCode      String?  @map("reference_code")
+  sepayTransactionId Int?     @map("sepay_transaction_id")
+  payload            Json
+  processed          Boolean  @default(false)
+  message            String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([referenceCode])
+  @@index([sepayTransactionId])
+  @@map("payment_webhook_logs")
 }
 
 model RoomUnit {
@@ -435,11 +515,11 @@ model RoomInventory {
 }
 
 model HotelCard {
-  id         String   @id @default(cuid())
-  slug       String   @unique
+  id         String                @id @default(cuid())
+  slug       String                @unique
   name       String
   rating     Float
-  reviews    Int      @default(0)
+  reviews    Int                   @default(0)
   city       String
   area       String
   location   String
@@ -452,10 +532,11 @@ model HotelCard {
   image      String
   badge      String?
   tags       String[]
-  isActive   Boolean  @default(true)
-  sortOrder  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isActive   Boolean               @default(true)
+  sortOrder  Int                   @default(0)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  viewedBy   CustomerViewedHotel[]
 
   @@index([city])
   @@index([area])
@@ -464,6 +545,22 @@ model HotelCard {
   @@index([rating])
   @@index([isActive])
   @@map("hotel_cards")
+}
+
+model CustomerViewedHotel {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  hotelId   String    @map("hotel_id")
+  viewedAt  DateTime  @default(now()) @map("viewed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  hotel     HotelCard @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hotelId])
+  @@index([userId, viewedAt])
+  @@index([hotelId])
+  @@map("customer_viewed_hotels")
 }
 
 model CustomerMessage {
@@ -614,4 +711,18 @@ enum CustomerNotificationType {
   booking
   offers
   others
+}
+
+enum PaymentMethod {
+  VIETQR
+  PAY_AT_HOTEL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  FAILED
+  EXPIRED_FINAL
+  PAYMENT_NOT_RECORDED
 }

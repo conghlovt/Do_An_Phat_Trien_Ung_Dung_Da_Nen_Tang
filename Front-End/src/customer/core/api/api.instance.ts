@@ -2,7 +2,6 @@ import { create, type InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { ApiResponse } from '@/src/customer/core/types/api.types';
-import { forceLogout, getBlockedAuthMessage, isBlockedAuthError } from '@/src/login/shared/api/api.instance';
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -96,11 +95,6 @@ apiInstance.interceptors.response.use(
     console.log('AXIOS ERROR METHOD:', error.config?.method);
     console.log('AXIOS ERROR DATA:', error.response?.data);
 
-    if (isBlockedAuthError(error)) {
-      await forceLogout(getBlockedAuthMessage(error));
-      return Promise.reject(error);
-    }
-
     if (error.response?.status === 401 && !original?._retry) {
       const isAuthEndpoint = original?.url?.includes('/api/customer/auth/');
       const isRefreshEndpoint = original?.url?.includes('/refresh-token');
@@ -132,11 +126,7 @@ apiInstance.interceptors.response.use(
         original.headers.Authorization = `Bearer ${nextAccessToken}`;
         return apiInstance(original);
       } catch (refreshError) {
-        if (isBlockedAuthError(refreshError)) {
-          await forceLogout(getBlockedAuthMessage(refreshError));
-        } else {
-          await clearStoredAuth();
-        }
+        await clearStoredAuth();
         return Promise.reject(refreshError);
       }
     }

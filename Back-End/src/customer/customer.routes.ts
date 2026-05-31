@@ -5,6 +5,7 @@ import homeRoutes from './routes/home.routes';
 import locationRoutes from './routes/location.routes';
 import messageRoutes from './routes/message.routes';
 import bookingRoutes from './routes/booking.routes';
+import paymentRoutes from './routes/payment.routes';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.use('/hotels', hotelRoutes);
 router.use('/home', homeRoutes);
 router.use('/locations', locationRoutes);
 router.use('/bookings', bookingRoutes);
+router.use('/payments', paymentRoutes);
 router.use('/', messageRoutes);
 
 export default router;

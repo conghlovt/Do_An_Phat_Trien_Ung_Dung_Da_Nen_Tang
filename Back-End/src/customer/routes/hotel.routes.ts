@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as hotelController from '../controllers/hotel.controller';
 import * as hotelCardController from '../controllers/hotelCard.controller';
-import * as voucherController from '../controllers/voucher.controller';
 import {
   hotelAvailabilityQuerySchema,
   hotelCardCityParamsSchema,
@@ -9,6 +8,7 @@ import {
   hotelListQuerySchema,
 } from '../middlewares/customer.validator';
 import { validate } from '../middlewares/validate.middleware';
+import { customerOnly } from '../middlewares/auth.middleware';
 
 const router = Router();
 
@@ -24,20 +24,17 @@ router.get('/locations', hotelController.getHotelLocations);
 // GET /api/customer/hotels/city/:city  ← phải trước /:id để tránh conflict
 router.get('/city/:city', validate(hotelCardCityParamsSchema, 'params'), hotelCardController.getHotelCardsByCity);
 
+// GET /api/customer/hotels/viewed
+router.get('/viewed', ...customerOnly, hotelController.getViewedHotels);
+
+// POST /api/customer/hotels/:id/view
+router.post('/:id/view', ...customerOnly, validate(hotelIdParamsSchema, 'params'), hotelController.addViewedHotel);
+
 // GET /api/customer/hotels/:id
 router.get('/:id', validate(hotelIdParamsSchema, 'params'), hotelController.getHotelById);
 
 // GET /api/customer/hotels/:id/rooms
 router.get('/:id/rooms', validate(hotelIdParamsSchema, 'params'), hotelController.getHotelRooms);
-
-// GET /api/customer/hotels/:id/vouchers
-router.get('/:id/vouchers', validate(hotelIdParamsSchema, 'params'), voucherController.listHotelVouchers);
-
-// POST /api/customer/hotels/:id/vouchers/validate
-router.post('/:id/vouchers/validate', validate(hotelIdParamsSchema, 'params'), voucherController.validateHotelVoucher);
-
-// GET /api/customer/hotels/:id/reviews
-router.get('/:id/reviews', validate(hotelIdParamsSchema, 'params'), hotelController.getHotelReviews);
 
 // GET /api/customer/hotels/:id/availability
 router.get(

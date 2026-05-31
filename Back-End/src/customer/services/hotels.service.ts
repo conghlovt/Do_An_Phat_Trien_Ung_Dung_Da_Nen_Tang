@@ -4,10 +4,30 @@ import { AppError } from '../../shared/errors/AppError';
 import { CUSTOMER_OFFICE_INFO } from '../constants/office.constants';
 import { buildLocationTree } from '../utils/locationTree.util';
 import { attachRoomAmenities, findHotelIdsByRoomAmenities, parseRoomAmenities } from '../utils/roomAmenities.util';
-import { normalizeName } from '../utils/text.util';
+import { normalizeName, textMatches } from '../utils/text.util';
+
+type HotelSearchCandidate = {
+  name?: string | null;
+  city?: string | null;
+  district?: string | null;
+  area?: string | null;
+  location?: string | null;
+};
+
+const matchesHotelKeyword = (hotel: HotelSearchCandidate, keyword?: string) => {
+  if (!keyword) return true;
+
+  return textMatches(hotel.name, keyword) ||
+    [
+      hotel.city,
+      hotel.district,
+      hotel.area,
+      hotel.location,
+    ].some((value) => textMatches(value, keyword, { stripAdministrativeWords: true }));
+};
 
 export const findHotels = async (params: HotelQueryParams) => {
-  const { tag, sort, minPrice, maxPrice, district, limit, roomAmenities } = params;
+  const { keyword, tag, sort, minPrice, maxPrice, district, limit, roomAmenities } = params;
   const selectedRoomAmenities = parseRoomAmenities(roomAmenities);
 
   const where: any = {
@@ -39,6 +59,14 @@ export const findHotels = async (params: HotelQueryParams) => {
 
   const take = limit ? Math.min(Number(limit), 50) : 20;
 
+  if (keyword) {
+    const hotels = await prisma.hotelCard.findMany({ where, orderBy });
+    const matchedHotels = hotels.filter((hotel) => matchesHotelKeyword(hotel, keyword));
+    const pagedHotels = matchedHotels.slice(0, take);
+
+    return { hotels: await attachRoomAmenities(pagedHotels), total: matchedHotels.length };
+  }
+
   const [hotels, total] = await Promise.all([
     prisma.hotelCard.findMany({ where, orderBy, take }),
     prisma.hotelCard.count({ where }),
@@ -54,6 +82,38 @@ export const findHotelById = async (id: string) => {
   }
   const [hotelWithRoomAmenities] = await attachRoomAmenities([hotel]);
   return hotelWithRoomAmenities;
+};
+
+export const findViewedHotels = async (userId: string) => {
+  const viewedRows = await prisma.customerViewedHotel.findMany({
+    where: {
+      userId,
+      hotel: { isActive: true },
+    },
+    include: { hotel: true },
+    orderBy: { viewedAt: 'desc' },
+    take: 12,
+  });
+
+  return attachRoomAmenities(viewedRows.map((row) => row.hotel));
+};
+
+export const saveViewedHotel = async (userId: string, hotelId: string) => {
+  await findHotelById(hotelId);
+
+  await prisma.customerViewedHotel.upsert({
+    where: {
+      userId_hotelId: {
+        userId,
+        hotelId,
+      },
+    },
+    update: { viewedAt: new Date() },
+    create: {
+      userId,
+      hotelId,
+    },
+  });
 };
 
 export const findHotelLocations = async (): Promise<LocationProvince[]> => {

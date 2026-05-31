@@ -26,3 +26,9 @@ export interface AvailabilityQueryParams {
   bookingType?: string;
   date?: string;
 }
+
+export interface RoomQueryParams {
+  bookingType?: string;
+  checkIn?: string;
+  checkOut?: string;
+}

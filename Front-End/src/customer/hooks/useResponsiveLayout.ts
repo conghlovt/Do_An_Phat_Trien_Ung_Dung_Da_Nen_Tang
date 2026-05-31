@@ -6,15 +6,16 @@ const WEB_BREAKPOINT = 768;
 export function useResponsiveLayout(breakpoint = WEB_BREAKPOINT) {
   const { height, width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
+  const isWebLayout = isWeb && width >= breakpoint;
 
   return useMemo(
     () => ({
       height,
-      isMobileLayout: !isWeb || width < breakpoint,
+      isMobileLayout: !isWebLayout,
       isWeb,
-      isWebLayout: isWeb && width >= breakpoint,
+      isWebLayout,
       width,
     }),
-    [breakpoint, height, isWeb, width],
+    [height, isWeb, isWebLayout, width],
   );
 }

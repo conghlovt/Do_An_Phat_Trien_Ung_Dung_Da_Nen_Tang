@@ -1,0 +1,14 @@
+import React from 'react';
+import { SupportCard } from '@/src/customer/features/support/SupportCard';
+import { SupportScreen } from '@/src/customer/features/support/SupportScreen';
+import { FAQS } from '@/src/customer/constants/support/faqs';
+
+export default function FaqsScreen() {
+  return (
+    <SupportScreen title="Hỏi đáp">
+      {FAQS.map((item) => (
+        <SupportCard key={item.question} subtitle={item.answer} title={item.question} />
+      ))}
+    </SupportScreen>
+  );
+}

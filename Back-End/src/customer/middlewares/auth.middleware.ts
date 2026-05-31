@@ -4,14 +4,10 @@ import prisma from '../../login/lib/prisma';
 import { verifyAccessToken } from '../../shared/utils/jwt.util';
 import { sendResponse } from '../../shared/utils/response.util';
 import { USER_MESSAGES } from '../../shared/utils/app-error.util';
-import { isActiveUserStatus, isPendingUserStatus } from '../../shared/utils/user-status.util';
 
 export interface CustomerAuthUser {
   id: string;
   role: string;
-  email?: string;
-  username?: string;
-  status?: string;
   [key: string]: unknown;
 }
 
@@ -31,63 +27,43 @@ export const authenticateCustomer = async (
     return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_MISSING);
   }
 
+  let decoded: CustomerAuthUser;
+
   try {
-    const decoded = verifyAccessToken(token);
-    const userId = typeof decoded?.id === 'string' ? decoded.id : undefined;
-
-    if (!userId) {
-      res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
-      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID, undefined, { code: 'AUTH_TOKEN_INVALID' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        status: true,
-      },
-    });
-
-    if (!user) {
-      res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
-      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID, undefined, { code: 'AUTH_TOKEN_INVALID' });
-    }
-
-    if (!isActiveUserStatus(user.status)) {
-      const isPending = isPendingUserStatus(user.status);
-      return sendResponse(
-        res,
-        403,
-        isPending ? USER_MESSAGES.AUTH_USER_PENDING : USER_MESSAGES.AUTH_USER_BLOCKED,
-        undefined,
-        { code: isPending ? 'AUTH_USER_PENDING' : 'AUTH_USER_BLOCKED' },
-      );
-    }
-
-    req.user = {
-      ...(decoded as CustomerAuthUser),
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      status: user.status,
-    };
-    return next();
+    decoded = verifyAccessToken(token) as CustomerAuthUser;
   } catch (error) {
     res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
 
     if (error instanceof jwt.TokenExpiredError) {
-      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_EXPIRED, undefined, { code: 'AUTH_TOKEN_EXPIRED' });
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_EXPIRED);
     }
 
-    if (error instanceof jwt.JsonWebTokenError) {
-      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID, undefined, { code: 'AUTH_TOKEN_INVALID' });
+    return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID);
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, role: true, status: true },
+    });
+
+    if (!user) {
+      res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token"');
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID);
     }
 
-    return next(error);
+    if (user.status === 'BLOCKED' || user.status === 'banned') {
+      return sendResponse(res, 403, USER_MESSAGES.AUTH_USER_BLOCKED);
+    }
+
+    if (user.status === 'PENDING') {
+      return sendResponse(res, 403, USER_MESSAGES.AUTH_USER_PENDING);
+    }
+
+    req.user = { ...decoded, id: user.id, role: user.role };
+    next();
+  } catch (error) {
+    next(error);
   }
 };
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import * as Location from 'expo-location';
-import { locationsApi, type LocationDistrict, type LocationProvince } from '../api/locations.api';
+import { locationsApi, type LocationDistrict, type LocationProvince } from '@/src/customer/services/hotels/locations.api';
 
 export interface Province {
   id: string;
