@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { AuthState, AuthResponse } from '../types/auth.types';
-import { tokenStorage } from '../shared/storage/secure-token.storage';
-import { userProfileStorage } from '../shared/storage/sqlite-user.storage';
+import { create } from "zustand";
+import { AuthState, AuthResponse } from "../types/auth.types";
+import { tokenStorage } from "../shared/storage/secure-token.storage";
+import { userProfileStorage } from "../shared/storage/sqlite-user.storage";
 
 interface AuthStore extends AuthState {
   setAuth: (data: AuthResponse) => Promise<void>;
@@ -9,6 +9,7 @@ interface AuthStore extends AuthState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   restoreSession: () => Promise<void>;
+  updateUser: (updates: Partial<AuthState["user"]>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -31,7 +32,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         userProfileStorage.saveCurrentUser(data.user),
       ]);
     } catch (e) {
-      console.error('Error saving auth state', e);
+      console.error("Error saving auth state", e);
     }
   },
 
@@ -48,7 +49,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         userProfileStorage.clearCurrentUser(),
       ]);
     } catch (e) {
-      console.error('Error clearing auth state', e);
+      console.error("Error clearing auth state", e);
     }
   },
 
@@ -83,5 +84,23 @@ export const useAuthStore = create<AuthStore>((set) => ({
     } finally {
       set({ isLoading: false });
     }
-  }
+  },
+
+  updateUser: async (updates: Partial<AuthState["user"]>) => {
+    try {
+      const currentUser = useAuthStore.getState().user;
+      if (!currentUser) return;
+
+      const updatedUser = { ...currentUser, ...updates };
+      set({ user: updatedUser });
+
+      try {
+        await userProfileStorage.saveCurrentUser(updatedUser);
+      } catch (e) {
+        console.error("Error saving updated user to storage", e);
+      }
+    } catch (e) {
+      console.error("Error updating user", e);
+    }
+  },
 }));

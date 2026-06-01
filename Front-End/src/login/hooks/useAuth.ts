@@ -1,10 +1,24 @@
-import { useAuthStore } from '../store/auth.store';
-import { login as loginApi, logout as logoutApi, register as registerApi } from '../api/auth.api';
-import { getApiErrorMessage } from '../shared/api/api-error.util';
-import { resetForceLogoutGuard } from '../shared/api/api.instance';
+import { useAuthStore } from "../store/auth.store";
+import {
+  login as loginApi,
+  logout as logoutApi,
+  register as registerApi,
+} from "../api/auth.api";
+import { getApiErrorMessage } from "../shared/api/api-error.util";
+import { resetForceLogoutGuard } from "../shared/api/api.instance";
 
 export const useAuth = () => {
-  const { user, accessToken, isAuthenticated, isLoading, error, setAuth, clearAuth, restoreSession } = useAuthStore();
+  const {
+    user,
+    accessToken,
+    isAuthenticated,
+    isLoading,
+    error,
+    setAuth,
+    clearAuth,
+    restoreSession,
+    updateUser,
+  } = useAuthStore();
 
   const login = async (email: string, password: string) => {
     try {
@@ -14,7 +28,11 @@ export const useAuth = () => {
       resetForceLogoutGuard();
       return res;
     } catch (err) {
-      useAuthStore.getState().setError(getApiErrorMessage(err, 'Không thể đăng nhập. Vui lòng thử lại.'));
+      useAuthStore
+        .getState()
+        .setError(
+          getApiErrorMessage(err, "Không thể đăng nhập. Vui lòng thử lại."),
+        );
       throw err;
     } finally {
       useAuthStore.getState().setIsLoading(false);
@@ -27,19 +45,28 @@ export const useAuth = () => {
       await logoutApi();
       await clearAuth();
     } catch (err: any) {
-      console.error('Logout failed:', err);
+      console.error("Logout failed:", err);
     } finally {
       useAuthStore.getState().setIsLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, username: string, role: 'customer' | 'partner') => {
+  const register = async (
+    email: string,
+    password: string,
+    username: string,
+    role: "customer" | "partner",
+  ) => {
     try {
       useAuthStore.getState().setIsLoading(true);
       const res = await registerApi({ email, password, username, role });
       return res;
     } catch (err) {
-      useAuthStore.getState().setError(getApiErrorMessage(err, 'Không thể đăng ký. Vui lòng thử lại.'));
+      useAuthStore
+        .getState()
+        .setError(
+          getApiErrorMessage(err, "Không thể đăng ký. Vui lòng thử lại."),
+        );
       throw err;
     } finally {
       useAuthStore.getState().setIsLoading(false);
@@ -56,5 +83,6 @@ export const useAuth = () => {
     logout,
     register,
     restoreSession,
+    updateUser,
   };
 };

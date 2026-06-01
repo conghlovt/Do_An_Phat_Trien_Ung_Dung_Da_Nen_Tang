@@ -1,4 +1,10 @@
-export type Role = 'admin' | 'partner' | 'customer' | 'SUPER_ADMIN' | 'OPERATOR' | 'ACCOUNTANT';
+export type Role =
+  | "admin"
+  | "partner"
+  | "customer"
+  | "SUPER_ADMIN"
+  | "OPERATOR"
+  | "ACCOUNTANT";
 
 export interface User {
   id: string;
@@ -7,6 +13,10 @@ export interface User {
   role: Role;
   avatar?: string;
   code?: string;
+  nickname?: string | null;
+  phone?: string | null;
+  gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  dateOfBirth?: string | null;
 }
 
 export interface AuthState {
