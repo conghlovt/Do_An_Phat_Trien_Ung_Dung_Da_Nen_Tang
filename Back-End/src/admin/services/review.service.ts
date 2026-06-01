@@ -1,12 +1,19 @@
-import prisma from '../../login/lib/prisma';
-import { Prisma } from '@prisma/client';
-import { recalculateHotelRating } from '../../shared/services/lodging-sync.service';
-import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
+import prisma from "../../login/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { recalculateHotelRating } from "../../shared/services/lodging-sync.service";
+import {
+  buildListResult,
+  type DateRange,
+  type SortOrder,
+} from "../utils/admin-query.util";
 
 const normalizeReview = (review: any) => ({
   ...review,
-  guest: review.user?.username || 'Khach hang',
-  property: review.booking?.property?.name || review.booking?.room?.property?.name || 'N/A',
+  guest: review.user?.username || "Khach hang",
+  property:
+    review.booking?.property?.name ||
+    review.booking?.room?.property?.name ||
+    "N/A",
   date: review.createdAt,
 });
 
@@ -23,19 +30,36 @@ export type AdminReviewListOptions = {
   paginate?: boolean | undefined;
 };
 
-const reviewSortFields = new Set(['createdAt', 'updatedAt', 'rating', 'status']);
+const reviewSortFields = new Set([
+  "createdAt",
+  "updatedAt",
+  "rating",
+  "status",
+]);
 
-const buildReviewWhere = (options: AdminReviewListOptions): Prisma.ReviewWhereInput => {
-  const query = String(options.search || options.q || '').trim();
+const buildReviewWhere = (
+  options: AdminReviewListOptions,
+): Prisma.ReviewWhereInput => {
+  const query = String(options.search || options.q || "").trim();
   const where: Prisma.ReviewWhereInput = {};
 
   if (query) {
     where.OR = [
-      { comment: { contains: query, mode: 'insensitive' } },
-      { user: { username: { contains: query, mode: 'insensitive' } } },
-      { user: { email: { contains: query, mode: 'insensitive' } } },
-      { booking: { property: { name: { contains: query, mode: 'insensitive' } } } },
-      { booking: { room: { property: { name: { contains: query, mode: 'insensitive' } } } } },
+      { comment: { contains: query, mode: "insensitive" } },
+      { user: { username: { contains: query, mode: "insensitive" } } },
+      { user: { email: { contains: query, mode: "insensitive" } } },
+      {
+        booking: {
+          property: { name: { contains: query, mode: "insensitive" } },
+        },
+      },
+      {
+        booking: {
+          room: {
+            property: { name: { contains: query, mode: "insensitive" } },
+          },
+        },
+      },
     ];
   }
 
@@ -60,8 +84,12 @@ const buildReviewWhere = (options: AdminReviewListOptions): Prisma.ReviewWhereIn
   return where;
 };
 
-const buildReviewOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
-  [reviewSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+const buildReviewOrderBy = (
+  sortBy?: string,
+  sortOrder: SortOrder = "desc",
+) => ({
+  [reviewSortFields.has(String(sortBy || "")) ? String(sortBy) : "createdAt"]:
+    sortOrder,
 });
 
 export const reviewService = {
@@ -72,23 +100,29 @@ export const reviewService = {
 
     const [reviews, total] = await Promise.all([
       prisma.review.findMany({
-      where,
-      include: {
-        user: { select: { username: true, email: true } },
-        booking: {
-          include: {
-            property: { select: { id: true, name: true } },
-            room: { include: { property: { select: { name: true } } } },
+        where,
+        include: {
+          user: { select: { username: true, email: true } },
+          booking: {
+            include: {
+              property: { select: { id: true, name: true } },
+              room: { include: { property: { select: { name: true } } } },
+            },
           },
         },
-      },
-      orderBy: buildReviewOrderBy(options.sortBy, options.sortOrder) as any,
-      ...(paginate ? { skip, take: limit } : {}),
-    } as any),
+        orderBy: buildReviewOrderBy(options.sortBy, options.sortOrder) as any,
+        ...(paginate ? { skip, take: limit } : {}),
+      } as any),
       prisma.review.count({ where }),
     ]);
 
-    return buildListResult('reviews', reviews.map(normalizeReview), page, limit, total);
+    return buildListResult(
+      "reviews",
+      reviews.map(normalizeReview),
+      page,
+      limit,
+      total,
+    );
   },
 
   updateReview: async (id: string, data: any) => {
@@ -104,11 +138,17 @@ export const reviewService = {
         },
         include: {
           user: { select: { username: true, email: true } },
-          booking: { include: { room: { include: { property: { select: { name: true } } } } } },
+          booking: {
+            include: {
+              room: { include: { property: { select: { name: true } } } },
+            },
+          },
         },
       });
 
-      await recalculateHotelRating(tx, updated.booking.propertyId);
+      if (updated.booking.propertyId) {
+        await recalculateHotelRating(tx, updated.booking.propertyId);
+      }
       return updated;
     });
     return normalizeReview(review);

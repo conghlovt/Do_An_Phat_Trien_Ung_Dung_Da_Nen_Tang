@@ -96,7 +96,7 @@ export const validateVoucher = async (
   if (!code) throw makeValidationError('Vui lòng nhập mã voucher.');
 
   const voucher = await tx.voucher.findFirst({
-    where: { hotelId: params.hotelId, code },
+    where: { hotelId: params.hotelId, code, status: 'ACTIVE' },
   });
 
   if (!voucher) throw makeNotFoundError('Không tìm thấy voucher.');

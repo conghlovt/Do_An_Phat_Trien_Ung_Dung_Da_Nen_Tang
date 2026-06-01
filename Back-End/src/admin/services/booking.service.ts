@@ -1,10 +1,12 @@
-import prisma from '../../login/lib/prisma';
-import { Prisma } from '@prisma/client';
+import prisma from "../../login/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { updateBookingStatusWithInventory } from "../../shared/services/lodging-sync.service";
+import { decrementVoucherUsageByCode } from "../../shared/services/voucher-validation.service";
 import {
-  updateBookingStatusWithInventory,
-} from '../../shared/services/lodging-sync.service';
-import { decrementVoucherUsageByCode } from '../../shared/services/voucher-validation.service';
-import { buildListResult, type DateRange, type SortOrder } from '../utils/admin-query.util';
+  buildListResult,
+  type DateRange,
+  type SortOrder,
+} from "../utils/admin-query.util";
 
 const normalizeBooking = (booking: any) => ({
   ...booking,
@@ -24,22 +26,38 @@ export type AdminBookingListOptions = {
   paginate?: boolean | undefined;
 };
 
-const ALLOWED_STATUSES = new Set(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']);
-const bookingSortFields = new Set(['createdAt', 'updatedAt', 'checkIn', 'checkOut', 'totalPrice', 'status']);
+const ALLOWED_STATUSES = new Set([
+  "PENDING",
+  "CONFIRMED",
+  "CANCELLED",
+  "COMPLETED",
+]);
+const bookingSortFields = new Set([
+  "createdAt",
+  "updatedAt",
+  "checkIn",
+  "checkOut",
+  "totalPrice",
+  "status",
+]);
 
-const buildBookingWhere = (options: AdminBookingListOptions): Prisma.BookingWhereInput => {
-  const query = String(options.search || options.q || '').trim();
+const buildBookingWhere = (
+  options: AdminBookingListOptions,
+): Prisma.BookingWhereInput => {
+  const query = String(options.search || options.q || "").trim();
   const where: Prisma.BookingWhereInput = {};
 
   if (query) {
     where.OR = [
-      { id: { contains: query, mode: 'insensitive' } },
-      { paymentId: { contains: query, mode: 'insensitive' } },
-      { user: { username: { contains: query, mode: 'insensitive' } } },
-      { user: { email: { contains: query, mode: 'insensitive' } } },
-      { room: { name: { contains: query, mode: 'insensitive' } } },
-      { room: { property: { name: { contains: query, mode: 'insensitive' } } } },
-      { property: { name: { contains: query, mode: 'insensitive' } } },
+      { id: { contains: query, mode: "insensitive" } },
+      { paymentId: { contains: query, mode: "insensitive" } },
+      { user: { username: { contains: query, mode: "insensitive" } } },
+      { user: { email: { contains: query, mode: "insensitive" } } },
+      { room: { name: { contains: query, mode: "insensitive" } } },
+      {
+        room: { property: { name: { contains: query, mode: "insensitive" } } },
+      },
+      { property: { name: { contains: query, mode: "insensitive" } } },
     ];
   }
 
@@ -48,7 +66,7 @@ const buildBookingWhere = (options: AdminBookingListOptions): Prisma.BookingWher
   }
 
   if (options.paymentId) {
-    where.paymentId = { contains: options.paymentId, mode: 'insensitive' };
+    where.paymentId = { contains: options.paymentId, mode: "insensitive" };
   }
 
   if (options.dateRange?.from || options.dateRange?.to) {
@@ -61,8 +79,12 @@ const buildBookingWhere = (options: AdminBookingListOptions): Prisma.BookingWher
   return where;
 };
 
-const buildBookingOrderBy = (sortBy?: string, sortOrder: SortOrder = 'desc') => ({
-  [bookingSortFields.has(String(sortBy || '')) ? String(sortBy) : 'createdAt']: sortOrder,
+const buildBookingOrderBy = (
+  sortBy?: string,
+  sortOrder: SortOrder = "desc",
+) => ({
+  [bookingSortFields.has(String(sortBy || "")) ? String(sortBy) : "createdAt"]:
+    sortOrder,
 });
 
 export const bookingService = {
@@ -73,42 +95,58 @@ export const bookingService = {
 
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
-      where,
-      include: {
-        user: { select: { username: true, email: true, phone: true } },
-        property: { select: { id: true, name: true, address: true } },
-        room: {
-          include: {
-            property: { select: { name: true, address: true } },
+        where,
+        include: {
+          user: { select: { username: true, email: true, phone: true } },
+          property: { select: { id: true, name: true, address: true } },
+          room: {
+            include: {
+              property: { select: { name: true, address: true } },
+            },
           },
         },
-      },
-      orderBy: buildBookingOrderBy(options.sortBy, options.sortOrder) as any,
-      ...(paginate ? { skip, take: limit } : {}),
-    } as any),
+        orderBy: buildBookingOrderBy(options.sortBy, options.sortOrder) as any,
+        ...(paginate ? { skip, take: limit } : {}),
+      } as any),
       prisma.booking.count({ where }),
     ]);
 
-    return buildListResult('bookings', bookings.map(normalizeBooking), page, limit, total);
+    return buildListResult(
+      "bookings",
+      bookings.map(normalizeBooking),
+      page,
+      limit,
+      total,
+    );
   },
 
   updateBookingStatus: async (id: string, status: string) => {
     const booking = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findUnique({
         where: { id },
-        select: { status: true, voucherCode: true, propertyId: true, paymentId: true },
+        select: {
+          status: true,
+          voucherCode: true,
+          propertyId: true,
+          paymentId: true,
+        },
       });
 
       const updated = await updateBookingStatusWithInventory(tx, id, status);
 
       if (
         current &&
-        current.status !== 'CANCELLED' &&
-        status === 'CANCELLED' &&
+        current.status !== "CANCELLED" &&
+        status === "CANCELLED" &&
         current.voucherCode &&
-        !current.paymentId
+        !current.paymentId &&
+        current.propertyId
       ) {
-        await decrementVoucherUsageByCode(tx, current.propertyId, current.voucherCode);
+        await decrementVoucherUsageByCode(
+          tx,
+          current.propertyId,
+          current.voucherCode,
+        );
       }
 
       return updated;
@@ -120,13 +158,22 @@ export const bookingService = {
     await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findUnique({
         where: { id },
-        select: { status: true, voucherCode: true, propertyId: true, paymentId: true },
+        select: {
+          status: true,
+          voucherCode: true,
+          propertyId: true,
+          paymentId: true,
+        },
       });
-      if (current && current.status !== 'CANCELLED') {
-        await updateBookingStatusWithInventory(tx, id, 'CANCELLED');
+      if (current && current.status !== "CANCELLED") {
+        await updateBookingStatusWithInventory(tx, id, "CANCELLED");
       }
-      if (current?.voucherCode && !current.paymentId) {
-        await decrementVoucherUsageByCode(tx, current.propertyId, current.voucherCode);
+      if (current?.voucherCode && !current.paymentId && current.propertyId) {
+        await decrementVoucherUsageByCode(
+          tx,
+          current.propertyId,
+          current.voucherCode,
+        );
       }
       await tx.review.deleteMany({ where: { bookingId: id } });
       await tx.booking.delete({ where: { id } });
