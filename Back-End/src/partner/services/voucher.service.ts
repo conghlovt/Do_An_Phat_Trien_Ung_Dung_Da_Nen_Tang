@@ -1,6 +1,5 @@
-import { PrismaClient, VoucherStatus, Prisma } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import prisma from '../../login/lib/prisma';
+import { VoucherStatus, Prisma } from '@prisma/client';
 import {
   applyActions,
   validateConstraints,
@@ -9,12 +8,7 @@ import {
   normalizeObject,
 } from '../utils/voucher.engine';
 
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 const toJson = (value: unknown): Prisma.InputJsonValue => {
   return value as Prisma.InputJsonValue;
 };

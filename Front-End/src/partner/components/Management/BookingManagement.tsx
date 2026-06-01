@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,24 @@ import {
   RefreshControl,
   Platform,
   useWindowDimensions,
+  TextInput,
 } from 'react-native';
 import {
-  ClipboardList, Clock, CheckCircle, Trophy, XCircle,
-  User, Phone, BedDouble, Calendar, Banknote,
+  ClipboardList,
+  Clock,
+  CheckCircle,
+  Trophy,
+  XCircle,
+  User,
+  Phone,
+  BedDouble,
+  Calendar,
+  Banknote,
+  Search,
+  Building2,
+  DoorOpen,
 } from 'lucide-react-native';
+
 import { partnerService } from '../../services/partner.service';
 import type { Booking, BookingStatus } from '../../services/partner.service';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
@@ -25,21 +38,69 @@ const isMobile = Platform.OS !== 'web';
 // CONSTANTS
 // ============================================================
 
-const FILTERS: { key: BookingStatus | 'ALL'; label: string; Icon: React.ElementType }[] = [
+const FILTERS: {
+  key: BookingStatus | 'ALL';
+  label: string;
+  Icon: React.ElementType;
+}[] = [
   { key: 'ALL', label: 'Tất cả', Icon: ClipboardList },
-  { key: 'PENDING', label: 'Chờ duyệt', Icon: Clock },
-  { key: 'CONFIRMED', label: 'Đã xác nhận', Icon: CheckCircle },
+  { key: 'CHECKED_IN', label: 'Đã nhận phòng', Icon: DoorOpen },
+  { key: 'PAYMENT_PENDING', label: 'Trả phòng/thanh toán', Icon: Banknote },
   { key: 'COMPLETED', label: 'Hoàn thành', Icon: Trophy },
   { key: 'CANCELLED', label: 'Đã hủy', Icon: XCircle },
 ];
 
-const STATUS_CONFIG: Record<BookingStatus, { color: string; bg: string; label: string; Icon: React.ElementType }> = {
-  PENDING:    { color: '#F59E0B', bg: '#FFFBEB', label: 'Chờ duyệt',      Icon: Clock },
-  CONFIRMED:  { color: '#0D9488', bg: '#F0FDFA', label: 'Đã xác nhận',    Icon: CheckCircle },
-  COMPLETED:  { color: '#22C55E', bg: '#F0FDF4', label: 'Hoàn thành',     Icon: Trophy },
-  CANCELLED:  { color: '#EF4444', bg: '#FEF2F2', label: 'Đã hủy',        Icon: XCircle },
-};
+const STATUS_CONFIG: Record<
+  BookingStatus,
+  {
+    color: string;
+    bg: string;
+    label: string;
+    Icon: React.ElementType;
+  }
+> = {
+  PENDING: {
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    label: 'Chờ duyệt',
+    Icon: Clock,
+  },
 
+  CONFIRMED: {
+    color: '#0D9488',
+    bg: '#F0FDFA',
+    label: 'Đã xác nhận',
+    Icon: CheckCircle,
+  },
+
+  CHECKED_IN: {
+    color: '#2563EB',
+    bg: '#EFF6FF',
+    label: 'Đã nhận phòng',
+    Icon: DoorOpen,
+  },
+
+  PAYMENT_PENDING: {
+    color: '#D97706',
+    bg: '#FFF7ED',
+    label: 'Đã trả phòng / Chờ thanh toán',
+    Icon: Banknote,
+  },
+
+  COMPLETED: {
+    color: '#22C55E',
+    bg: '#F0FDF4',
+    label: 'Hoàn thành',
+    Icon: Trophy,
+  },
+
+  CANCELLED: {
+    color: '#EF4444',
+    bg: '#FEF2F2',
+    label: 'Đã hủy',
+    Icon: XCircle,
+  },
+};
 // ============================================================
 // HELPERS
 // ============================================================
@@ -54,6 +115,15 @@ const formatDate = (value: string) =>
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('vi-VN').format(value) + ' VNĐ';
 
+const getBookingHotelName = (booking: any) => {
+  return (
+    booking.property?.name ||
+    booking.hotel?.name ||
+    booking.hotelName ||
+    'Cơ sở lưu trú'
+  );
+};
+
 // ============================================================
 // SUB-COMPONENTS
 // ============================================================
@@ -61,6 +131,7 @@ const formatPrice = (value: number) =>
 const BookingStatusBadge = ({ status }: { status: BookingStatus }) => {
   const cfg = STATUS_CONFIG[status];
   const IconComp = cfg.Icon;
+
   return (
     <View style={[s.badge, { backgroundColor: cfg.bg }]}>
       <IconComp size={13} color={cfg.color} />
@@ -85,7 +156,10 @@ const InfoRow = ({
       <Icon size={15} color="#94A3B8" />
       <Text style={s.infoLabel}>{label}</Text>
     </View>
-    <Text style={[s.infoValue, valueStyle]}>{value}</Text>
+
+    <Text style={[s.infoValue, valueStyle]} numberOfLines={1}>
+      {value}
+    </Text>
   </View>
 );
 
@@ -120,6 +194,7 @@ const BookingCard = ({
   onAction: (id: string, status: BookingStatus) => void;
 }) => {
   const cfg = STATUS_CONFIG[booking.status];
+  const hotelName = getBookingHotelName(booking as any);
 
   return (
     <View style={[s.card, { borderLeftColor: cfg.color, borderLeftWidth: 4 }]}>
@@ -129,21 +204,27 @@ const BookingCard = ({
           <View style={s.avatarCircle}>
             <User size={18} color="#fff" />
           </View>
+
           <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={s.cardTitle} numberOfLines={1}>{booking.user.username}</Text>
+            <Text style={s.cardTitle} numberOfLines={1}>
+              {booking.user.username}
+            </Text>
+
             <View style={s.phoneRow}>
               <Phone size={12} color="#64748B" />
-              <Text style={s.cardPhone}>{booking.user.phone || 'Chưa có SĐT'}</Text>
+              <Text style={s.cardPhone}>
+                {booking.user.phone || 'Chưa có SĐT'}
+              </Text>
             </View>
           </View>
         </View>
+
         <BookingStatusBadge status={booking.status} />
       </View>
 
-      {/* Divider */}
       <View style={s.divider} />
 
-      {/* Info Rows */}
+      <InfoRow Icon={Building2} label="Khách sạn" value={hotelName} />
       <InfoRow Icon={BedDouble} label="Phòng" value={booking.room.name} />
       <InfoRow Icon={Calendar} label="Nhận phòng" value={formatDate(booking.checkIn)} />
       <InfoRow Icon={Calendar} label="Trả phòng" value={formatDate(booking.checkOut)} />
@@ -154,16 +235,20 @@ const BookingCard = ({
         valueStyle={s.priceValue}
       />
 
-      {/* Actions */}
       {renderActions(booking, onAction)}
     </View>
   );
 };
 
-/** Luong: PENDING -> CONFIRMED/CANCELLED -> COMPLETED */
+/**
+ * Luồng trạng thái:
+ * PENDING -> CONFIRMED / CANCELLED
+ * CONFIRMED -> CHECKED_IN / CANCELLED
+ * CHECKED_IN -> COMPLETED / CANCELLED
+ */
 function renderActions(
   booking: Booking,
-  onAction: (id: string, status: BookingStatus) => void,
+  onAction: (id: string, status: BookingStatus) => void
 ) {
   const { id, status } = booking;
 
@@ -177,6 +262,7 @@ function renderActions(
           Icon={CheckCircle}
           onPress={() => onAction(id, 'CONFIRMED')}
         />
+
         <ActionButton
           label="Từ chối"
           color="#EF4444"
@@ -192,12 +278,13 @@ function renderActions(
     return (
       <View style={s.actionRow}>
         <ActionButton
-          label="Hoàn thành"
-          color="#22C55E"
-          bgColor="#F0FDF4"
-          Icon={Trophy}
-          onPress={() => onAction(id, 'COMPLETED')}
+          label="Đã nhận phòng"
+          color="#2563EB"
+          bgColor="#EFF6FF"
+          Icon={DoorOpen}
+          onPress={() => onAction(id, 'CHECKED_IN')}
         />
+
         <ActionButton
           label="Hủy đơn"
           color="#EF4444"
@@ -209,8 +296,46 @@ function renderActions(
     );
   }
 
-  return null; // COMPLETED, CANCELLED — no actions
+  if (status === 'CHECKED_IN') {
+    return (
+      <View style={s.actionRow}>
+        <ActionButton
+          label="Đã nhận phòng"
+          color="#28d122"
+          bgColor="#FFF7ED"
+          Icon={Banknote}
+          onPress={() => onAction(id, 'PAYMENT_PENDING')}
+        />
+
+        <ActionButton
+          label="Hủy đơn"
+          color="#EF4444"
+          bgColor="#FEF2F2"
+          Icon={XCircle}
+          onPress={() => onAction(id, 'CANCELLED')}
+        />
+      </View>
+    );
+  }
+
+  if (status === 'PAYMENT_PENDING') {
+    return (
+      <View style={s.actionRow}>
+        <ActionButton
+          label="Đã thanh toán"
+          color="#22C55E"
+          bgColor="#F0FDF4"
+          Icon={Trophy}
+          onPress={() => onAction(id, 'COMPLETED')}
+        />
+      </View>
+    );
+  }
+
+  return null;
 }
+
+
 
 // ============================================================
 // MAIN SCREEN
@@ -219,20 +344,39 @@ function renderActions(
 export function BookingManagement() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<'ALL' | BookingStatus>('ALL');
+  const [hotelKeyword, setHotelKeyword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [msgModal, setMsgModal] = useState<{ visible: boolean; type: MessageType; message: string }>({ visible: false, type: 'error', message: '' });
+
+  const [msgModal, setMsgModal] = useState<{
+    visible: boolean;
+    type: MessageType;
+    message: string;
+  }>({
+    visible: false,
+    type: 'error',
+    message: '',
+  });
+
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 600;
 
-  const showMsg = (type: MessageType, message: string) => setMsgModal({ visible: true, type, message });
-  const closeMsgModal = () => setMsgModal(prev => ({ ...prev, visible: false }));
+  const showMsg = (type: MessageType, message: string) =>
+    setMsgModal({ visible: true, type, message });
+
+  const closeMsgModal = () =>
+    setMsgModal((prev) => ({ ...prev, visible: false }));
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
+
     try {
-      const data = await partnerService.getBookings(filter === 'ALL' ? undefined : filter);
-      setBookings(data);
+      const data = await partnerService.getBookings(
+        filter === 'ALL' ? undefined : filter
+      );
+
+      setBookings(Array.isArray(data) ? data : []);
     } catch (error: any) {
       showMsg('error', error.message || 'Không thể tải đơn đặt phòng');
     } finally {
@@ -244,15 +388,50 @@ export function BookingManagement() {
     loadBookings();
   }, [loadBookings]);
 
+  const filteredBookings = useMemo(() => {
+    const q = hotelKeyword.trim().toLowerCase();
+
+    if (!q) return bookings;
+
+    return bookings.filter((booking: any) => {
+      const hotelName = String(
+        booking.property?.name ||
+          booking.hotel?.name ||
+          booking.hotelName ||
+          ''
+      ).toLowerCase();
+
+      const roomName = String(booking.room?.name || '').toLowerCase();
+      const customerName = String(booking.user?.username || '').toLowerCase();
+      const customerPhone = String(booking.user?.phone || '').toLowerCase();
+
+      return (
+        hotelName.includes(q) ||
+        roomName.includes(q) ||
+        customerName.includes(q) ||
+        customerPhone.includes(q)
+      );
+    });
+  }, [bookings, hotelKeyword]);
+
   const handleAction = async (id: string, status: BookingStatus) => {
     try {
       await partnerService.updateBookingStatus(id, status);
-      const statusLabels: Record<string, string> = {
-        CONFIRMED: 'Đã xác nhận đơn đặt phòng',
-        COMPLETED: 'Đơn đã hoàn thành',
-        CANCELLED: 'Đã hủy đơn đặt phòng',
-      };
+
+
+
+    const statusLabels: Record<string, string> = {
+      CONFIRMED: 'Đã xác nhận đơn đặt phòng',
+      CHECKED_IN: 'Đã cập nhật trạng thái nhận phòng',
+      PAYMENT_PENDING: 'Đã cập nhật trạng thái nhận phòng',
+      COMPLETED: 'Đã thanh toán và hoàn thành đơn',
+      CANCELLED: 'Đã hủy đơn đặt phòng',
+    };
+
+
+
       showMsg('success', statusLabels[status] || 'Cập nhật thành công');
+
       await loadBookings();
     } catch (error: any) {
       showMsg('error', error.message || 'Cập nhật trạng thái thất bại');
@@ -271,13 +450,14 @@ export function BookingManagement() {
 
   return (
     <View style={s.container}>
-      {/* ====== Page Header — matching rooms.tsx pattern ====== */}
       {(isMobile || isNarrow) ? (
         <View style={s.mobilePageHeader}>
           <Text style={s.mobilePageTitle}>Đơn đặt phòng</Text>
+
           <View style={s.mobilePageHeaderRow}>
             <Text style={s.mobilePageSub}>
-              {bookings.length} đơn{filter !== 'ALL' ? ` · ${STATUS_CONFIG[filter].label}` : ''}
+              {filteredBookings.length} đơn
+              {filter !== 'ALL' ? ` · ${STATUS_CONFIG[filter].label}` : ''}
             </Text>
           </View>
         </View>
@@ -288,14 +468,30 @@ export function BookingManagement() {
               <ClipboardList size={20} color="#0F172A" />
               <Text style={s.pageTitle}>Đơn đặt phòng</Text>
             </View>
+
             <Text style={s.pageSub}>
-              {bookings.length} đơn{filter !== 'ALL' ? ` · ${STATUS_CONFIG[filter].label}` : ''}
+              {filteredBookings.length} đơn
+              {filter !== 'ALL' ? ` · ${STATUS_CONFIG[filter].label}` : ''}
             </Text>
           </View>
         </View>
       )}
 
-      {/* ====== Filter Tabs Bar — matching rooms.tsx tabsBar ====== */}
+      {/* Search theo tên khách sạn/phòng/khách */}
+      <View style={s.searchBar}>
+        <View style={s.searchBox}>
+          <Search size={16} color="#94A3B8" />
+
+          <TextInput
+            style={s.searchInput}
+            value={hotelKeyword}
+            onChangeText={setHotelKeyword}
+            placeholder="Tìm theo tên khách sạn, phòng, khách hàng hoặc SĐT..."
+            placeholderTextColor="#94A3B8"
+          />
+        </View>
+      </View>
+
       <View style={s.tabsBar}>
         <ScrollView
           horizontal
@@ -305,6 +501,7 @@ export function BookingManagement() {
           {FILTERS.map((item) => {
             const isActive = filter === item.key;
             const FilterIcon = item.Icon;
+
             return (
               <TouchableOpacity
                 key={item.key}
@@ -313,6 +510,7 @@ export function BookingManagement() {
                 activeOpacity={0.7}
               >
                 <FilterIcon size={14} color={isActive ? '#FFF' : '#64748B'} />
+
                 <Text style={[s.tabLabel, isActive && s.tabLabelActive]}>
                   {item.label}
                 </Text>
@@ -322,9 +520,8 @@ export function BookingManagement() {
         </ScrollView>
       </View>
 
-      {/* ====== Content ====== */}
       <FlatList<Booking>
-        data={bookings}
+        data={filteredBookings}
         keyExtractor={(item: Booking) => item.id}
         renderItem={({ item }: { item: Booking }) => (
           <BookingCard booking={item} onAction={handleAction} />
@@ -341,11 +538,16 @@ export function BookingManagement() {
         ListEmptyComponent={
           <EmptyState
             icon="📋"
-            title="Chưa có đơn đặt phòng"
-            subtitle="Các đơn đặt phòng mới sẽ hiển thị tại đây"
+            title="Không tìm thấy đơn đặt phòng"
+            subtitle={
+              hotelKeyword
+                ? 'Không có đơn nào khớp với từ khóa tìm kiếm'
+                : 'Các đơn đặt phòng mới sẽ hiển thị tại đây'
+            }
           />
         }
       />
+
       <MessageModal
         visible={msgModal.visible}
         type={msgModal.type}
@@ -357,7 +559,7 @@ export function BookingManagement() {
 }
 
 // ============================================================
-// STYLES — Matching rooms.tsx (Go2Joy-inspired)
+// STYLES
 // ============================================================
 
 const s = StyleSheet.create({
@@ -366,7 +568,6 @@ const s = StyleSheet.create({
     backgroundColor: isMobile ? '#FFF' : '#F8FAFC',
   },
 
-  // ── Mobile Page Header ──────────────────────────────────────
   mobilePageHeader: {
     paddingHorizontal: 20,
     paddingTop: 8,
@@ -375,23 +576,25 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+
   mobilePageTitle: {
     fontSize: 22,
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 6,
   },
+
   mobilePageHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   mobilePageSub: {
     fontSize: 13,
     color: '#64748B',
   },
 
-  // ── Page Header (Web) ──────────────────────────────────────
   pageHeader: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -404,16 +607,19 @@ const s = StyleSheet.create({
     borderBottomColor: '#E2E8F0',
     gap: 10,
   },
+
   pageTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+
   pageTitle: {
     fontSize: isMobile ? 18 : 20,
     fontWeight: '800',
     color: '#0F172A',
   },
+
   pageSub: {
     fontSize: 13,
     color: '#64748B',
@@ -421,7 +627,34 @@ const s = StyleSheet.create({
     marginLeft: 28,
   },
 
-  // ── Tabs Bar ────────────────────────────────────────────────
+  searchBar: {
+    paddingHorizontal: isMobile ? 12 : 20,
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+
+  searchBox: {
+    maxWidth: 560,
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+  },
+
+  searchInput: {
+    flex: 1,
+    color: '#0F172A',
+    fontSize: 14,
+    paddingVertical: 10,
+  },
+
   tabsBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,10 +663,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+
   tabsContent: {
     paddingHorizontal: isMobile ? 12 : 20,
     gap: isMobile ? 6 : 8,
   },
+
   tabItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -443,25 +678,26 @@ const s = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F1F5F9',
   },
+
   tabItemActive: {
     backgroundColor: '#008080',
   },
+
   tabLabel: {
     fontSize: 13,
     color: '#64748B',
     fontWeight: '600',
   },
+
   tabLabelActive: {
     color: '#FFF',
   },
 
-  // ── Content List ────────────────────────────────────────────
   list: {
     padding: isMobile ? 12 : 20,
     paddingBottom: 40,
   },
 
-  // ── Card ────────────────────────────────────────────────────
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -473,17 +709,20 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
+
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+
   cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     marginRight: 10,
   },
+
   avatarCircle: {
     width: 40,
     height: 40,
@@ -492,57 +731,64 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
   },
+
   phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 3,
     gap: 4,
   },
+
   cardPhone: {
     fontSize: 13,
     color: '#64748B',
   },
 
-  // ── Divider ─────────────────────────────────────────────────
   divider: {
     height: 1,
     backgroundColor: '#F1F5F9',
     marginVertical: 12,
   },
 
-  // ── Info Rows ───────────────────────────────────────────────
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 5,
+    gap: 12,
   },
+
   infoLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+
   infoLabel: {
     color: '#64748B',
     fontSize: 14,
   },
+
   infoValue: {
     color: '#0F172A',
     fontWeight: '600',
     fontSize: 14,
+    flexShrink: 1,
+    textAlign: 'right',
   },
+
   priceValue: {
     color: '#0D9488',
     fontWeight: '800',
     fontSize: 15,
   },
 
-  // ── Badge ───────────────────────────────────────────────────
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,18 +797,20 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
   },
+
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
   },
 
-  // ── Actions ─────────────────────────────────────────────────
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 14,
     gap: 10,
+    flexWrap: 'wrap',
   },
+
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -572,6 +820,7 @@ const s = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 14,
   },
+
   actionText: {
     fontWeight: '700',
     fontSize: 13,

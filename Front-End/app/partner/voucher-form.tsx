@@ -21,7 +21,6 @@ import { partnerService } from '../../src/partner/services/partner.service';
 import { partnerVoucherService } from '../../src/partner/services/voucher.service';
 
 const isMobile = Platform.OS !== 'web';
-const DEFAULT_TEST_HOTEL_ID = '';
 
 const customerTierOptions = [
   { id: 'REGULAR', name: 'Khách thường' },
@@ -29,9 +28,6 @@ const customerTierOptions = [
   { id: 'LOYAL', name: 'Khách thân thiết' },
   { id: 'VIP', name: 'Khách VIP' },
 ];
-
-
-
 
 type DiscountType = 'percent' | 'fixed';
 
@@ -44,168 +40,6 @@ type NoticeState = {
   type: 'success' | 'error';
   message: string;
 } | null;
-
-const hourOptions = Array.from({ length: 24 }, (_, index) =>
-  String(index).padStart(2, '0')
-);
-
-const minuteOptions = Array.from({ length: 60 }, (_, index) =>
-  String(index).padStart(2, '0')
-);
-
-const splitDateTime = (value: string) => {
-  if (!value) {
-    return {
-      date: '',
-      time: '',
-    };
-  }
-
-  const [date, timeWithSeconds] = value.split('T');
-
-  return {
-    date: date || '',
-    time: timeWithSeconds ? timeWithSeconds.slice(0, 5) : '',
-  };
-};
-
-const mergeDateTime = (date: string, time: string) => {
-  if (!date && !time) return '';
-  if (!date) return '';
-  if (!time) return `${date}T00:00`;
-
-  return `${date}T${time}`;
-};
-
-const DateTimePickerInput = ({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) => {
-  const current = splitDateTime(value);
-
-  const rawHour = current.time ? current.time.slice(0, 2) : '00';
-  const rawMinute = current.time ? current.time.slice(3, 5) : '00';
-
-  const currentHour = hourOptions.includes(rawHour) ? rawHour : '12';
-  const currentMinute = minuteOptions.includes(rawMinute) ? rawMinute : '00';
-  const webDateInputStyle: any = {
-    width: '100%',
-    height: 44,
-    borderRadius: 10,
-    border: '1px solid #E2E8F0',
-    backgroundColor: '#F8FAFC',
-    padding: '0 14px',
-    fontSize: 14,
-    color: '#1E293B',
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
-  const handleDateChange = (date: string) => {
-    onChange(mergeDateTime(date, `${currentHour}:${currentMinute}`));
-  };
-
-  const handleHourChange = (hour: string) => {
-    onChange(mergeDateTime(current.date, `${hour}:${currentMinute}`));
-  };
-
-  const handleMinuteChange = (minute: string) => {
-    onChange(mergeDateTime(current.date, `${currentHour}:${minute}`));
-  };
-
-  return (
-    <View style={s.dateTimePickerBox}>
-      {Platform.OS === 'web' ? (
-
-        React.createElement('input' as any, {
-          type: 'date',
-          value: current.date,
-          onChange: (e: any) => handleDateChange(e.target.value),
-          style: webDateInputStyle,
-        })
-
-      ) : (
-        <TextInput
-          style={s.input}
-          value={current.date}
-          onChangeText={handleDateChange}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#94A3B8"
-        />
-      )}
-
-      <View style={s.timeWheelWrap}>
-        <View style={s.timeWheelColumn}>
-          <Text style={s.timeWheelLabel}>Giờ</Text>
-
-          <ScrollView
-            style={s.timeWheel}
-            showsVerticalScrollIndicator={false}
-          >
-            {hourOptions.map((hour) => {
-              const selected = hour === currentHour;
-
-              return (
-                <TouchableOpacity
-                  key={hour}
-                  style={[
-                    s.timeWheelItem,
-                    selected && s.timeWheelItemActive,
-                  ]}
-                  onPress={() => handleHourChange(hour)}
-                >
-                  <Text
-                    style={[
-                      s.timeWheelText,
-                      selected && s.timeWheelTextActive,
-                    ]}
-                  >
-                    {hour}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        <View style={s.timeWheelColumn}>
-          <Text style={s.timeWheelLabel}>Phút</Text>
-
-          <ScrollView
-            style={s.timeWheel}
-            showsVerticalScrollIndicator={false}
-          >
-            {minuteOptions.map((minute) => {
-              const selected = minute === currentMinute;
-
-              return (
-                <TouchableOpacity
-                  key={minute}
-                  style={[
-                    s.timeWheelItem,
-                    selected && s.timeWheelItemActive,
-                  ]}
-                  onPress={() => handleMinuteChange(minute)}
-                >
-                  <Text
-                    style={[
-                      s.timeWheelText,
-                      selected && s.timeWheelTextActive,
-                    ]}
-                  >
-                    {minute}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </View>
-    </View>
-  );
-};
 
 const toDateTimeInputValue = (value?: string | null) => {
   if (!value) return '';
@@ -229,6 +63,215 @@ const toIsoDateTime = (value: string) => {
   return new Date(value).toISOString();
 };
 
+const getHotelAddressText = (hotel: any) => {
+  const district = hotel?.address?.district || '';
+  const city = hotel?.address?.city || '';
+  const fullAddress = hotel?.address?.fullAddress || '';
+
+  if (fullAddress) return fullAddress;
+  if (district && city) return `${district}, ${city}`;
+  if (city) return city;
+  if (district) return district;
+
+  return 'Chưa có địa chỉ';
+};
+
+const hourOptions = Array.from({ length: 24 }, (_, index) =>
+  String(index).padStart(2, '0')
+);
+
+const minuteOptions = Array.from({ length: 60 }, (_, index) =>
+  String(index).padStart(2, '0')
+);
+
+const splitDateTimeValue = (value: string) => {
+  if (!value) {
+    return {
+      date: '',
+      hour: '00',
+      minute: '00',
+    };
+  }
+
+  const [datePart, timePart] = value.split('T');
+  const [hourPart, minutePart] = (timePart || '').split(':');
+
+  return {
+    date: datePart || '',
+    hour: hourOptions.includes(hourPart || '') ? hourPart! : '00',
+    minute: minuteOptions.includes(minutePart || '') ? minutePart! : '00',
+  };
+};
+
+const mergeDateTimeValue = (date: string, hour: string, minute: string) => {
+  if (!date) return '';
+
+  return `${date}T${hour}:${minute}`;
+};
+
+const DateTimePickerInput = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  const current = splitDateTimeValue(value);
+
+  const handleDateChange = (date: string) => {
+    onChange(mergeDateTimeValue(date, current.hour, current.minute));
+  };
+
+  const handleHourChange = (hour: string) => {
+    onChange(mergeDateTimeValue(current.date, hour, current.minute));
+  };
+
+  const handleMinuteChange = (minute: string) => {
+    onChange(mergeDateTimeValue(current.date, current.hour, minute));
+  };
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={s.dateTimeInline}>
+        {React.createElement('input' as any, {
+          type: 'date',
+          value: current.date,
+          onChange: (e: any) => handleDateChange(e.target.value),
+          style: {
+            flex: 1,
+            minWidth: 160,
+            height: 44,
+            borderRadius: 10,
+            border: '1px solid #E2E8F0',
+            backgroundColor: '#F8FAFC',
+            padding: '0 12px',
+            fontSize: 14,
+            color: '#1E293B',
+            outline: 'none',
+            boxSizing: 'border-box',
+          },
+        })}
+
+        {React.createElement(
+          'select' as any,
+          {
+            value: current.hour,
+            onChange: (e: any) => handleHourChange(e.target.value),
+            style: {
+              width: 76,
+              height: 44,
+              borderRadius: 10,
+              border: '1px solid #E2E8F0',
+              backgroundColor: '#F8FAFC',
+              padding: '0 10px',
+              fontSize: 14,
+              color: '#1E293B',
+              outline: 'none',
+              boxSizing: 'border-box',
+              fontWeight: 700,
+            },
+          },
+          hourOptions.map((hour) =>
+            React.createElement(
+              'option' as any,
+              {
+                key: hour,
+                value: hour,
+              },
+              hour
+            )
+          )
+        )}
+
+        <Text style={s.timeColon}>:</Text>
+
+        {React.createElement(
+          'select' as any,
+          {
+            value: current.minute,
+            onChange: (e: any) => handleMinuteChange(e.target.value),
+            style: {
+              width: 76,
+              height: 44,
+              borderRadius: 10,
+              border: '1px solid #E2E8F0',
+              backgroundColor: '#F8FAFC',
+              padding: '0 10px',
+              fontSize: 14,
+              color: '#1E293B',
+              outline: 'none',
+              boxSizing: 'border-box',
+              fontWeight: 700,
+            },
+          },
+          minuteOptions.map((minute) =>
+            React.createElement(
+              'option' as any,
+              {
+                key: minute,
+                value: minute,
+              },
+              minute
+            )
+          )
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={s.dateTimeInline}>
+      <TextInput
+        style={[s.input, { flex: 1 }]}
+        value={current.date}
+        onChangeText={handleDateChange}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor="#94A3B8"
+      />
+
+      <TextInput
+        style={[s.input, s.timeInput]}
+        value={current.hour}
+        onChangeText={(text) => {
+          const clean = text.replace(/[^0-9]/g, '').slice(0, 2);
+          const numeric = Number(clean);
+
+          if (clean.length === 2 && numeric >= 0 && numeric <= 23) {
+            handleHourChange(clean);
+          } else if (!clean) {
+            handleHourChange('00');
+          }
+        }}
+        placeholder="00"
+        placeholderTextColor="#94A3B8"
+        keyboardType="numeric"
+        maxLength={2}
+      />
+
+      <Text style={s.timeColon}>:</Text>
+
+      <TextInput
+        style={[s.input, s.timeInput]}
+        value={current.minute}
+        onChangeText={(text) => {
+          const clean = text.replace(/[^0-9]/g, '').slice(0, 2);
+          const numeric = Number(clean);
+
+          if (clean.length === 2 && numeric >= 0 && numeric <= 59) {
+            handleMinuteChange(clean);
+          } else if (!clean) {
+            handleMinuteChange('00');
+          }
+        }}
+        placeholder="00"
+        placeholderTextColor="#94A3B8"
+        keyboardType="numeric"
+        maxLength={2}
+      />
+    </View>
+  );
+};
+
 export default function VoucherFormPage() {
   const router = useRouter();
 
@@ -238,12 +281,13 @@ export default function VoucherFormPage() {
     hotelId?: string;
   }>();
 
-  const hotelId =
+  const initialHotelId =
     typeof params.hotelId === 'string' && params.hotelId
       ? params.hotelId
-      : ''
+      : '';
 
-  // Hỗ trợ cả id cũ và voucherId mới
+  const [activeHotelId, setActiveHotelId] = useState(initialHotelId);
+
   const voucherId =
     typeof params.voucherId === 'string' && params.voucherId
       ? params.voucherId
@@ -277,6 +321,11 @@ export default function VoucherFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [hotels, setHotels] = useState<any[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+  const [hotelSearch, setHotelSearch] = useState('');
+  const [showHotelSuggestions, setShowHotelSuggestions] = useState(false);
+
   const pageTitle = useMemo(() => {
     return isEdit ? 'Chỉnh sửa voucher' : 'Tạo voucher mới';
   }, [isEdit]);
@@ -285,6 +334,32 @@ export default function VoucherFormPage() {
     if (loading) return isEdit ? 'Đang cập nhật...' : 'Đang tạo...';
     return isEdit ? 'Cập nhật voucher' : 'Tạo voucher';
   }, [loading, isEdit]);
+
+  const hotelSuggestions = useMemo(() => {
+    const q = hotelSearch.trim().toLowerCase();
+
+    if (!q) {
+      return hotels.slice(0, 8);
+    }
+
+    return hotels
+      .filter((hotel: any) => {
+        const name = String(hotel.name || '').toLowerCase();
+        const city = String(hotel.address?.city || '').toLowerCase();
+        const district = String(hotel.address?.district || '').toLowerCase();
+        const fullAddress = String(
+          hotel.address?.fullAddress || ''
+        ).toLowerCase();
+
+        return (
+          name.includes(q) ||
+          city.includes(q) ||
+          district.includes(q) ||
+          fullAddress.includes(q)
+        );
+      })
+      .slice(0, 8);
+  }, [hotels, hotelSearch]);
 
   const showNotice = (
     message: string,
@@ -305,11 +380,45 @@ export default function VoucherFormPage() {
   };
 
   useEffect(() => {
-    if (!hotelId) return;
+    const loadHotels = async () => {
+      try {
+        const hotelRes = await partnerService.getHotels();
+        const hotelItems = Array.isArray(hotelRes.items) ? hotelRes.items : [];
+
+        setHotels(hotelItems);
+
+        if (!hotelItems.length) {
+          setSelectedHotel(null);
+          setHotelSearch('');
+          setActiveHotelId('');
+          return;
+        }
+
+        const matchedHotel = initialHotelId
+          ? hotelItems.find((hotel: any) => hotel.id === initialHotelId)
+          : null;
+
+        const initialHotel = matchedHotel || hotelItems[0];
+
+        setSelectedHotel(initialHotel);
+        setHotelSearch(initialHotel.name || '');
+        setActiveHotelId(initialHotel.id);
+      } catch (err) {
+        console.error('Không tải được danh sách khách sạn:', err);
+      }
+    };
+
+    loadHotels();
+  }, [initialHotelId]);
+
+  useEffect(() => {
+    if (!activeHotelId) return;
 
     const loadRoomTypes = async () => {
       try {
-        const roomTypes = await partnerService.getRoomTypes(String(hotelId));
+        const roomTypes = await partnerService.getRoomTypes(
+          String(activeHotelId)
+        );
 
         setRoomTypeOptions([
           { id: 'all', name: 'Tất cả loại phòng' },
@@ -324,17 +433,17 @@ export default function VoucherFormPage() {
     };
 
     loadRoomTypes();
-  }, [hotelId]);
+  }, [activeHotelId]);
 
   useEffect(() => {
-    if (!isEdit || !voucherId || !hotelId) return;
+    if (!isEdit || !voucherId || !activeHotelId) return;
 
     const loadVoucher = async () => {
       try {
         setLoadingDetail(true);
 
         const voucher = await partnerVoucherService.getVoucherById(
-          String(hotelId),
+          String(activeHotelId),
           String(voucherId)
         );
 
@@ -355,18 +464,19 @@ export default function VoucherFormPage() {
           startDate: toDateTimeInputValue(voucher.startDate),
           endDate: toDateTimeInputValue(voucher.endDate),
 
-          applicableRoomTypeIds:
-            voucher.applicableRoomTypeIds?.length
-              ? voucher.applicableRoomTypeIds
-              : ['all'],
-          customerTiers:
-            customerTierRule?.values?.length
-              ? customerTierRule.values
-              : ['REGULAR', 'RETURNING', 'LOYAL', 'VIP'],
+          applicableRoomTypeIds: voucher.applicableRoomTypeIds?.length
+            ? voucher.applicableRoomTypeIds
+            : ['all'],
+
+          customerTiers: customerTierRule?.values?.length
+            ? customerTierRule.values
+            : ['REGULAR', 'RETURNING', 'LOYAL', 'VIP'],
+
           status: voucher.status || 'ACTIVE',
         });
       } catch (err: any) {
         console.error('Không tải được voucher:', err);
+
         showNotice(
           err?.response?.data?.message ||
             err?.message ||
@@ -379,7 +489,35 @@ export default function VoucherFormPage() {
     };
 
     loadVoucher();
-  }, [voucherId, hotelId, isEdit]);
+  }, [voucherId, activeHotelId, isEdit]);
+
+  const handleHotelSearchChange = (value: string) => {
+    setHotelSearch(value);
+
+    if (!isEdit) {
+      setShowHotelSuggestions(true);
+    }
+  };
+
+  const closeHotelSuggestions = () => {
+    setTimeout(() => {
+      setShowHotelSuggestions(false);
+    }, 150);
+  };
+
+  const handleSelectHotel = (hotel: any) => {
+    if (isEdit) return;
+
+    setSelectedHotel(hotel);
+    setActiveHotelId(hotel.id);
+    setHotelSearch(hotel.name || '');
+    setShowHotelSuggestions(false);
+
+    setForm((prev) => ({
+      ...prev,
+      applicableRoomTypeIds: ['all'],
+    }));
+  };
 
   const toggleRoomType = (roomTypeId: string) => {
     setForm((prev) => {
@@ -410,6 +548,7 @@ export default function VoucherFormPage() {
       };
     });
   };
+
   const toggleCustomerTier = (tierId: string) => {
     setForm((prev) => {
       let nextTiers = [...prev.customerTiers];
@@ -417,7 +556,7 @@ export default function VoucherFormPage() {
       if (nextTiers.includes(tierId)) {
         nextTiers = nextTiers.filter((item) => item !== tierId);
       } else {
-        nextTiers.push(tierId); 
+        nextTiers.push(tierId);
       }
 
       if (nextTiers.length === 0) {
@@ -430,8 +569,9 @@ export default function VoucherFormPage() {
       };
     });
   };
+
   const validateForm = () => {
-    if (!hotelId) {
+    if (!activeHotelId) {
       showNotice('Không tìm thấy khách sạn để lưu voucher', 'error');
       return false;
     }
@@ -442,7 +582,10 @@ export default function VoucherFormPage() {
     }
 
     if (!/^[A-Z0-9_-]+$/i.test(form.code.trim())) {
-      showNotice('Mã voucher chỉ nên gồm chữ, số, dấu gạch ngang hoặc gạch dưới', 'error');
+      showNotice(
+        'Mã voucher chỉ nên gồm chữ, số, dấu gạch ngang hoặc gạch dưới',
+        'error'
+      );
       return false;
     }
 
@@ -493,7 +636,6 @@ export default function VoucherFormPage() {
       return false;
     }
 
-
     if (!form.startDate) {
       showNotice('Vui lòng chọn thời gian bắt đầu', 'error');
       return false;
@@ -503,9 +645,6 @@ export default function VoucherFormPage() {
       showNotice('Vui lòng chọn thời gian kết thúc', 'error');
       return false;
     }
-
-
-
 
     const startTime = new Date(form.startDate).getTime();
     const endTime = new Date(form.endDate).getTime();
@@ -519,8 +658,6 @@ export default function VoucherFormPage() {
       showNotice('Thời gian kết thúc phải lớn hơn thời gian bắt đầu', 'error');
       return false;
     }
-
-
 
     if (form.perUser && Number(form.perUser) <= 0) {
       showNotice('Số lần mỗi khách được dùng phải lớn hơn 0', 'error');
@@ -567,17 +704,9 @@ export default function VoucherFormPage() {
       value: Number(form.discountValue),
     };
 
-    if (form.discountType === 'percent' && Number(form.maxDiscount) > 0) {
+    if (Number(form.maxDiscount) > 0) {
       action.max = Number(form.maxDiscount);
     }
-
-    if (form.discountType === 'fixed') {
-      // fixed không nhất thiết cần max, nhưng nếu bạn nhập thì vẫn lưu để tương thích UI
-      if (Number(form.maxDiscount) > 0) {
-        action.max = Number(form.maxDiscount);
-      }
-    }
-
 
     const constraints: any = {
       usageLimit: Number(form.usageLimit || 100),
@@ -585,13 +714,11 @@ export default function VoucherFormPage() {
       perUser: Number(form.perUser || 1),
     };
 
-
     if (form.startDate) {
       constraints.startDate = toIsoDateTime(form.startDate);
     }
 
     if (form.endDate) {
-
       constraints.endDate = toIsoDateTime(form.endDate);
     }
 
@@ -615,12 +742,15 @@ export default function VoucherFormPage() {
 
       if (isEdit && voucherId) {
         await partnerVoucherService.updateVoucher(
-          String(hotelId),
+          String(activeHotelId),
           String(voucherId),
           payload
         );
       } else {
-        await partnerVoucherService.createVoucher(String(hotelId), payload);
+        await partnerVoucherService.createVoucher(
+          String(activeHotelId),
+          payload
+        );
       }
 
       showNotice(
@@ -631,7 +761,7 @@ export default function VoucherFormPage() {
       setTimeout(() => {
         router.push({
           pathname: '/partner/vouchers' as any,
-          params: { hotelId },
+          params: { hotelId: activeHotelId },
         });
       }, 700);
     } catch (err: any) {
@@ -648,47 +778,13 @@ export default function VoucherFormPage() {
     }
   };
 
-  const handleTestApply = async () => {
-    try {
-      const result = await partnerVoucherService.applyVoucher(String(hotelId), {
-        code: form.code || 'FLASH30',
-        totalPrice: 1000000,
-        bookingType: 'overnight',
-        stayDays: 2,
-                
-        customerTier: 'VIP',
-        userUsage: 0,
-
-      });
-
-      showNotice(
-        `Test OK: giảm ${Number(result.discount || 0).toLocaleString(
-          'vi-VN'
-        )}đ, thanh toán ${Number(result.finalPrice || 0).toLocaleString(
-          'vi-VN'
-        )}đ`,
-        'success'
-      );
-    } catch (err: any) {
-      showNotice(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Test apply voucher thất bại',
-        'error'
-      );
-    }
-  };
-
-
   const applyTemplate = (type: string) => {
     const startAt = new Date();
-
     startAt.setHours(20, 0, 0, 0);
 
     const endAt = new Date();
     endAt.setMonth(endAt.getMonth() + 1);
     endAt.setHours(23, 59, 0, 0);
-
 
     const formatDateTimeLocal = (date: Date) => {
       const year = date.getFullYear();
@@ -704,7 +800,6 @@ export default function VoucherFormPage() {
       startDate: formatDateTimeLocal(startAt),
       endDate: formatDateTimeLocal(endAt),
     };
-
 
     const templates: Record<string, any> = {
       flash: {
@@ -795,10 +890,7 @@ export default function VoucherFormPage() {
     <View style={s.container}>
       {isMobile ? (
         <View style={s.mobileBackHeader}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ padding: 4 }}
-          >
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
             <ArrowLeft size={20} color="#1E293B" />
           </TouchableOpacity>
 
@@ -810,7 +902,7 @@ export default function VoucherFormPage() {
         {!isMobile && (
           <View style={s.pageHeader}>
             <View style={s.pageTitleRow}>
-              <TicketPercent size={22} color="#0F172A" />
+              <TicketPercent size={22} color="#0D9488" />
 
               <Text style={s.pageTitle}>{pageTitle}</Text>
             </View>
@@ -850,31 +942,134 @@ export default function VoucherFormPage() {
         ) : (
           <View style={s.formSection}>
             <Text style={s.sectionTitle}>Thông tin voucher</Text>
+
+            <View style={[s.field, s.hotelSelectField]}>
+              <Text style={s.label}>
+                Khách sạn áp dụng <Text style={s.required}>*</Text>
+              </Text>
+
+              <View style={s.hotelSearchBox}>
+                <TextInput
+                  style={[s.input, isEdit && s.inputDisabled]}
+                  value={hotelSearch}
+                  onChangeText={handleHotelSearchChange}
+                  onFocus={() => {
+                    if (!isEdit) setShowHotelSuggestions(true);
+                  }}
+                  onBlur={closeHotelSuggestions}
+                  editable={!isEdit}
+                  placeholder="Nhập tên khách sạn, quận/huyện hoặc thành phố..."
+                  placeholderTextColor="#94A3B8"
+                />
+
+                {showHotelSuggestions && !isEdit ? (
+                  <View style={s.hotelSuggestionBox}>
+                    {hotelSuggestions.length > 0 ? (
+                      hotelSuggestions.map((hotel: any) => {
+                        const active = hotel.id === activeHotelId;
+
+                        return (
+                          <TouchableOpacity
+                            key={hotel.id}
+                            style={[
+                              s.hotelSuggestionItem,
+                              active && s.hotelSuggestionItemActive,
+                            ]}
+                            onPress={() => handleSelectHotel(hotel)}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text
+                                style={[
+                                  s.hotelSuggestionName,
+                                  active && s.hotelSuggestionNameActive,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {hotel.name}
+                              </Text>
+
+                              <Text
+                                style={s.hotelSuggestionAddress}
+                                numberOfLines={1}
+                              >
+                                {getHotelAddressText(hotel)}
+                              </Text>
+                            </View>
+
+                            {active ? (
+                              <Text style={s.hotelSelectedText}>Đang chọn</Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <View style={s.hotelSuggestionEmpty}>
+                        <Text style={s.hotelSuggestionEmptyText}>
+                          Không tìm thấy khách sạn phù hợp
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+              </View>
+
+              {selectedHotel ? (
+                <Text style={s.roomTypeHint}>
+                  {isEdit
+                    ? `Đang sửa voucher của khách sạn: ${selectedHotel.name}`
+                    : `Voucher sẽ được tạo cho khách sạn: ${selectedHotel.name}`}
+                </Text>
+              ) : (
+                <Text style={s.roomTypeHint}>
+                  Vui lòng chọn khách sạn trước khi tạo voucher.
+                </Text>
+              )}
+            </View>
+
             <View style={s.templateRow}>
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('flash')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('flash')}
+              >
                 <Text style={s.templateText}>Flash sale</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('flashNight')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('flashNight')}
+              >
                 <Text style={s.templateText}>Flash đêm</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('loyal')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('loyal')}
+              >
                 <Text style={s.templateText}>Thân thiết</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('vip')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('vip')}
+              >
                 <Text style={s.templateText}>VIP</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('hourly')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('hourly')}
+              >
                 <Text style={s.templateText}>Theo giờ</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.templateBtn} onPress={() => applyTemplate('stay3days')}>
+              <TouchableOpacity
+                style={s.templateBtn}
+                onPress={() => applyTemplate('stay3days')}
+              >
                 <Text style={s.templateText}>Ở 3 ngày</Text>
               </TouchableOpacity>
             </View>
+
             <View style={s.field}>
               <Text style={s.label}>
                 Mã voucher <Text style={s.required}>*</Text>
@@ -899,7 +1094,7 @@ export default function VoucherFormPage() {
                 style={s.input}
                 value={form.name}
                 onChangeText={(v) => updateField('name', v)}
-                placeholder="VD: Giảm giá mùa hè"
+                placeholder="VD: Flash sale giờ vàng"
                 placeholderTextColor="#94A3B8"
               />
             </View>
@@ -983,6 +1178,7 @@ export default function VoucherFormPage() {
                 Nếu chọn “Tất cả loại phòng”, voucher sẽ áp dụng cho toàn bộ loại phòng.
               </Text>
             </View>
+
             <View style={s.field}>
               <Text style={s.label}>Hạng khách hàng áp dụng</Text>
 
@@ -1022,6 +1218,7 @@ export default function VoucherFormPage() {
                 Voucher chỉ áp dụng cho các hạng khách hàng đã chọn.
               </Text>
             </View>
+
             <View style={s.row}>
               <View style={[s.field, { flex: 1 }]}>
                 <Text style={s.label}>
@@ -1087,6 +1284,7 @@ export default function VoucherFormPage() {
                 />
               </View>
             </View>
+
             <View style={s.row}>
               <View style={[s.field, { flex: 1 }]}>
                 <Text style={s.label}>Mỗi khách dùng tối đa</Text>
@@ -1143,27 +1341,36 @@ export default function VoucherFormPage() {
                 </View>
               </View>
             </View>
+
             <View style={s.row}>
               <View style={[s.field, { flex: 1 }]}>
-                <Text style={s.label}>Thời gian bắt đầu</Text>
-
+                <Text style={s.label}>
+                  Thời gian bắt đầu <Text style={s.required}>*</Text>
+                </Text>
 
                 <DateTimePickerInput
                   value={form.startDate}
                   onChange={(v) => updateField('startDate', v)}
                 />
 
+                <Text style={s.dateTimeHint}>
+                  Chọn ngày và giờ bắt đầu áp dụng voucher.
+                </Text>
               </View>
 
               <View style={[s.field, { flex: 1 }]}>
-                <Text style={s.label}>Thời gian kết thúc</Text>
-
+                <Text style={s.label}>
+                  Thời gian kết thúc <Text style={s.required}>*</Text>
+                </Text>
 
                 <DateTimePickerInput
                   value={form.endDate}
                   onChange={(v) => updateField('endDate', v)}
                 />
 
+                <Text style={s.dateTimeHint}>
+                  Chọn ngày và giờ kết thúc áp dụng voucher.
+                </Text>
               </View>
             </View>
           </View>
@@ -1183,12 +1390,6 @@ export default function VoucherFormPage() {
           </TouchableOpacity>
         </View>
 
-        <View style={s.testActions}>
-          <TouchableOpacity style={s.testBtn} onPress={handleTestApply}>
-            <Text style={s.testText}>Test apply voucher</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -1200,9 +1401,11 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: isMobile ? '#FFF' : '#F8FAFC',
   },
+
   scroll: {
     flex: 1,
   },
+
   mobileBackHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1213,11 +1416,13 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+
   mobileBackTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
   },
+
   pageHeader: {
     paddingHorizontal: 24,
     paddingTop: 24,
@@ -1226,22 +1431,26 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+
   pageTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+
   pageTitle: {
     fontSize: 22,
     fontWeight: '800',
     color: '#0F172A',
   },
+
   pageSubtitle: {
     fontSize: 13,
     color: '#94A3B8',
     marginTop: 4,
     marginLeft: 32,
   },
+
   formSection: {
     marginHorizontal: isMobile ? 16 : 20,
     marginTop: isMobile ? 16 : 20,
@@ -1250,16 +1459,26 @@ const s = StyleSheet.create({
     padding: isMobile ? 16 : 20,
     borderWidth: isMobile ? 0 : 1,
     borderColor: '#E2E8F0',
+    position: 'relative',
+    zIndex: 20,
   },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 16,
   },
+
   field: {
     marginBottom: 14,
   },
+
+  hotelSelectField: {
+    position: 'relative',
+    zIndex: 100,
+  },
+
   label: {
     fontSize: 12,
     fontWeight: '600',
@@ -1268,9 +1487,11 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
+
   required: {
     color: '#EF4444',
   },
+
   input: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
@@ -1281,39 +1502,125 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: '#1E293B',
   },
+
+  inputDisabled: {
+    opacity: 0.7,
+  },
+
+  hotelSearchBox: {
+    position: 'relative',
+    zIndex: 120,
+  },
+
+  hotelSuggestionBox: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    maxHeight: 280,
+    overflow: 'hidden',
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    elevation: 8,
+  },
+
+  hotelSuggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+
+  hotelSuggestionItemActive: {
+    backgroundColor: '#F0FDFA',
+  },
+
+  hotelSuggestionName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+
+  hotelSuggestionNameActive: {
+    color: '#0D9488',
+  },
+
+  hotelSuggestionAddress: {
+    marginTop: 3,
+    fontSize: 12,
+    color: '#64748B',
+  },
+
+  hotelSelectedText: {
+    marginLeft: 10,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0D9488',
+  },
+
+  hotelSuggestionEmpty: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+
+  hotelSuggestionEmptyText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+
   row: {
     flexDirection: isMobile ? 'column' : 'row',
     gap: 12,
   },
+
   segment: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderRadius: 10,
     padding: 4,
   },
+
   segmentItem: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 8,
   },
+
   segmentItemActive: {
     backgroundColor: '#0D9488',
   },
+
   segmentText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#64748B',
   },
+
   segmentTextActive: {
     color: '#FFF',
   },
+
   actions: {
     flexDirection: 'row',
     gap: 12,
     marginHorizontal: isMobile ? 16 : 20,
     marginTop: 24,
   },
+
   cancelBtn: {
     flex: 1,
     paddingVertical: 14,
@@ -1321,11 +1628,13 @@ const s = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
   },
+
   cancelText: {
     color: '#64748B',
     fontSize: 14,
     fontWeight: '700',
   },
+
   submitBtn: {
     flex: 2,
     paddingVertical: 14,
@@ -1333,19 +1642,23 @@ const s = StyleSheet.create({
     backgroundColor: '#0D9488',
     alignItems: 'center',
   },
+
   submitBtnDisabled: {
     opacity: 0.6,
   },
+
   submitText: {
     color: '#FFF',
     fontSize: 14,
     fontWeight: '700',
   },
+
   roomTypeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
+
   roomTypeItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1358,24 +1671,29 @@ const s = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     minWidth: isMobile ? ('100%' as any) : 180,
   },
+
   roomTypeItemSelected: {
     backgroundColor: '#F0FDFA',
     borderColor: '#99F6E4',
   },
+
   roomTypeText: {
     fontSize: 14,
     color: '#64748B',
     fontWeight: '600',
   },
+
   roomTypeTextSelected: {
     color: '#0D9488',
     fontWeight: '800',
   },
+
   roomTypeHint: {
     marginTop: 8,
     fontSize: 12,
     color: '#94A3B8',
   },
+
   noticeBox: {
     marginHorizontal: isMobile ? 16 : 20,
     marginTop: 16,
@@ -1384,40 +1702,30 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
   },
+
   noticeSuccess: {
     backgroundColor: '#F0FDFA',
     borderColor: '#99F6E4',
   },
+
   noticeError: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
   },
+
   noticeText: {
     fontSize: 14,
     fontWeight: '700',
   },
+
   noticeSuccessText: {
     color: '#0F766E',
   },
+
   noticeErrorText: {
     color: '#DC2626',
   },
-  testActions: {
-    marginHorizontal: isMobile ? 16 : 20,
-    marginTop: 12,
-  },
-  testBtn: {
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#99F6E4',
-    alignItems: 'center',
-  },
-  testText: {
-    color: '#0F766E',
-    fontWeight: '800',
-  },
+
   templateRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1437,58 +1745,31 @@ const s = StyleSheet.create({
   templateText: {
     color: '#0F766E',
     fontWeight: '700',
-    fontSize: 12, 
-  },
-  
-  dateTimePickerBox: {
-    gap: 10,
-  },
-
-  timeWheelWrap: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  timeWheelColumn: {
-    flex: 1,
-  },
-
-  timeWheelLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    marginBottom: 6,
   },
 
-  timeWheel: {
-    height: 150,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingVertical: 6,
+  dateTimeHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
   },
-
-  timeWheelItem: {
-    height: 36,
-    justifyContent: 'center',
+  dateTimeInline: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 6,
-    borderRadius: 8,
+    gap: 8,
   },
 
-  timeWheelItemActive: {
-    backgroundColor: '#0D9488',
-  },
-
-  timeWheelText: {
-    fontSize: 14,
-    fontWeight: '700',
+  timeColon: {
+    fontSize: 18,
+    fontWeight: '900',
     color: '#64748B',
   },
 
-  timeWheelTextActive: {
-    color: '#FFFFFF',
+  timeInput: {
+    width: 64,
+    textAlign: 'center',
+    fontWeight: '800',
   },
 
 });

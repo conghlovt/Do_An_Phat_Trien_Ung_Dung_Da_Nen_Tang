@@ -1,6 +1,16 @@
 import apiInstance from '../../login/shared/api/api.instance';
 
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+
+
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CHECKED_IN'
+  | 'PAYMENT_PENDING'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+
 
 export interface Booking {
   id: string;
@@ -8,10 +18,21 @@ export interface Booking {
   checkOut: string;
   totalPrice: number;
   status: BookingStatus;
-  user: { username: string; phone: string | null };
-  room: { name: string };
-}
 
+  user: {
+    username: string;
+    phone: string | null;
+  };
+
+  room: {
+    name: string;
+  };
+
+  property?: {
+    id: string;
+    name: string;
+  };
+}
 export interface HotelAddress {
   id?: string;
   addressLine: string;

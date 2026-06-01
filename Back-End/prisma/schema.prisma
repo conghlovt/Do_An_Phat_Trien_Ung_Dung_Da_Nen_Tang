@@ -620,10 +620,12 @@ enum UserStatus {
   banned
 }
 
+
 enum BookingStatus {
   PENDING
   CONFIRMED
   CHECKED_IN
+  PAYMENT_PENDING
   CANCELLED
   COMPLETED
 }

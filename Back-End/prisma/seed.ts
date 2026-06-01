@@ -280,6 +280,9 @@ async function main() {
 
   await seedHotelCards();
 
+  await seedHotelBookingsForStats();
+
+
   await seedVouchers();
 
   console.log('--- Hoàn tất ---');
@@ -1253,7 +1256,342 @@ const seedHotelCards = async () => {
   console.log(`✅ Seeded ${allHotelCards.length} hotel cards, hotels, amenities, room types, room units, pricing và inventory thành công.`);
 };
 
+const seedHotelBookingsForStats = async () => {
+  console.log('🌱 Seeding booking/doanh thu cho thống kê khách sạn...');
 
+  const partner = await prisma.user.findUnique({
+    where: { email: 'partner@gmail.com' },
+  });
+
+  const customer = await prisma.user.findUnique({
+    where: { email: 'customer@gmail.com' },
+  });
+
+  if (!partner || !customer) {
+    console.log('⚠ Không tìm thấy partner hoặc customer để seed booking thống kê.');
+    return;
+  }
+
+  const oldPartnerProperties = await prisma.property.findMany({
+    where: {
+      ownerId: partner.id,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const oldPropertyIds = oldPartnerProperties.map((property) => property.id);
+
+  if (oldPropertyIds.length > 0) {
+    await prisma.review.deleteMany({
+      where: {
+        booking: {
+          propertyId: {
+            in: oldPropertyIds,
+          },
+        },
+      },
+    });
+
+    await prisma.booking.deleteMany({
+      where: {
+        propertyId: {
+          in: oldPropertyIds,
+        },
+      },
+    });
+
+    console.log('✔ Đã xóa toàn bộ booking cũ của partner');
+  }
+
+  /**
+   * Lấy đúng 10 khách sạn đang hiển thị trên trang chủ partner.
+   * Trang chủ đang hiển thị New Urban Hotel 20, 19, 18...
+   * nên dùng sortOrder desc.
+   */
+  const hotelCards = await prisma.hotelCard.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: {
+      sortOrder: 'desc',
+    },
+    take: 10,
+  });
+
+  if (!hotelCards.length) {
+    console.log('⚠ Không có hotelCard để seed booking thống kê.');
+    return;
+  }
+
+  const hotelIds = hotelCards.map((card) => card.id);
+
+  const hotels = await prisma.hotel.findMany({
+    where: {
+      id: {
+        in: hotelIds,
+      },
+      ownerId: partner.id,
+    },
+    include: {
+      address: true,
+    },
+  });
+
+  const hotelById = new Map<string, (typeof hotels)[number]>(
+    hotels.map((hotel) => [hotel.id, hotel])
+  );
+
+  const orderedHotels = hotelCards
+    .map((card) => hotelById.get(card.id))
+    .filter(Boolean) as typeof hotels;
+
+  if (!orderedHotels.length) {
+    console.log('⚠ Không tìm thấy Hotel tương ứng với HotelCard.');
+    return;
+  }
+
+  const roomPlans = [
+    {
+      name: 'Phòng Standard',
+      type: 'Standard',
+      price: 700000,
+      capacity: 2,
+      totalRooms: 10,
+      available: 10,
+    },
+    {
+      name: 'Phòng Deluxe',
+      type: 'Deluxe',
+      price: 1100000,
+      capacity: 2,
+      totalRooms: 8,
+      available: 8,
+    },
+    {
+      name: 'Phòng Suite',
+      type: 'Suite',
+      price: 1800000,
+      capacity: 4,
+      totalRooms: 4,
+      available: 4,
+    },
+  ];
+
+  const propertyIds: string[] = [];
+  const roomIdsByPropertyId = new Map<string, string[]>();
+
+  for (const hotel of orderedHotels) {
+    let property = await prisma.property.findFirst({
+      where: {
+        ownerId: partner.id,
+        name: hotel.name,
+      },
+      include: {
+        rooms: true,
+      },
+    });
+
+    if (!property) {
+      property = await prisma.property.create({
+        data: {
+          name: hotel.name,
+          description:
+            hotel.description ||
+            `Cơ sở lưu trú đồng bộ từ khách sạn ${hotel.name} để seed booking thống kê.`,
+          address:
+            hotel.address?.fullAddress ||
+            hotel.address?.addressLine ||
+            `Địa chỉ ${hotel.name}`,
+          city: hotel.address?.city || 'Hà Nội',
+          type: 'Hotel',
+          status: 'ACTIVE',
+          ownerId: partner.id,
+          images: [],
+          amenities: ['Wi-Fi miễn phí', 'Lễ tân 24/24', 'Điều hoà'],
+        } as any,
+        include: {
+          rooms: true,
+        },
+      });
+    }
+
+    propertyIds.push(property.id);
+
+    const roomIds: string[] = [];
+
+    for (const plan of roomPlans) {
+      let room = await prisma.room.findFirst({
+        where: {
+          propertyId: property.id,
+          name: plan.name,
+        },
+      });
+
+      if (!room) {
+        room = await prisma.room.create({
+          data: {
+            propertyId: property.id,
+            name: plan.name,
+            type: plan.type,
+            price: plan.price,
+            capacity: plan.capacity,
+            totalRooms: plan.totalRooms,
+            available: plan.available,
+          } as any,
+        });
+      } else {
+        room = await prisma.room.update({
+          where: {
+            id: room.id,
+          },
+          data: {
+            type: plan.type,
+            price: plan.price,
+            capacity: plan.capacity,
+            totalRooms: plan.totalRooms,
+            available: plan.available,
+          } as any,
+        });
+      }
+
+      roomIds.push(room.id);
+    }
+
+    roomIdsByPropertyId.set(property.id, roomIds);
+  }
+
+  /**
+   * Xóa review trước booking để tránh lỗi foreign key.
+   */
+  await prisma.review.deleteMany({
+    where: {
+      booking: {
+        propertyId: {
+          in: propertyIds,
+        },
+      },
+    },
+  });
+
+  await prisma.booking.deleteMany({
+    where: {
+      propertyId: {
+        in: propertyIds,
+      },
+    },
+  });
+
+  console.log('✔ Đã xóa booking/review thống kê cũ của các khách sạn seed');
+
+  const statusPattern = [
+    'CHECKED_IN',
+    'PAYMENT_PENDING',
+    'PAYMENT_PENDING',
+    'COMPLETED',
+    'COMPLETED',
+    'CANCELLED',
+    'CONFIRMED',
+    'PENDING',
+  ];
+  let totalBookings = 0;
+  let totalRevenue = 0;
+
+  for (let hotelIndex = 0; hotelIndex < orderedHotels.length; hotelIndex++) {
+    const hotel = orderedHotels[hotelIndex];
+
+    const property = await prisma.property.findFirst({
+      where: {
+        ownerId: partner.id,
+        name: hotel.name,
+      },
+      include: {
+        rooms: true,
+      },
+    });
+
+    if (!property) continue;
+
+    const roomIds = roomIdsByPropertyId.get(property.id) || [];
+
+    if (!roomIds.length) continue;
+
+    /**
+     * Mỗi khách sạn tạo 18 booking.
+     * 6 booking đầu trong 6 ngày gần nhất.
+     * Các booking còn lại rải trong 1 năm.
+     */
+    for (let bookingIndex = 0; bookingIndex < 18; bookingIndex++) {
+      const roomId = roomIds[bookingIndex % roomIds.length];
+
+      const room = await prisma.room.findUnique({
+        where: {
+          id: roomId,
+        },
+      });
+
+      if (!room) continue;
+
+      const daysAgo =
+        bookingIndex < 6
+          ? bookingIndex
+          : (hotelIndex * 7 + bookingIndex * 11) % 365;
+
+      const checkIn = new Date();
+      checkIn.setDate(checkIn.getDate() - daysAgo);
+      checkIn.setHours(14, Math.max(0, 59 - hotelIndex), 0, 0);
+
+      const checkOut = new Date(checkIn);
+      checkOut.setDate(checkOut.getDate() + 1 + (bookingIndex % 2));
+      checkOut.setHours(12, 0, 0, 0);
+
+      const status = statusPattern[
+        (hotelIndex + bookingIndex) % statusPattern.length
+      ] as any;
+
+      const nights = bookingIndex % 2 === 0 ? 1 : 2;
+
+      const totalPrice =
+        Number(room.price || 700000) * nights +
+        hotelIndex * 50000 +
+        bookingIndex * 30000;
+
+      await prisma.booking.create({
+        data: {
+          userId: customer.id,
+          propertyId: property.id,
+          roomId: room.id,
+          checkIn,
+          checkOut,
+          guests: 1 + (bookingIndex % 3),
+          totalPrice,
+          status,
+          voucherCode:
+            bookingIndex % 4 === 0
+              ? 'FLASH30'
+              : bookingIndex % 5 === 0
+                ? 'VIP25'
+                : null,
+        } as any,
+      });
+
+      totalBookings += 1;
+
+      if (status === 'COMPLETED') {
+        totalRevenue += totalPrice;
+      }
+    }
+  }
+
+  console.log(
+    `✔ Đã seed ${totalBookings} booking cho ${orderedHotels.length} khách sạn`
+  );
+
+  console.log(
+    `✔ Doanh thu hoàn thành demo: ${totalRevenue.toLocaleString('vi-VN')}đ`
+  );
+};
 const seedVouchers = async () => {
   console.log('🌱 Seeding vouchers...');
 
@@ -1281,14 +1619,7 @@ const seedVouchers = async () => {
     return;
   }
 
-  // Xóa voucher khách hàng mới theo yêu cầu: không dùng WELCOME10 nữa
-  await prisma.voucher.deleteMany({
-    where: {
-      code: 'WELCOME10',
-    },
-  });
 
-  console.log('✔ Đã xóa voucher WELCOME10');
 
   const voucherTemplates = [
     {
@@ -1481,8 +1812,29 @@ const seedVouchers = async () => {
     },
   ];
 
-  for (const hotel of hotels) {
-    for (const voucher of voucherTemplates) {
+await prisma.voucher.deleteMany({
+    where: {
+      hotelId: {
+        in: hotels.map((hotel) => hotel.id),
+      },
+    },
+  });
+
+  console.log('✔ Đã xóa voucher cũ của các khách sạn partner');
+
+  let totalSeeded = 0;
+
+  for (let hotelIndex = 0; hotelIndex < hotels.length; hotelIndex++) {
+    const hotel = hotels[hotelIndex];
+
+    const selectedTemplates = Array.from({ length: 5 }, (_, offset) => {
+      const voucherIndex = (hotelIndex + offset * 2) % voucherTemplates.length;
+      return voucherTemplates[voucherIndex];
+    });
+
+    for (const voucher of selectedTemplates) {
+      if (!voucher) continue;
+
       await prisma.voucher.upsert({
         where: {
           hotelId_code: {
@@ -1507,11 +1859,13 @@ const seedVouchers = async () => {
           status: 'ACTIVE',
         } as any,
       });
+
+      totalSeeded += 1;
     }
   }
 
   console.log(
-    `✔ Đã seed ${voucherTemplates.length} voucher cho ${hotels.length} khách sạn`
+    `✔ Đã seed ${totalSeeded} voucher, mỗi khách sạn có 5 voucher khác nhau`
   );
 };
 
