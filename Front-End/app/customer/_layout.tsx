@@ -402,9 +402,11 @@ export default function RootLayout() {
         <FavoritesProvider>
           <ThemedStatusBar />
           <AuthRestorer>
-            <ResponsiveAppWrapper>
-              <CustomerStack />
-            </ResponsiveAppWrapper>
+            <VoucherCollectProvider>
+              <ResponsiveAppWrapper>
+                <CustomerStack />
+              </ResponsiveAppWrapper>
+            </VoucherCollectProvider>
           </AuthRestorer>
         </FavoritesProvider>
       </ThemeProvider>
