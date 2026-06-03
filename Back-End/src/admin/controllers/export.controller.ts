@@ -17,6 +17,8 @@ export const exportResource = async (req: Request, res: Response) => {
       requesterRole: (req as any).user?.role,
       search: getSearchQuery(req),
       status: getStringQuery(req, 'status'),
+      scope: getStringQuery(req, 'scope'),
+      hotelId: getStringQuery(req, 'hotelId'),
       role: getStringQuery(req, 'role'),
       city: getStringQuery(req, 'city'),
       propertyType: getStringQuery(req, 'propertyType'),

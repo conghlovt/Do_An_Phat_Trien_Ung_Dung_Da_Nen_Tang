@@ -64,15 +64,27 @@ const saveCollectedData = (data: CollectedVouchers) => {
   fs.writeFileSync(COLLECTED_FILE, JSON.stringify(data, null, 2));
 };
 
+const isVoucherInDateRange = (voucher: Voucher) => {
+  const constraints = (voucher.constraints || {}) as any;
+  const now = Date.now();
+  if (constraints.startDate && new Date(constraints.startDate).getTime() > now) {
+    return false;
+  }
+  if (constraints.endDate && new Date(constraints.endDate).getTime() < now) {
+    return false;
+  }
+  return true;
+};
+
 export class OffersService {
   /**
    * Get all active offers, grouped by category
    */
   async getGroupedOffers(userId?: string) {
-    // Fetch distinct active vouchers (grouping by code since they might be duplicated across hotels)
-    const vouchers = await prisma.voucher.findMany({
+    const customerVouchers = await prisma.voucher.findMany({
       where: {
         status: "ACTIVE",
+        hotelId: null,
       },
       distinct: ["code"],
       include: {
@@ -81,6 +93,21 @@ export class OffersService {
         },
       },
     });
+    const hotelVouchers = await prisma.voucher.findMany({
+      where: {
+        status: "ACTIVE",
+        hotelId: { not: null },
+      },
+      distinct: ["code"],
+      include: {
+        hotel: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+      take: 12,
+    });
+    const vouchers = customerVouchers.filter(isVoucherInDateRange);
+    const validHotelVouchers = hotelVouchers.filter(isVoucherInDateRange);
 
     const flashDeals: FormattedOffer[] = [];
     const customerRewards: FormattedOffer[] = [];
@@ -197,17 +224,20 @@ export class OffersService {
         code.includes("HOURLY")
       ) {
         customerRewards.push(formatted);
-      } else if (v.hotelId) {
-        hotelOffers.push({
-          ...formatted,
-          image:
-            "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=600",
-          benefit: formatted.collectInfo.discountLabel,
-          note: v.name,
-        });
       } else {
         nearbyOffers.push(formatted);
       }
+    });
+
+    validHotelVouchers.forEach((v) => {
+      const formatted = formatOffer(v);
+      hotelOffers.push({
+        ...formatted,
+        image:
+          "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=600",
+        benefit: formatted.collectInfo.discountLabel,
+        note: v.name,
+      });
     });
 
     // If nearbyOffers is empty, fallback some offers for UI balance
@@ -231,7 +261,6 @@ export class OffersService {
           !v.hotelId
         );
       });
-      // If there are literally no non-hotel generic offers left, use a slice of everything as "nearby"
       if (rest.length === 0 && vouchers.length > 0) {
         const fallback = vouchers.slice(0, 3).map(formatOffer);
         nearbyOffers.push(...fallback);
@@ -258,8 +287,8 @@ export class OffersService {
       where: { id: offerId },
     });
 
-    if (!voucher) {
-      throw new Error("Offer not found");
+    if (!voucher || voucher.hotelId || voucher.status !== "ACTIVE" || !isVoucherInDateRange(voucher)) {
+      throw new Error("Offer not found or not collectable");
     }
 
     const data = getCollectedData();
@@ -307,6 +336,7 @@ export class OffersService {
           in: collectedCodes,
         },
         status: "ACTIVE",
+        hotelId: null,
       },
       distinct: ["code"],
       include: {
@@ -316,7 +346,7 @@ export class OffersService {
       },
     });
 
-    const walletVouchers = vouchers.map((v) => {
+    const walletVouchers = vouchers.filter(isVoucherInDateRange).map((v) => {
       const actions = v.actions as any[];
       let discountType = "percent";
       let discountValue = 0;

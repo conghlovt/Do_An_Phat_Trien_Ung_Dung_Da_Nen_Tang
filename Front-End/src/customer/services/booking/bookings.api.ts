@@ -16,6 +16,24 @@ export type CreateBookingPayload = {
   durationValue?: number;
   customerName?: string;
   customerPhone?: string;
+  voucherCode?: string;
+};
+
+export type CheckoutVoucher = {
+  id: string;
+  hotelId?: string | null;
+  code: string;
+  name: string;
+  discount: number;
+  finalTotal: number;
+  discountType?: string;
+  discountValue?: number;
+};
+
+export type ValidateVoucherResponse = {
+  voucher: CheckoutVoucher;
+  discount: number;
+  finalTotal: number;
 };
 
 export type BookingPaymentQr = {
@@ -104,6 +122,28 @@ export type BookingPaymentStatus = {
 export const bookingsApi = {
   create: async (payload: CreateBookingPayload): Promise<CreateBookingResponse> => {
     const res = await apiInstance.post<ApiResponse<CreateBookingResponse>>(BASE, payload);
+    return res.data.data;
+  },
+
+  getCheckoutVouchers: async (
+    hotelId: string,
+    params?: { roomTypeId?: string; subtotal?: number },
+  ): Promise<CheckoutVoucher[]> => {
+    const res = await apiInstance.get<ApiResponse<{ vouchers: CheckoutVoucher[] }>>(
+      `/api/customer/hotels/${hotelId}/vouchers`,
+      { params },
+    );
+    return res.data.data.vouchers || [];
+  },
+
+  validateVoucher: async (
+    hotelId: string,
+    payload: { code: string; roomTypeId?: string; subtotal: number },
+  ): Promise<ValidateVoucherResponse> => {
+    const res = await apiInstance.post<ApiResponse<ValidateVoucherResponse>>(
+      `/api/customer/hotels/${hotelId}/vouchers/validate`,
+      payload,
+    );
     return res.data.data;
   },
 

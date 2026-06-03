@@ -18,6 +18,15 @@ const makeNotFoundError = (message: string) =>
 
 const normalizeCode = (code?: string | null) => String(code || '').trim().toUpperCase();
 
+const voucherScopeWhere = (hotelId: string) => ({
+  OR: [{ hotelId }, { hotelId: null }],
+});
+
+const pickScopedVoucher = (vouchers: any[], hotelId: string) =>
+  vouchers.find((voucher) => voucher.hotelId === hotelId) ||
+  vouchers.find((voucher) => voucher.hotelId === null) ||
+  null;
+
 export const formatVoucherForCustomer = (voucher: any, subtotal?: number) => {
   const rules = normalizeArray(voucher.rules);
   const actions = normalizeArray(voucher.actions);
@@ -57,7 +66,7 @@ export const listUsableVouchers = async (
 ) => {
   const vouchers = await tx.voucher.findMany({
     where: {
-      hotelId: params.hotelId,
+      ...voucherScopeWhere(params.hotelId),
       status: 'ACTIVE',
     },
     orderBy: { createdAt: 'desc' },
@@ -69,6 +78,11 @@ export const listUsableVouchers = async (
   };
 
   return vouchers
+    .sort((a: any, b: any) => {
+      if (a.hotelId === params.hotelId && b.hotelId !== params.hotelId) return -1;
+      if (a.hotelId !== params.hotelId && b.hotelId === params.hotelId) return 1;
+      return 0;
+    })
     .filter((v: any) => {
       const cValid = validateConstraints(v.constraints, context).valid;
       const rValid = validateRules(v.rules, context).valid;
@@ -95,9 +109,14 @@ export const validateVoucher = async (
   const code = normalizeCode(params.code);
   if (!code) throw makeValidationError('Vui lòng nhập mã voucher.');
 
-  const voucher = await tx.voucher.findFirst({
-    where: { hotelId: params.hotelId, code, status: 'ACTIVE' },
+  const vouchers = await tx.voucher.findMany({
+    where: {
+      ...voucherScopeWhere(params.hotelId),
+      code,
+      status: 'ACTIVE',
+    },
   });
+  const voucher = pickScopedVoucher(vouchers, params.hotelId);
 
   if (!voucher) throw makeNotFoundError('Không tìm thấy voucher.');
 
@@ -156,9 +175,13 @@ export const decrementVoucherUsageByCode = async (
   const normalizedCode = normalizeCode(code);
   if (!normalizedCode) return;
 
-  const voucher = await tx.voucher.findFirst({
-    where: { hotelId, code: normalizedCode },
+  const vouchers = await tx.voucher.findMany({
+    where: {
+      ...voucherScopeWhere(hotelId),
+      code: normalizedCode,
+    },
   });
+  const voucher = pickScopedVoucher(vouchers, hotelId);
 
   if (!voucher) return;
 

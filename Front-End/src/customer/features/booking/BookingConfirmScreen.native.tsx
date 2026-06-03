@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ import {
   Tag,
 } from 'lucide-react-native';
 import ImageWithFallback from '@/src/customer/components/common/ImageWithFallback';
-import { bookingsApi, type BookingPaymentQr, type CreateQrBookingResponse } from '@/src/customer/services/booking/bookings.api';
+import { bookingsApi, type BookingPaymentQr, type CheckoutVoucher, type CreateQrBookingResponse, type ValidateVoucherResponse } from '@/src/customer/services/booking/bookings.api';
 import { useAuth } from '@/src/customer/hooks/useAuth';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { getParamText } from '@/src/customer/navigation/routeParams';
@@ -249,14 +250,29 @@ export default function BookingConfirmScreen() {
   const [expiredNoticePaymentId, setExpiredNoticePaymentId] = useState<string | null>(null);
   const [showPaymentMethodSheet, setShowPaymentMethodSheet] = useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<PaymentMethodId | null>('vietqr');
+  const [voucherCode, setVoucherCode] = useState('');
+  const [availableVouchers, setAvailableVouchers] = useState<CheckoutVoucher[]>([]);
+  const [appliedVoucher, setAppliedVoucher] = useState<ValidateVoucherResponse | null>(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
   const isWebLayout = false;
 
   const hotelName = getParamText(params.hotelName) || 'Khách sạn';
+  const hotelId = getParamText(params.hotelId) || '';
+  const roomId = getParamText(params.roomId) || '';
   const roomName = getParamText(params.roomName) || 'STANDARD ROOM';
   const hotelAddress = getParamText(params.hotelAddress) || 'Địa chỉ khách sạn đang cập nhật';
   const roomImage = getParamText(params.roomImage) || DEFAULT_ROOM_IMAGE;
   const amount = Math.round(Number(getParamText(params.price)) || 0);
   const price = formatMoney(String(amount));
+  const payableAmount = appliedVoucher
+    ? Math.max(0, Math.round(Number(appliedVoucher.finalTotal || amount)))
+    : amount;
+  const payablePrice = formatMoney(String(payableAmount));
+  const discountAmount = appliedVoucher
+    ? Math.max(0, Math.round(Number(appliedVoucher.discount || 0)))
+    : 0;
+  const discountPrice = formatMoney(String(discountAmount));
   const bookingType = getParamText(params.bookingType) || 'Theo giờ';
   const durationLabel = getBookingDurationLabel(bookingType, getParamText(params.hours));
   const checkIn = useMemo(() => parseBookingPoint(getParamText(params.checkIn)), [params.checkIn]);
@@ -276,6 +292,24 @@ export default function BookingConfirmScreen() {
   const activePaymentId = paymentSession?.payment.id;
   const activePaymentExpiresAt = paymentSession?.payment.expiresAt;
   const activePaymentGraceExpiresAt = paymentSession?.payment.graceExpiresAt;
+
+  useEffect(() => {
+    if (!hotelId || !amount) return;
+
+    let active = true;
+    bookingsApi
+      .getCheckoutVouchers(hotelId, { roomTypeId: roomId || undefined, subtotal: amount })
+      .then((vouchers) => {
+        if (active) setAvailableVouchers(vouchers);
+      })
+      .catch(() => {
+        if (active) setAvailableVouchers([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [amount, hotelId, roomId]);
 
   useEffect(() => {
     if (!activePaymentId || confirmed) return;
@@ -382,6 +416,40 @@ export default function BookingConfirmScreen() {
     };
   }, [paymentSession, confirmed]);
 
+  const handleApplyVoucher = async (codeOverride?: string) => {
+    const code = String(codeOverride || voucherCode).trim();
+    if (!hotelId || !roomId) {
+      setVoucherError('Không đủ thông tin phòng để áp dụng ưu đãi.');
+      return;
+    }
+    if (!code) {
+      setVoucherError('Vui lòng nhập mã ưu đãi.');
+      return;
+    }
+
+    setVoucherLoading(true);
+    setVoucherError(null);
+    try {
+      const result = await bookingsApi.validateVoucher(hotelId, {
+        code,
+        roomTypeId: roomId,
+        subtotal: amount,
+      });
+      setAppliedVoucher(result);
+      setVoucherCode(result.voucher.code);
+    } catch (error) {
+      setAppliedVoucher(null);
+      setVoucherError(getErrorMessage(error));
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherError(null);
+  };
+
   const handleConfirmBooking = async () => {
     if (saving) return;
     if (!selectedPaymentMethodId) {
@@ -396,15 +464,16 @@ export default function BookingConfirmScreen() {
     setPaymentError(null);
     try {
       console.log('[handleConfirmBooking] Creating booking with:', {
-        hotelId: getParamText(params.hotelId),
-        roomId: getParamText(params.roomId),
+        hotelId,
+        roomId,
         paymentMethod: apiPaymentMethod,
         amount,
+        voucherCode: appliedVoucher?.voucher.code,
       });
 
       const result = await bookingsApi.create({
-        hotelId: getParamText(params.hotelId) || '',
-        roomId: getParamText(params.roomId) || '',
+        hotelId,
+        roomId,
         paymentMethod: apiPaymentMethod,
         bookingType,
         checkIn: toBookingIso(checkIn),
@@ -413,6 +482,7 @@ export default function BookingConfirmScreen() {
         amount,
         durationValue: Number(getParamText(params.hours)) || undefined,
         customerName,
+        voucherCode: appliedVoucher?.voucher.code,
         customerPhone: customerPhone === 'Chưa cập nhật' ? undefined : customerPhone,
       });
 
@@ -841,13 +911,66 @@ export default function BookingConfirmScreen() {
         <View style={[styles.band, isWebLayout && styles.webBand]} />
 
         <View style={[styles.section, isWebLayout && styles.webSection]}>
-          <Pressable style={styles.actionRow}>
+          <View style={styles.voucherHeader}>
             <View style={styles.rowLabelWrap}>
               <Tag size={20} color={PRIMARY} fill={PRIMARY_FILL} />
               <Text style={styles.actionTitle}>Ưu đãi</Text>
             </View>
-            <ChevronRight size={24} color={PRIMARY} strokeWidth={2.6} />
-          </Pressable>
+            {appliedVoucher && (
+              <Pressable onPress={handleRemoveVoucher} hitSlop={8}>
+                <Text style={styles.removeVoucherText}>Bỏ mã</Text>
+              </Pressable>
+            )}
+          </View>
+          <View style={styles.voucherInputRow}>
+            <TextInput
+              value={voucherCode}
+              onChangeText={(value) => {
+                setVoucherCode(value.toUpperCase());
+                setVoucherError(null);
+              }}
+              placeholder="Nhập mã ưu đãi"
+              placeholderTextColor={TEXT_MUTED}
+              autoCapitalize="characters"
+              style={styles.voucherInput}
+              editable={!voucherLoading}
+            />
+            <Pressable
+              style={[styles.applyVoucherBtn, voucherLoading && styles.applyVoucherBtnDisabled]}
+              onPress={() => handleApplyVoucher()}
+              disabled={voucherLoading}
+            >
+              {voucherLoading ? (
+                <ActivityIndicator color={SURFACE} size="small" />
+              ) : (
+                <Text style={styles.applyVoucherText}>Áp dụng</Text>
+              )}
+            </Pressable>
+          </View>
+          {!!availableVouchers.length && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.voucherChipRow}>
+              {availableVouchers.slice(0, 6).map((voucher) => (
+                <Pressable
+                  key={voucher.id}
+                  style={[
+                    styles.voucherChip,
+                    appliedVoucher?.voucher.code === voucher.code && styles.voucherChipActive,
+                  ]}
+                  onPress={() => handleApplyVoucher(voucher.code)}
+                  disabled={voucherLoading}
+                >
+                  <Text style={styles.voucherChipCode}>{voucher.code}</Text>
+                  <Text style={styles.voucherChipMeta}>Giảm {formatMoney(String(voucher.discount || 0))}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+          {!!appliedVoucher && (
+            <Text style={styles.voucherSuccessText}>
+              Đã áp dụng {appliedVoucher.voucher.code}, giảm {discountPrice}.
+            </Text>
+          )}
+          {!!voucherError && <Text style={styles.voucherErrorText}>{voucherError}</Text>}
         </View>
 
         <View style={[styles.band, isWebLayout && styles.webBand]} />
@@ -858,9 +981,15 @@ export default function BookingConfirmScreen() {
             <Text style={styles.paymentLabel}>Tiền phòng</Text>
             <Text style={styles.paymentValue}>{price}</Text>
           </View>
+          {discountAmount > 0 && (
+            <View style={styles.paymentLine}>
+              <Text style={styles.paymentLabel}>Ưu đãi</Text>
+              <Text style={styles.discountValue}>-{discountPrice}</Text>
+            </View>
+          )}
           <View style={styles.paymentLine}>
             <Text style={styles.totalTitle}>Tổng thanh toán</Text>
-            <Text style={styles.totalTitle}>{price}</Text>
+            <Text style={styles.totalTitle}>{payablePrice}</Text>
           </View>
         </View>
 
@@ -921,7 +1050,7 @@ export default function BookingConfirmScreen() {
         <View style={styles.bottomSummaryRow}>
           <View>
             <Text style={styles.bottomLabel}>Tổng thanh toán</Text>
-            <Text style={styles.bottomPrice}>{price}</Text>
+            <Text style={styles.bottomPrice}>{payablePrice}</Text>
           </View>
           <Pressable style={[styles.bookButton, saving && styles.bookButtonDisabled]} onPress={handlePaymentButtonPress} disabled={saving}>
               <Text style={styles.bookButtonText}>
@@ -1216,6 +1345,94 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'right',
   },
+  voucherHeader: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  removeVoucherText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  voucherInputRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+    marginTop: 12,
+  },
+  voucherInput: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    color: TEXT_DARK,
+    fontSize: 15,
+    fontWeight: '700',
+    backgroundColor: '#fbfbfc',
+  },
+  applyVoucherBtn: {
+    minWidth: 96,
+    minHeight: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 14,
+  },
+  applyVoucherBtnDisabled: {
+    opacity: 0.7,
+  },
+  applyVoucherText: {
+    color: SURFACE,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  voucherChipRow: {
+    gap: 10,
+    paddingTop: 12,
+  },
+  voucherChip: {
+    minWidth: 118,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fbfbfc',
+  },
+  voucherChipActive: {
+    borderColor: PRIMARY,
+    backgroundColor: PRIMARY_FILL,
+  },
+  voucherChipCode: {
+    color: TEXT_DARK,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  voucherChipMeta: {
+    color: TEXT_MUTED,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  voucherSuccessText: {
+    color: '#15803d',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  voucherErrorText: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 10,
+  },
   actionRow: {
     minHeight: 54,
     flexDirection: 'row',
@@ -1252,6 +1469,11 @@ const styles = StyleSheet.create({
   paymentValue: {
     color: TEXT_DARK,
     fontSize: 16,
+  },
+  discountValue: {
+    color: '#15803d',
+    fontSize: 16,
+    fontWeight: '900',
   },
   totalTitle: {
     color: TEXT_DARK,

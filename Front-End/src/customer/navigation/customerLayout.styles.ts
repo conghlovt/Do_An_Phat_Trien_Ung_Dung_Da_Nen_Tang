@@ -76,13 +76,10 @@ export const styles = StyleSheet.create({
   webBrandRowCollapsed: {
     justifyContent: 'center',
   },
-  webLogoIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    backgroundColor: '#85c2a4',
-    alignItems: 'center',
-    justifyContent: 'center',
+  webLogoImage: {
+    width: 58,
+    height: 38,
+    borderRadius: 6,
   },
   webBrandCopy: {
     minWidth: 0,

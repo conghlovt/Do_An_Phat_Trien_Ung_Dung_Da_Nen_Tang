@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView, Image } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '../../../login/hooks/useAuth';
 import {
@@ -8,7 +8,6 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Hotel,
   ChevronLeft,
   ChevronRight,
   Calendar,
@@ -89,10 +88,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           // Expanded: logo + nút thu gọn
           <>
             <View style={styles.logoRow}>
-              <View style={styles.logoIcon}>
-                <Hotel size={18} color="#FFF" />
-              </View>
-              <Text style={styles.logoText}>StayBuddy</Text>
+              <Image source={require('../../../../assets/images/stayhub-logo.png')} style={styles.logoImage} resizeMode="contain" />
+              <Text style={styles.logoText}>StayHub</Text>
             </View>
             <TouchableOpacity onPress={onToggle} style={styles.toggleBtn}>
               <ChevronLeft size={16} color="#94A3B8" />
@@ -215,13 +212,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  logoIcon: {
-    width: 32,
+  logoImage: {
+    width: 54,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: '#0D9488',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 6,
   },
   logoText: {
     fontSize: 17,

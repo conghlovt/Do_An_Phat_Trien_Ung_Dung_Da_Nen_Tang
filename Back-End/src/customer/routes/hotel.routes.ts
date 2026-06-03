@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as hotelController from '../controllers/hotel.controller';
 import * as hotelCardController from '../controllers/hotelCard.controller';
+import * as voucherController from '../controllers/voucher.controller';
 import {
   hotelAvailabilityQuerySchema,
   hotelCardCityParamsSchema,
@@ -35,6 +36,22 @@ router.get('/:id', validate(hotelIdParamsSchema, 'params'), hotelController.getH
 
 // GET /api/customer/hotels/:id/rooms
 router.get('/:id/rooms', validate(hotelIdParamsSchema, 'params'), hotelController.getHotelRooms);
+
+// GET /api/customer/hotels/:id/vouchers
+router.get(
+  '/:id/vouchers',
+  ...customerOnly,
+  validate(hotelIdParamsSchema, 'params'),
+  voucherController.listHotelVouchers,
+);
+
+// POST /api/customer/hotels/:id/vouchers/validate
+router.post(
+  '/:id/vouchers/validate',
+  ...customerOnly,
+  validate(hotelIdParamsSchema, 'params'),
+  voucherController.validateHotelVoucher,
+);
 
 // GET /api/customer/hotels/:id/availability
 router.get(

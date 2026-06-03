@@ -19,6 +19,7 @@ import {
   Platform,
   Text,
   Pressable,
+  Image,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/src/customer/hooks/useAuth";
@@ -29,7 +30,6 @@ import {
   Compass,
   Gift,
   Home,
-  Hotel,
   LogOut,
   User,
 } from "lucide-react-native";
@@ -147,9 +147,11 @@ function ResponsiveAppWrapper({ children }: { children: React.ReactNode }) {
                   collapsed && styles.webBrandRowCollapsed,
                 ]}
               >
-                <View style={styles.webLogoIcon}>
-                  <Hotel size={20} color="#ffffff" strokeWidth={2.4} />
-                </View>
+                <Image
+                  source={require("../../assets/images/stayhub-logo.png")}
+                  style={styles.webLogoImage}
+                  resizeMode="contain"
+                />
                 {!collapsed && (
                   <View style={styles.webBrandCopy}>
                     <Text style={[styles.webBrandText, { color: brandColor }]}>

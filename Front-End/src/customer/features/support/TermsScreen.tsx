@@ -8,7 +8,7 @@ import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 const SECTIONS = [
   {
     title: 'Điều khoản sử dụng',
-    body: 'Người dùng cần cung cấp thông tin chính xác khi đăng ký, đặt phòng và thanh toán. StayBuddy có thể từ chối xử lý các yêu cầu có dấu hiệu gian lận hoặc vi phạm quy định.',
+    body: 'Người dùng cần cung cấp thông tin chính xác khi đăng ký, đặt phòng và thanh toán. StayHub có thể từ chối xử lý các yêu cầu có dấu hiệu gian lận hoặc vi phạm quy định.',
   },
   {
     title: 'Chính sách đặt phòng',

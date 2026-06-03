@@ -31,6 +31,7 @@ export const createBooking = async (
       durationValue: req.body.durationValue,
       customerName: req.body.customerName,
       customerPhone: req.body.customerPhone,
+      voucherCode: req.body.voucherCode,
     });
 
     return sendResponse(res, 201, 'Tạo booking thành công.', result);

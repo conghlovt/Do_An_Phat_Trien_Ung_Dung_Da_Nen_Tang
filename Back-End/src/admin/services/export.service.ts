@@ -22,6 +22,8 @@ export type ExportOptions = {
   requesterRole: string;
   search?: string | undefined;
   status?: string | undefined;
+  scope?: string | undefined;
+  hotelId?: string | undefined;
   role?: string | undefined;
   city?: string | undefined;
   propertyType?: string | undefined;
@@ -197,6 +199,8 @@ export const adminExportService = {
       const result = await voucherService.getAllVouchers({
         search: options.search,
         status: options.status,
+        scope: options.scope,
+        hotelId: options.hotelId,
         sortBy: options.sortBy,
         sortOrder: options.sortOrder,
         dateRange: options.dateRange,

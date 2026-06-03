@@ -1,7 +1,6 @@
 import { type Request, type Response } from 'express';
 import { voucherService } from '../services/voucher.service';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
-import { USER_MESSAGES } from '../../shared/utils/app-error.util';
 import {
   getSearchQuery,
   getStringQuery,
@@ -16,6 +15,8 @@ export const getAllVouchers = async (req: Request, res: Response) => {
     const result = await voucherService.getAllVouchers({
       search: getSearchQuery(req),
       status: getStringQuery(req, 'status'),
+      scope: getStringQuery(req, 'scope'),
+      hotelId: getStringQuery(req, 'hotelId'),
       page,
       limit,
       sortBy: getStringQuery(req, 'sortBy'),
@@ -30,11 +31,10 @@ export const getAllVouchers = async (req: Request, res: Response) => {
 
 export const createVoucher = async (req: Request, res: Response) => {
   try {
-    const { code, hotelId, discount, discountValue, type, discountType, expiry, startDate, endDate } = req.body;
-    if (!hotelId || !code || (discount === undefined && discountValue === undefined) || !(type || discountType) || !(expiry || endDate) || !startDate) {
-      return sendResponse(res, 400, USER_MESSAGES.VOUCHER_REQUIRED_FIELDS);
-    }
-    const voucher = await voucherService.createVoucher(req.body);
+    const voucher = await voucherService.createVoucher({
+      ...req.body,
+      scope: req.body?.scope || req.body?.typeScope || getStringQuery(req, 'scope'),
+    });
     return sendResponse(res, 201, 'Tạo voucher thành công.', voucher);
   } catch (error) {
     return sendError(res, error);

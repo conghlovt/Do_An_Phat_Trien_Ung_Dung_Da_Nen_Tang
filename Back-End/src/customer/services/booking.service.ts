@@ -8,6 +8,10 @@ import {
   countReservedRooms,
   type BookingRange,
 } from "../utils/roomAvailability.util";
+import {
+  incrementVoucherUsage,
+  validateVoucher,
+} from "../../shared/services/voucher-validation.service";
 
 type CreateCustomerBookingInput = {
   userId: string;
@@ -22,6 +26,7 @@ type CreateCustomerBookingInput = {
   durationValue?: number;
   customerName?: string;
   customerPhone?: string;
+  voucherCode?: string;
 };
 
 const CUSTOMER_BOOKING_TYPE_TO_DB: Record<
@@ -239,6 +244,7 @@ const normalizeBooking = (booking: any) => {
     customerName:
       booking.customerName || booking.user?.username || "Khách hàng",
     customerPhone: booking.customerPhone || undefined,
+    voucherCode: booking.voucherCode || undefined,
     status: getBookingStatusText(booking),
     paymentMethod: payment?.method || "VIETQR",
     paymentStatus: payment?.status || "PENDING",
@@ -398,6 +404,7 @@ export const createCustomerBooking = async (
     effectivePaymentMethod: paymentMethod,
     bookingType: input.bookingType,
     amount: input.amount,
+    voucherCode: input.voucherCode,
   });
 
   const checkIn = parseRequiredDate(input.checkIn, "Thời gian nhận phòng");
@@ -471,6 +478,32 @@ export const createCustomerBooking = async (
     const bookingCode = await generateBookingCode(tx);
     console.log("[createCustomerBooking] Booking code generated:", bookingCode);
 
+    const dbBookingType = CUSTOMER_BOOKING_TYPE_TO_DB[input.bookingType];
+    const submittedVoucherCode = String(input.voucherCode || "").trim();
+    let finalAmount = amount;
+    let appliedVoucherId: string | null = null;
+    let appliedVoucherCode: string | null = null;
+
+    if (submittedVoucherCode) {
+      const voucherResult = await validateVoucher(tx, {
+        hotelId: input.hotelId,
+        roomTypeId: roomType.id,
+        subtotal: amount,
+        code: submittedVoucherCode,
+        ...(dbBookingType ? { bookingType: dbBookingType } : {}),
+      });
+
+      finalAmount = Math.round(Number(voucherResult.finalTotal || amount));
+      if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+        throw new AppError(400, "VALIDATION_ERROR", {
+          userMessage: "Tổng tiền sau ưu đãi không hợp lệ.",
+        });
+      }
+
+      appliedVoucherId = voucherResult.voucher.id;
+      appliedVoucherCode = voucherResult.voucher.code;
+    }
+
     const booking = await tx.booking.create({
       data: {
         bookingCode,
@@ -480,23 +513,28 @@ export const createCustomerBooking = async (
         checkIn,
         checkOut,
         guests: input.guests,
-        totalPrice: amount,
-        bookingType: CUSTOMER_BOOKING_TYPE_TO_DB[input.bookingType],
+        totalPrice: finalAmount,
+        bookingType: dbBookingType,
         durationValue: input.durationValue,
         customerName: input.customerName,
         customerPhone: input.customerPhone,
+        voucherCode: appliedVoucherCode,
         status: "PENDING",
       } as any,
     });
 
     console.log("[createCustomerBooking] Booking created:", booking.id);
 
+    if (appliedVoucherId) {
+      await incrementVoucherUsage(tx, appliedVoucherId);
+    }
+
     if (paymentMethod === "PAY_AT_HOTEL") {
       console.log("[createCustomerBooking] Creating PAY_AT_HOTEL payment");
       await createPayAtHotelPayment(tx, {
         bookingId: booking.id,
         bookingCode,
-        amount,
+        amount: finalAmount,
       });
     } else {
       console.log("[createCustomerBooking] Creating VIETQR payment");
@@ -504,7 +542,7 @@ export const createCustomerBooking = async (
         bookingId: booking.id,
         bookingCode,
         hotelId: input.hotelId,
-        amount,
+        amount: finalAmount,
         attemptNo: 1,
       });
     }

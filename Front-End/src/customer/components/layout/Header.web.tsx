@@ -1,7 +1,7 @@
 import { styles } from "./Header.styles";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   MapPin,
@@ -20,8 +20,6 @@ import LocationPickerModal from "@/src/customer/components/layout/LocationPicker
 import { messagesApi } from "@/src/customer/services/messages/messages.api";
 
 const STAYHUB_COLOR = "#85c2a4";
-const STAYHUB_LIGHT = "#85c2a4";
-const STAYHUB_DARK = "#ffffff";
 const PRIMARY = "#85c2a4";
 
 interface HeaderProps {
@@ -40,7 +38,7 @@ export default function Header({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { selectedProvince, isLoading } = useLocationContext();
-  const { currentTheme, isDarkMode } = useThemeContext();
+  const { currentTheme } = useThemeContext();
   const { user, isAuthenticated, logout } = useAuth();
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -53,7 +51,6 @@ export default function Header({
     user?.email?.split("@")[0] ||
     "Khách hàng";
   const initial = displayName.slice(0, 1).toUpperCase();
-  const stayHubColor = isDarkMode ? STAYHUB_DARK : STAYHUB_LIGHT;
   const locationLabel = selectedProvince.selectedWard
     ? `${selectedProvince.selectedWard}, ${selectedProvince.selectedDistrict}`
     : selectedProvince.selectedDistrict
@@ -131,15 +128,11 @@ export default function Header({
           {!isScrolled && (
             <View style={[styles.topRow, styles.webTopRow]}>
               <View style={styles.brandBlock}>
-                <Text
-                  style={[
-                    styles.brand,
-                    styles.webBrand,
-                    { color: stayHubColor },
-                  ]}
-                >
-                  StayHub
-                </Text>
+                <Image
+                  source={require("../../../../assets/images/stayhub-logo.png")}
+                  style={{ width: 150, height: 58 }}
+                  resizeMode="contain"
+                />
                 <Text
                   style={[
                     styles.subtitle,

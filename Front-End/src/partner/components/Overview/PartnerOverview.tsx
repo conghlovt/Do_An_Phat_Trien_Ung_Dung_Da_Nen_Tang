@@ -221,7 +221,7 @@ export function PartnerOverview({ onNavigate }: Props) {
               <View style={styles.noImagePlaceholder}>
                 <Camera size={28} color={COLORS.textSecondary} />
                 <Text style={[styles.textSecondary, { marginTop: 8, fontSize: 13 }]}>Chưa có hình ảnh nào</Text>
-                <Text style={[styles.textSecondary, { fontSize: 12, marginTop: 4 }]}>Nhấn "Cập nhật" để thêm ảnh cho khách sạn</Text>
+                <Text style={[styles.textSecondary, { fontSize: 12, marginTop: 4 }]}>Nhấn &quot;Cập nhật&quot; để thêm ảnh cho khách sạn</Text>
               </View>
             )}
           </View>

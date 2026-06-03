@@ -104,6 +104,7 @@ export const createBookingSchema = z
     durationValue: z.coerce.number().int().min(1).max(31).optional(),
     customerName: z.string().trim().min(1).max(100).optional(),
     customerPhone: z.string().trim().min(1).max(30).optional(),
+    voucherCode: z.string().trim().max(100).optional(),
   })
   .refine((data) => new Date(data.checkOut) > new Date(data.checkIn), {
     path: ["checkOut"],

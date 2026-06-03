@@ -1,6 +1,6 @@
 import { styles } from './Header.styles';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, ChevronDown, MessageCircle, Bell, Search } from 'lucide-react-native';
 import { useLocationContext } from '@/src/customer/context/LocationContext';
@@ -81,7 +81,11 @@ export default function Header({ onOpenSearch, onOpenMessages, onOpenNotificatio
                 {!isScrolled && (
                     <View style={styles.topRow}>
                         <View style={styles.brandBlock}>
-                            <Text style={[styles.brand, { color: STAYHUB_COLOR }]}>StayHub</Text>
+                            <Image
+                                source={require('../../../../assets/images/stayhub-logo.png')}
+                                style={{ width: 132, height: 50 }}
+                                resizeMode="contain"
+                            />
                             <Text style={[styles.subtitle, { color: currentTheme.textSecondary }]}>Khám phá khách sạn và ưu đãi tại</Text>
 
                             <Pressable

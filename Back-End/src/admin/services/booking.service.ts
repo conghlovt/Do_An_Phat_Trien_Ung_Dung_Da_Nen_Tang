@@ -10,7 +10,8 @@ import {
 
 const normalizeBooking = (booking: any) => ({
   ...booking,
-  property: booking.property || booking.room?.property || null,
+  property: booking.property || booking.hotel || booking.room?.property || null,
+  room: booking.room || booking.roomType || null,
 });
 
 export type AdminBookingListOptions = {
@@ -99,9 +100,15 @@ export const bookingService = {
         include: {
           user: { select: { username: true, email: true, phone: true } },
           property: { select: { id: true, name: true, address: true } },
+          hotel: { select: { id: true, name: true } },
           room: {
             include: {
               property: { select: { name: true, address: true } },
+            },
+          },
+          roomType: {
+            include: {
+              hotel: { select: { id: true, name: true } },
             },
           },
         },
@@ -128,6 +135,7 @@ export const bookingService = {
           status: true,
           voucherCode: true,
           propertyId: true,
+          hotelId: true,
           paymentId: true,
         },
       });
@@ -140,11 +148,11 @@ export const bookingService = {
         status === "CANCELLED" &&
         current.voucherCode &&
         !current.paymentId &&
-        current.propertyId
+        (current.propertyId || current.hotelId)
       ) {
         await decrementVoucherUsageByCode(
           tx,
-          current.propertyId,
+          current.propertyId || current.hotelId!,
           current.voucherCode,
         );
       }
@@ -162,16 +170,17 @@ export const bookingService = {
           status: true,
           voucherCode: true,
           propertyId: true,
+          hotelId: true,
           paymentId: true,
         },
       });
       if (current && current.status !== "CANCELLED") {
         await updateBookingStatusWithInventory(tx, id, "CANCELLED");
       }
-      if (current?.voucherCode && !current.paymentId && current.propertyId) {
+      if (current?.voucherCode && !current.paymentId && (current.propertyId || current.hotelId)) {
         await decrementVoucherUsageByCode(
           tx,
-          current.propertyId,
+          current.propertyId || current.hotelId!,
           current.voucherCode,
         );
       }

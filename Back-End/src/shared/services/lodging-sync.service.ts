@@ -405,7 +405,9 @@ export const updateBookingStatusWithInventory = async (
     where: { id: bookingId },
     include: {
       room: true,
+      roomType: true,
       property: true,
+      hotel: true,
     },
   });
 
@@ -419,11 +421,19 @@ export const updateBookingStatusWithInventory = async (
 
   const oldHeld = HELD_BOOKING_STATUSES.has(booking.status);
   const nextHeld = HELD_BOOKING_STATUSES.has(nextStatus);
+  const inventoryRoomTypeId = booking.roomTypeId || booking.roomId;
+  const totalUnits = Number(booking.roomType?.totalUnits ?? booking.room?.totalRooms ?? 0);
 
   if (!oldHeld && nextHeld) {
-    await applyInventoryDelta(tx, booking.roomId, Number(booking.room?.totalRooms || 0), booking.checkIn, booking.checkOut, 1);
+    if (!inventoryRoomTypeId) {
+      throw makeValidationError('Booking chua co thong tin loai phong.');
+    }
+    await applyInventoryDelta(tx, inventoryRoomTypeId, totalUnits, booking.checkIn, booking.checkOut, 1);
   } else if (oldHeld && !nextHeld) {
-    await applyInventoryDelta(tx, booking.roomId, Number(booking.room?.totalRooms || 0), booking.checkIn, booking.checkOut, -1);
+    if (!inventoryRoomTypeId) {
+      throw makeValidationError('Booking chua co thong tin loai phong.');
+    }
+    await applyInventoryDelta(tx, inventoryRoomTypeId, totalUnits, booking.checkIn, booking.checkOut, -1);
   }
 
   return tx.booking.update({
@@ -432,6 +442,8 @@ export const updateBookingStatusWithInventory = async (
     include: {
       user: { select: { username: true, email: true, phone: true } },
       room: { include: { property: { select: { id: true, name: true, address: true, ownerId: true } } } },
+      roomType: { include: { hotel: { select: { id: true, name: true } } } },
+      hotel: true,
       property: true,
       reviews: true,
     },

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform, Image } from 'react-native';
 import {
   Bell,
   Building2,
@@ -10,7 +10,6 @@ import {
   Globe,
   LayoutDashboard,
   LayoutGrid,
-  LogOut,
   Moon,
   Search,
   Star,
@@ -143,6 +142,20 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children, activeTab, set
     setIsNotificationOpen(false);
   };
 
+  const handleMenuPress = (menu: any) => {
+    if (!menu.children?.length) {
+      navigateTo(menu.id);
+      return;
+    }
+
+    if (isSidebarCollapsed) {
+      navigateTo(menu.children[0].value);
+      return;
+    }
+
+    toggleMenu(menu.id);
+  };
+
   const persistReadNotifications = useCallback((ids: string[]) => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     try {
@@ -190,38 +203,57 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children, activeTab, set
     <AdminThemeContext.Provider value={themeValue}>
     <View style={[styles.container, isLight && styles.containerLight]}>
       <View style={[styles.sidebar, isLight && styles.sidebarLight, isSidebarCollapsed && styles.sidebarCollapsed]}>
-        <View style={[styles.sidebarHeader, isLight && styles.borderLight]}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <Building2 size={24} color="#FFF" />
-            </View>
+        <View style={[styles.sidebarHeader, isLight && styles.borderLight, isSidebarCollapsed && styles.sidebarHeaderCollapsed]}>
+          <View style={[styles.logoContainer, isSidebarCollapsed && styles.logoContainerCollapsed]}>
+            <Image
+              source={require('../../../assets/images/stayhub-logo.png')}
+              style={[styles.logoImage, isSidebarCollapsed && styles.logoImageCollapsed]}
+              resizeMode="contain"
+            />
             {!isSidebarCollapsed && (
               <View>
-                <Text style={[styles.logoText, isLight && styles.textDark]}>StayAdmin</Text>
+                <Text style={[styles.logoText, isLight && styles.textDark]}>StayHub Admin</Text>
                 <Text style={styles.logoSubtext}>Nền tảng Đặt phòng</Text>
               </View>
             )}
           </View>
-          <TouchableOpacity onPress={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={styles.collapseToggle}>
+          <TouchableOpacity
+            onPress={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            style={[styles.collapseToggle, isSidebarCollapsed && styles.collapseToggleCollapsed]}
+          >
             <LayoutGrid size={20} color="#64748B" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.menuScroll}
+          contentContainerStyle={isSidebarCollapsed && styles.menuScrollCollapsed}
+          showsVerticalScrollIndicator={false}
+        >
           {visibleMenuStructure.map((menu) => (
             <View key={menu.id}>
               <TouchableOpacity
                 style={[
                   styles.menuItem,
-                  activeTab === menu.id && styles.menuItemActive,
+                  (activeTab === menu.id || menu.children?.some((child) => child.value === activeTab)) && styles.menuItemActive,
                   !isSidebarCollapsed && styles.menuItemFull,
+                  isSidebarCollapsed && styles.menuItemCollapsed,
                 ]}
-                onPress={() => (menu.children ? toggleMenu(menu.id) : navigateTo(menu.id))}
+                onPress={() => handleMenuPress(menu)}
               >
-                <View style={styles.menuItemLeft}>
-                  <menu.icon size={20} color={activeTab === menu.id ? '#FFF' : '#94A3B8'} />
+                <View style={[styles.menuItemLeft, isSidebarCollapsed && styles.menuItemLeftCollapsed]}>
+                  <menu.icon
+                    size={20}
+                    color={(activeTab === menu.id || menu.children?.some((child) => child.value === activeTab)) ? '#FFF' : '#94A3B8'}
+                  />
                   {!isSidebarCollapsed && (
-                    <Text style={[styles.menuLabel, isLight && styles.menuLabelLight, activeTab === menu.id && styles.menuLabelActive]}>
+                    <Text
+                      style={[
+                        styles.menuLabel,
+                        isLight && styles.menuLabelLight,
+                        (activeTab === menu.id || menu.children?.some((child) => child.value === activeTab)) && styles.menuLabelActive,
+                      ]}
+                    >
                       {menu.label}
                     </Text>
                   )}
@@ -247,26 +279,6 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children, activeTab, set
           ))}
         </ScrollView>
 
-        {!isSidebarCollapsed && (
-          <View style={[styles.sidebarFooter, isLight && styles.borderLight]}>
-            <TouchableOpacity style={[styles.userProfile, isLight && styles.surfaceLight]} onPress={() => setIsUserMenuOpen((value) => !value)}>
-              <View style={styles.avatarContainer}>
-                <User size={20} color="#FFF" />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.userName, isLight && styles.textDark]}>{user?.username || 'Admin'}</Text>
-                <Text style={styles.userRole}>{user?.role || 'Super Admin'}</Text>
-              </View>
-              <ChevronDown size={18} color="#64748B" />
-            </TouchableOpacity>
-            {isUserMenuOpen && (
-              <TouchableOpacity onPress={onLogout} style={[styles.sidebarLogout, isLight && styles.surfaceLight]}>
-                <LogOut size={16} color="#EF4444" />
-                <Text style={styles.logoutText}>Đăng xuất</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
       </View>
 
       <View style={[styles.mainContent, isLight && styles.mainContentLight]}>
@@ -406,19 +418,26 @@ const styles = StyleSheet.create({
   containerLight: { backgroundColor: '#F8FAFC' },
   sidebar: { width: 280, backgroundColor: '#1E293B', borderRightWidth: 1, borderRightColor: '#334155' },
   sidebarLight: { backgroundColor: '#FFF', borderRightColor: '#E2E8F0' },
-  sidebarCollapsed: { width: 80 },
+  sidebarCollapsed: { width: 96 },
   sidebarHeader: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 80, borderBottomWidth: 1, borderBottomColor: '#334155' },
+  sidebarHeaderCollapsed: { height: 104, paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'column', justifyContent: 'center', gap: 10 },
   borderLight: { borderBottomColor: '#E2E8F0', borderTopColor: '#E2E8F0' },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' },
+  logoContainerCollapsed: { width: '100%', justifyContent: 'center' },
+  logoImage: { width: 48, height: 34, borderRadius: 6 },
+  logoImageCollapsed: { width: 54, height: 34 },
   logoText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   logoSubtext: { color: '#64748B', fontSize: 11 },
   collapseToggle: { padding: 4 },
+  collapseToggleCollapsed: { width: 44, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   menuScroll: { flex: 1, padding: 12 },
+  menuScrollCollapsed: { alignItems: 'center', paddingTop: 14, paddingBottom: 18 },
   menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, marginBottom: 4 },
   menuItemFull: { paddingHorizontal: 12, justifyContent: 'space-between' },
+  menuItemCollapsed: { width: 54, height: 54, paddingVertical: 0, marginBottom: 12, borderRadius: 12 },
   menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuItemActive: { backgroundColor: '#3B82F6' },
+  menuItemLeftCollapsed: { gap: 0, justifyContent: 'center' },
+  menuItemActive: { backgroundColor: '#0F766E' },
   menuLabel: { color: '#94A3B8', fontSize: 14, fontWeight: '500' },
   menuLabelLight: { color: '#475569' },
   menuLabelActive: { color: '#FFF' },
@@ -429,13 +448,6 @@ const styles = StyleSheet.create({
   subMenuLabel: { color: '#64748B', fontSize: 13 },
   subMenuLabelLight: { color: '#64748B' },
   subMenuLabelActive: { color: '#3B82F6', fontWeight: '700' },
-  sidebarFooter: { padding: 16, borderTopWidth: 1, borderTopColor: '#334155' },
-  userProfile: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', padding: 12, borderRadius: 16, gap: 12 },
-  avatarContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#6366F1', justifyContent: 'center', alignItems: 'center' },
-  userInfo: { flex: 1 },
-  userName: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
-  userRole: { color: '#64748B', fontSize: 11 },
-  sidebarLogout: { marginTop: 8, flexDirection: 'row', gap: 8, alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#0F172A' },
   mainContent: { flex: 1, backgroundColor: '#0F172A' },
   mainContentLight: { backgroundColor: '#F8FAFC' },
   header: { height: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: '#1E293B', zIndex: 20 },
