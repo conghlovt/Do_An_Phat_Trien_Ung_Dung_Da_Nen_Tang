@@ -11,8 +11,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { partnerService } from '../../src/partner/services/partner.service';
-import type { HotelListItem } from '../../src/partner/services/partner.service';
+
+
+import { hotelService } from '../../src/partner/services/hotel.service';
+import type { HotelListItem } from '../../src//partner/types/hotel.type';
+
 import { StatusBadge } from '../../src/partner/components/shared/StatusBadge';
 import {
   LoadingSpinner,
@@ -67,8 +70,8 @@ export default function PartnerDashboardScreen() {
 
   const loadHotels = async () => {
     try {
-
-      const { items } = await partnerService.getHotels({
+      // Thay vì partnerService, ta gọi hotelService
+      const { items } = await hotelService.getHotels({
         sort: 'created_at',
         order: 'desc',
         limit: 10,
@@ -128,7 +131,8 @@ export default function PartnerDashboardScreen() {
       setErrorMsg('');
       setIsLoading(true);
 
-      await partnerService.deleteHotel(hotelToDelete);
+      // Thay thế partnerService -> hotelService
+      await hotelService.deleteHotel(hotelToDelete);
 
       setSuccessMsg('Đã xóa khách sạn thành công');
       setShowSuccess(true);
@@ -154,7 +158,8 @@ export default function PartnerDashboardScreen() {
     try {
       setIsLoading(true);
 
-      await partnerService.submitHotelForReview(hotelId);
+      // Thay thế partnerService -> hotelService
+      await hotelService.submitHotelForReview(hotelId);
 
       setSuccessMsg('Đã gửi yêu cầu duyệt khách sạn!');
       setShowSuccess(true);
@@ -278,7 +283,7 @@ export default function PartnerDashboardScreen() {
                     </View>
                   </View>
 
-                  <StatusBadge status={hotel.status} />
+                  <StatusBadge status={hotel.hotelStatus} />
                 </View>
 
                 <View style={styles.cardStats}>
@@ -309,7 +314,7 @@ export default function PartnerDashboardScreen() {
                 </View>
 
                 <View style={styles.cardActions}>
-                  {hotel.status !== 'approved' && (
+                  {hotel.hotelStatus !== 'approved' && (
                     <TouchableOpacity
                       style={[styles.actionBtn, styles.actionBtnDanger]}
                       onPress={() => confirmDelete(hotel.id)}
@@ -318,7 +323,7 @@ export default function PartnerDashboardScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {hotel.status === 'draft' && (
+                  {hotel.hotelStatus === 'draft' && (
                     <TouchableOpacity
                       style={[styles.actionBtn, styles.actionBtnSubmit]}
                       onPress={() => handleSubmitForApproval(hotel.id)}

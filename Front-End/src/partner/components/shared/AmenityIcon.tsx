@@ -1,9 +1,9 @@
 import React from 'react';
 import { 
-  Wifi, Coffee, Car, Tv, Wind, Bath, Shield, 
+  Wifi, Car, Tv, Bath, Shield, 
   Briefcase, Snowflake, CheckSquare, 
   CigaretteOff, Wine, Utensils, Key, Dumbbell, Waves,
-  Flame, Shirt, Droplet, Fan, Sparkles
+  Flame, Shirt, Sparkles
 } from 'lucide-react-native';
 
 export function AmenityIcon({ name, size = 16, color = '#64748B' }: { name: string; size?: number; color?: string }) {

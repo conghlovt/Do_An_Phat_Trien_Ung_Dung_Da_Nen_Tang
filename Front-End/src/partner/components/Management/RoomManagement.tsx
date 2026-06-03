@@ -7,16 +7,17 @@ import {
   TouchableOpacity,
   Platform,
   RefreshControl,
-  Dimensions,
+
   useWindowDimensions,
   TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { partnerService } from '../../services/partner.service';
-import type {
-  RoomType,
-  HotelListItem,
-} from '../../services/partner.service';
+
+import { hotelService } from '../../services/hotel.service';
+import { roomService } from '../../services/room.service';
+import { HotelListItem } from '../../types/hotel.type';
+import { RoomType, CalendarRoomType } from '../../types/room.type';
+
 import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import {
@@ -31,11 +32,10 @@ import {
   Moon,
   Sun,
   Hotel as HotelIcon,
-  Search,
   Building2,
 } from 'lucide-react-native';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+
 const isMobile = Platform.OS !== 'web';
 
 type BookingTab = 'hourly' | 'overnight' | 'daily';
@@ -104,7 +104,7 @@ function formatPrice(price: number): string {
   return price.toLocaleString('vi-VN') + 'đ';
 }
 
-function getHotelAddressText(hotel: any) {
+function getHotelAddressText(hotel: HotelListItem) {
   return (
     hotel?.address?.fullAddress ||
     [hotel?.address?.district, hotel?.address?.city].filter(Boolean).join(', ') ||
@@ -126,7 +126,7 @@ export function RoomManagement() {
   const [hotelSearch, setHotelSearch] = useState('');
   const [showHotelSuggestions, setShowHotelSuggestions] = useState(false);
 
-  const [hotelStatus, setHotelStatus] = useState<string>('');
+
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,8 +137,9 @@ export function RoomManagement() {
 
   const [activeTab, setActiveTab] = useState<BookingTab>('daily');
   const [startDate, setStartDate] = useState(() => new Date());
-  const [calendarData, setCalendarData] = useState<any[]>([]);
-  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const [calendarData, setCalendarData] = useState<CalendarRoomType[]>([]);
+
 
   const DAYS_COUNT = 14;
 
@@ -170,7 +171,7 @@ export function RoomManagement() {
     if (!q) return hotels.slice(0, 8);
 
     return hotels
-      .filter((hotel: any) => {
+      .filter((hotel: HotelListItem) => {
         const name = String(hotel.name || '').toLowerCase();
         const city = String(hotel.address?.city || '').toLowerCase();
         const district = String(hotel.address?.district || '').toLowerCase();
@@ -190,7 +191,7 @@ export function RoomManagement() {
     try {
       setRoomsLoading(true);
 
-      const { items } = await partnerService.getHotels();
+      const { items } = await hotelService.getHotels();
       const hotelItems = Array.isArray(items) ? items : [];
 
       setHotels(hotelItems);
@@ -205,14 +206,13 @@ export function RoomManagement() {
       }
 
       const matchedHotel = queryHotelId
-        ? hotelItems.find((hotel: any) => hotel.id === queryHotelId)
+        ? hotelItems.find((hotel: HotelListItem) => hotel.id === queryHotelId)
         : null;
 
       const firstHotel = matchedHotel || hotelItems[0];
 
       setHotelId(firstHotel.id);
       setSelectedHotel(firstHotel);
-      setHotelStatus(firstHotel.status);
       setHotelSearch(firstHotel.name || '');
       setNoHotel(false);
     } catch (err) {
@@ -228,7 +228,7 @@ export function RoomManagement() {
     try {
       setRoomsLoading(true);
 
-      const types = await partnerService.getRoomTypes(targetHotelId);
+      const types = await roomService.getRoomTypes(targetHotelId);
       setRoomTypes(Array.isArray(types) ? types : []);
     } catch (err) {
       console.error('Không tải được loại phòng:', err);
@@ -242,9 +242,8 @@ export function RoomManagement() {
     if (!targetHotelId) return;
 
     try {
-      setCalendarLoading(true);
 
-      const data = await partnerService.getInventoryCalendar(
+      const data = await roomService.getInventoryCalendar(
         targetHotelId,
         formatDate(startDate),
         endDateStr
@@ -254,13 +253,12 @@ export function RoomManagement() {
     } catch (err) {
       console.warn('Calendar load error:', err);
       setCalendarData([]);
-    } finally {
-      setCalendarLoading(false);
     }
   };
 
   useEffect(() => {
     loadHotels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryHotelId]);
 
   useEffect(() => {
@@ -268,6 +266,7 @@ export function RoomManagement() {
 
     loadRoomTypes(hotelId);
     loadCalendar(hotelId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId, startDate, endDateStr]);
 
   const handleHotelSearchChange = (value: string) => {
@@ -284,7 +283,6 @@ export function RoomManagement() {
   const handleSelectHotel = async (hotel: HotelListItem) => {
     setSelectedHotel(hotel);
     setHotelId(hotel.id);
-    setHotelStatus(hotel.status);
     setHotelSearch(hotel.name || '');
     setShowHotelSuggestions(false);
 
@@ -316,7 +314,6 @@ export function RoomManagement() {
 
   const handleCreateRoom = () => {
     if (!hotelId) return;
-
     router.push(`/partner/room/new-room?hotelId=${hotelId}` as any);
   };
 
@@ -348,7 +345,7 @@ export function RoomManagement() {
 
   if (roomsLoading && roomTypes.length === 0) return <LoadingSpinner />;
 
-  const displayData =
+  const displayData: CalendarRoomType[] =
     calendarData.length > 0
       ? calendarData
       : roomTypes.map((rt) => ({
@@ -356,9 +353,9 @@ export function RoomManagement() {
           name: rt.name,
           totalUnits: rt.totalUnits,
           status: rt.status,
-          inventory: {} as any,
-          pricing: {} as any,
-        }));
+          inventory: {},
+          pricing: {},
+        } as CalendarRoomType));
 
   return (
     <View style={s.container}>

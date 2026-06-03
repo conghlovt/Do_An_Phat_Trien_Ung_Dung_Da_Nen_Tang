@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
 import {
   View,
   Text,
@@ -17,8 +16,12 @@ import {
   Square,
 } from 'lucide-react-native';
 
-import { partnerService } from '../../src/partner/services/partner.service';
+import { CreateVoucherInput, VoucherStatus } from '../../src//partner/types/booking.type';
+import { hotelService } from '../../src/partner/services/hotel.service';
+import { roomService } from '../../src/partner/services/room.service';
 import { partnerVoucherService } from '../../src/partner/services/voucher.service';
+import { HotelListItem } from '../../src/partner/types/hotel.type';
+import { RoomType } from '../../src/partner/types/room.type';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -63,7 +66,7 @@ const toIsoDateTime = (value: string) => {
   return new Date(value).toISOString();
 };
 
-const getHotelAddressText = (hotel: any) => {
+const getHotelAddressText = (hotel: HotelListItem) => {
   const district = hotel?.address?.district || '';
   const city = hotel?.address?.city || '';
   const fullAddress = hotel?.address?.fullAddress || '';
@@ -321,8 +324,8 @@ export default function VoucherFormPage() {
   const [loading, setLoading] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+  const [hotels, setHotels] = useState<HotelListItem[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(null);
   const [hotelSearch, setHotelSearch] = useState('');
   const [showHotelSuggestions, setShowHotelSuggestions] = useState(false);
 
@@ -343,7 +346,7 @@ export default function VoucherFormPage() {
     }
 
     return hotels
-      .filter((hotel: any) => {
+      .filter((hotel: HotelListItem) => {
         const name = String(hotel.name || '').toLowerCase();
         const city = String(hotel.address?.city || '').toLowerCase();
         const district = String(hotel.address?.district || '').toLowerCase();
@@ -382,7 +385,7 @@ export default function VoucherFormPage() {
   useEffect(() => {
     const loadHotels = async () => {
       try {
-        const hotelRes = await partnerService.getHotels();
+        const hotelRes = await hotelService.getHotels();
         const hotelItems = Array.isArray(hotelRes.items) ? hotelRes.items : [];
 
         setHotels(hotelItems);
@@ -395,7 +398,7 @@ export default function VoucherFormPage() {
         }
 
         const matchedHotel = initialHotelId
-          ? hotelItems.find((hotel: any) => hotel.id === initialHotelId)
+          ? hotelItems.find((hotel: HotelListItem) => hotel.id === initialHotelId)
           : null;
 
         const initialHotel = matchedHotel || hotelItems[0];
@@ -416,13 +419,11 @@ export default function VoucherFormPage() {
 
     const loadRoomTypes = async () => {
       try {
-        const roomTypes = await partnerService.getRoomTypes(
-          String(activeHotelId)
-        );
+        const roomTypes = await roomService.getRoomTypes(String(activeHotelId));
 
         setRoomTypeOptions([
           { id: 'all', name: 'Tất cả loại phòng' },
-          ...roomTypes.map((room: any) => ({
+          ...roomTypes.map((room: RoomType) => ({
             id: room.id,
             name: room.name,
           })),
@@ -447,9 +448,10 @@ export default function VoucherFormPage() {
           String(voucherId)
         );
 
+        // 1. Ép kiểu rõ ràng cho rule tìm được
         const customerTierRule = voucher.rules?.find(
           (rule: any) => rule.type === 'customerTier'
-        );
+        ) as { type: string; values: string[] } | undefined;
 
         setForm({
           code: voucher.code || '',
@@ -468,6 +470,7 @@ export default function VoucherFormPage() {
             ? voucher.applicableRoomTypeIds
             : ['all'],
 
+          // 2. Bây giờ TypeScript đã biết values là mảng string, nó sẽ không báo lỗi .length nữa
           customerTiers: customerTierRule?.values?.length
             ? customerTierRule.values
             : ['REGULAR', 'RETURNING', 'LOYAL', 'VIP'],
@@ -505,7 +508,7 @@ export default function VoucherFormPage() {
     }, 150);
   };
 
-  const handleSelectHotel = (hotel: any) => {
+  const handleSelectHotel = (hotel: HotelListItem) => {
     if (isEdit) return;
 
     setSelectedHotel(hotel);
@@ -672,8 +675,9 @@ export default function VoucherFormPage() {
     return true;
   };
 
-  const buildPayload = () => {
-    const rules: any[] = [];
+// 1. Ép hàm này BẮT BUỘC trả về định dạng CreateVoucherInput
+  const buildPayload = (): CreateVoucherInput => {
+    const rules: Record<string, unknown>[] = [];
 
     if (form.customerTiers.length > 0) {
       rules.push({
@@ -699,7 +703,7 @@ export default function VoucherFormPage() {
       });
     }
 
-    const action: any = {
+    const action: Record<string, unknown> = {
       type: form.discountType,
       value: Number(form.discountValue),
     };
@@ -728,7 +732,8 @@ export default function VoucherFormPage() {
       rules,
       actions: [action],
       constraints,
-      status: form.status || 'ACTIVE',
+      // 2. Ép form.status thành VoucherStatus ('ACTIVE' | 'INACTIVE') để khớp với Type
+      status: (form.status as VoucherStatus) || 'ACTIVE',
     };
   };
 
@@ -965,7 +970,7 @@ export default function VoucherFormPage() {
                 {showHotelSuggestions && !isEdit ? (
                   <View style={s.hotelSuggestionBox}>
                     {hotelSuggestions.length > 0 ? (
-                      hotelSuggestions.map((hotel: any) => {
+                      hotelSuggestions.map((hotel: HotelListItem) => {
                         const active = hotel.id === activeHotelId;
 
                         return (
@@ -1771,5 +1776,4 @@ const s = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '800',
   },
-
 });

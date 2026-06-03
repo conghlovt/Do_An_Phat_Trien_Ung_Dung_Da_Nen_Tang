@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
-  Image, RefreshControl, Dimensions, Modal,
+  Image, RefreshControl, Modal,
 } from 'react-native';
-import { partnerService } from '../../services/partner.service';
-import type { Hotel, HotelListItem } from '../../services/partner.service';
+import { hotelService } from '../../services/hotel.service';
+import { Hotel, HotelListItem } from '../../types/hotel.type';
 import { AmenityIcon } from '../shared/AmenityIcon';
 import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
-import { Pencil, Camera, Hotel as HotelIcon, ImageIcon, Info, Plus, Trash2 } from 'lucide-react-native';
+import { Pencil, Camera, ImageIcon, Info, Trash2 } from 'lucide-react-native';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+
 const isMobile = Platform.OS !== 'web';
 
 const COLORS = {
@@ -35,10 +35,10 @@ export function PartnerOverview({ onNavigate }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    partnerService.getHotels().then(({ items }) => {
+    hotelService.getHotels().then(({ items }) => {
       setHotels(items);
       if (items.length > 0) {
-        partnerService.getHotel(items[0].id).then(setCurrentHotel);
+        hotelService.getHotel(items[0].id).then(setCurrentHotel);
       }
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
@@ -46,17 +46,17 @@ export function PartnerOverview({ onNavigate }: Props) {
 
   useEffect(() => {
     if (hotels.length > 0 && !currentHotel) {
-      partnerService.getHotel(hotels[0].id).then(setCurrentHotel);
+      hotelService.getHotel(hotels[0].id).then(setCurrentHotel);
     }
-  }, [hotels]);
+  }, [hotels, currentHotel]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const { items } = await partnerService.getHotels();
+      const { items } = await hotelService.getHotels();
       setHotels(items);
       if (items.length > 0) {
-        const h = await partnerService.getHotel(items[0].id);
+        const h = await hotelService.getHotel(items[0].id);
         setCurrentHotel(h);
       }
     } catch {}
@@ -64,7 +64,7 @@ export function PartnerOverview({ onNavigate }: Props) {
   };
 
   const submitForReview = async (id: string) => {
-    await partnerService.submitHotelForReview(id);
+    await hotelService.submitHotelForReview(id);
     onRefresh();
   };
 
@@ -76,10 +76,10 @@ export function PartnerOverview({ onNavigate }: Props) {
     if (!currentHotel) return;
     try {
       setIsLoading(true);
-      await partnerService.deleteHotel(currentHotel.id);
+      await hotelService.deleteHotel(currentHotel.id);
       setHotels([]);
       setCurrentHotel(null);
-    } catch (err: any) {
+    } catch {
       // Handle error if needed
     } finally {
       setIsLoading(false);
@@ -112,10 +112,10 @@ export function PartnerOverview({ onNavigate }: Props) {
           <Text style={styles.mobilePageTitle}>Trang chủ</Text>
           <Text style={styles.mobileHotelName}>{hotel?.name || 'Khách sạn'}</Text>
           <View style={styles.mobileHeaderMeta}>
-            <StatusBadge status={hotel?.status || 'draft'} />
+            <StatusBadge status={hotel?.hotelStatus || 'draft'} />
             {hotel?.starRating ? <Text style={styles.starText}>{'⭐'.repeat(hotel.starRating)}</Text> : null}
-            {hotel?.status === 'draft' && (
-              <TouchableOpacity style={styles.submitBtnMobile} onPress={async () => { try { await submitForReview(hotel!.id); } catch (e: any) { } }}>
+            {hotel?.hotelStatus === 'draft' && (
+              <TouchableOpacity style={styles.submitBtnMobile} onPress={async () => { try { await submitForReview(hotel!.id); } catch { } }}>
                 <Text style={styles.submitBtnText}>Gửi duyệt</Text>
               </TouchableOpacity>
             )}
@@ -131,8 +131,8 @@ export function PartnerOverview({ onNavigate }: Props) {
               <Text style={styles.breadcrumbActive}>Thông tin khách sạn</Text>
             </View>
           </View>
-          {hotel?.status === 'draft' && (
-            <TouchableOpacity style={styles.submitBtn} onPress={async () => { try { await submitForReview(hotel!.id); } catch (e: any) { } }}>
+          {hotel?.hotelStatus === 'draft' && (
+            <TouchableOpacity style={styles.submitBtn} onPress={async () => { try { await submitForReview(hotel!.id); } catch { } }}>
               <Text style={styles.submitBtnText}>Gửi duyệt</Text>
             </TouchableOpacity>
           )}
@@ -146,7 +146,7 @@ export function PartnerOverview({ onNavigate }: Props) {
       >
         <View style={styles.mainCard}>
           <View style={styles.actionBar}>
-            <StatusBadge status={hotel?.status || 'draft'} />
+            <StatusBadge status={hotel?.hotelStatus || 'draft'} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity style={[styles.editBtn, { borderColor: '#FECACA', backgroundColor: '#FEF2F2' }]} onPress={handleDelete}>
                 <Trash2 size={14} color="#EF4444" style={{ marginRight: 6 }} />

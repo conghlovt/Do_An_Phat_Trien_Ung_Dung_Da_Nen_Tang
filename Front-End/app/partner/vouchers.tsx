@@ -18,12 +18,11 @@ import {
   Building2,
 } from 'lucide-react-native';
 
-import {
-  partnerService,
-  type Voucher,
-} from '../../src/partner/services/partner.service';
-
+// 🌟 ĐÃ SỬA: Import từ kiến trúc Type và Service mới
+import { hotelService } from '../../src/partner/services/hotel.service';
 import { partnerVoucherService } from '../../src/partner/services/voucher.service';
+import { Voucher } from '../../src/partner/types/booking.type';
+import { HotelListItem } from '../../src/partner/types/hotel.type';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -41,7 +40,6 @@ function getDiscountText(item: Voucher) {
   if (item.discountType === 'percent') {
     return `${item.discountValue}%`;
   }
-
   return formatCurrency(item.discountValue);
 }
 
@@ -62,8 +60,8 @@ function getRoomText(item: Voucher) {
     return 'Tất cả loại phòng';
   }
 
-  if (item.roomTypes?.length) {
-    return item.roomTypes
+  if (item.roomType?.length) {
+    return item.roomType
       .map((room) => room.name)
       .filter(Boolean)
       .join(', ');
@@ -72,8 +70,8 @@ function getRoomText(item: Voucher) {
   return ids.join(', ');
 }
 
-function getCustomerTierList(item: any): string[] {
-  const rule = item.rules?.find((r: any) => r.type === 'customerTier');
+function getCustomerTierList(item: Voucher): string[] {
+  const rule = item.rules?.find((r: any) => r.type === 'customerTier') as { values?: string[] } | undefined;
 
   const values: string[] = Array.isArray(rule?.values) ? rule.values : [];
 
@@ -89,7 +87,7 @@ function getCustomerTierList(item: any): string[] {
   return values.map((value: string) => labelMap[value] || value);
 }
 
-function getPerUserText(item: any) {
+function getPerUserText(item: Voucher) {
   const perUser = item.constraints?.perUser;
 
   if (!perUser) return 'Không giới hạn';
@@ -97,7 +95,7 @@ function getPerUserText(item: any) {
   return `${perUser} lần mỗi khách`;
 }
 
-function getHotelAddressText(hotel: any) {
+function getHotelAddressText(hotel: HotelListItem) {
   const district = hotel?.address?.district || '';
   const city = hotel?.address?.city || '';
   const fullAddress = hotel?.address?.fullAddress || '';
@@ -120,8 +118,9 @@ export default function PartnerVouchersPage() {
       : '';
 
   const [hotelId, setHotelId] = useState(queryHotelId || '');
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [selectedHotel, setSelectedHotel] = useState<any>(null);
+
+  const [hotels, setHotels] = useState<HotelListItem[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(null);
 
   const [keyword, setKeyword] = useState('');
   const [hotelSearch, setHotelSearch] = useState('');
@@ -139,7 +138,7 @@ export default function PartnerVouchersPage() {
     }
 
     return hotels
-      .filter((hotel: any) => {
+      .filter((hotel: HotelListItem) => {
         const name = String(hotel.name || '').toLowerCase();
         const city = String(hotel.address?.city || '').toLowerCase();
         const district = String(hotel.address?.district || '').toLowerCase();
@@ -200,7 +199,7 @@ export default function PartnerVouchersPage() {
       setLoading(true);
       setErrorText('');
 
-      const hotelRes = await partnerService.getHotels();
+      const hotelRes = await hotelService.getHotels();
       const hotelItems = Array.isArray(hotelRes.items) ? hotelRes.items : [];
 
       setHotels(hotelItems);
@@ -215,7 +214,7 @@ export default function PartnerVouchersPage() {
       }
 
       const matchedHotel = queryHotelId
-        ? hotelItems.find((hotel: any) => hotel.id === queryHotelId)
+        ? hotelItems.find((hotel: HotelListItem) => hotel.id === queryHotelId)
         : null;
 
       const initialHotel = matchedHotel || hotelItems[0];
@@ -256,7 +255,7 @@ export default function PartnerVouchersPage() {
     }, 150);
   };
 
-  const handleSelectHotel = async (hotel: any) => {
+  const handleSelectHotel = async (hotel: HotelListItem) => {
     setSelectedHotel(hotel);
     setHotelId(hotel.id);
     setHotelSearch(hotel.name || '');
@@ -358,7 +357,7 @@ export default function PartnerVouchersPage() {
               {showHotelSuggestions ? (
                 <View style={s.hotelSuggestionBox}>
                   {hotelSuggestions.length > 0 ? (
-                    hotelSuggestions.map((hotel: any) => {
+                    hotelSuggestions.map((hotel: HotelListItem) => {
                       const active = hotel.id === hotelId;
 
                       return (

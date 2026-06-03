@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Image } from 'expo-image';
-import { useLocation } from '../../hooks/useLocation';
+import { useLocation } from '../../hooks/useLocation'; 
 import { SelectDropdown, SelectOption } from '../shared/SelectDropdown';
 import { ImageUploader } from '../shared/ImageUploader';
 import { AmenityIcon } from '../shared/AmenityIcon';
-import { partnerService } from '../../services/partner.service';
-import type { Hotel, Amenity } from '../../services/partner.service';
-import { ClipboardList, MapPin, ImageIcon, Hotel as HotelIcon, Pencil, ArrowLeft, CheckSquare, Square, Sparkles, Trash2 } from 'lucide-react-native';
+
+import { hotelService } from '../../services/hotel.service';
+import { Hotel, CreateHotelInput } from '../../types/hotel.type';
+import { Amenity } from '../../types/common.type';
+
+import { ClipboardList, MapPin, ImageIcon, Hotel as HotelIcon, Pencil, ArrowLeft, Sparkles, Trash2 } from 'lucide-react-native';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -93,8 +96,6 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   const watchDistrictName = watch('districtName');
   const watchWardCode = watch('wardCode');
   const watchWardName = watch('wardName');
-  const watchCheckIn = watch('checkInTime');
-  const watchCheckOut = watch('checkOutTime');
 
   const [checkInHour, setCheckInHour] = useState('14');
   const [checkInMinute, setCheckInMinute] = useState('00');
@@ -103,7 +104,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
 
   useEffect(() => {
     setLoadingAmenities(true);
-    partnerService.getAmenities()
+    hotelService.getAmenities()
       .then(setAllAmenities)
       .catch(err => console.warn('Failed to load amenities:', err))
       .finally(() => setLoadingAmenities(false));
@@ -112,7 +113,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
   useEffect(() => {
     if (isEdit && editHotelId) {
       setIsLoading(true);
-      partnerService.getHotel(editHotelId).then(h => { setCurrentHotel(h); setIsLoading(false); });
+      hotelService.getHotel(editHotelId).then(h => { setCurrentHotel(h); setIsLoading(false); });
     }
   }, [isEdit, editHotelId]);
 
@@ -150,7 +151,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
         fetchDistricts(p.code);
       }
     }
-  }, [isEdit, currentHotel, provinces, watchProvinceCode, watchProvinceName, setValue]);
+  }, [isEdit, currentHotel, provinces, watchProvinceCode, watchProvinceName, setValue, fetchDistricts]);
 
   useEffect(() => {
     if (isEdit && currentHotel && districts.length > 0 && !watchDistrictCode && watchDistrictName) {
@@ -160,7 +161,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
         fetchWards(d.code);
       }
     }
-  }, [isEdit, currentHotel, districts, watchDistrictCode, watchDistrictName, setValue]);
+  }, [isEdit, currentHotel, districts, watchDistrictCode, watchDistrictName, setValue, fetchWards]);
 
   useEffect(() => {
     if (isEdit && currentHotel && wards.length > 0 && !watchWardCode && watchWardName) {
@@ -196,7 +197,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
     setValue('wardCode', opt.value as number); setValue('wardName', opt.label); 
   };
   
-  const toggleAmenity = (id: string) => setSelectedAmenityIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const toggleAmenity = (id: string) => setSelectedAmenityIds(prev => { const next = new Set(prev); if (next.has(id)) { next.delete(id); } else { next.add(id); } return next; });
   const handlePickImages = async (files: any[]) => {
     setPendingImages(prev => [...prev, ...files]);
     setImagesError('');
@@ -207,7 +208,7 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
     if (!imageToDelete || !currentHotel?.id) return;
     try {
       setIsDeletingImage(true);
-      await partnerService.deleteHotelImage(currentHotel.id, imageToDelete);
+      await hotelService.deleteHotelImage(currentHotel.id, imageToDelete);
       setCurrentHotel(prev => prev ? { ...prev, images: prev.images.filter(img => img.id !== imageToDelete) } : prev);
       setImageToDelete(null);
     } catch (err: any) {
@@ -238,45 +239,52 @@ export function HotelEditForm({ hotelId: editHotelId, onBack }: Props) {
 
     try {
       setIsSaving(true);
+
+      const amenityArray: string[] = [];
+      selectedAmenityIds.forEach(id => amenityArray.push(id));
+
       const payload = {
         name: data.name.trim(),
-        description: data.description?.trim() || undefined,
+        description: data.description?.trim() || '',
         propertyType: data.propertyType,
         starRating: data.starRating,
         checkInTime: data.checkInTime,
         checkOutTime: data.checkOutTime,
         address: {
           addressLine: data.addressLine.trim(),
-          ward: data.wardName || undefined,
+          ward: data.wardName || '',
           district: data.districtName,
           city: data.provinceName,
           province: data.provinceName,
           country: 'Vietnam',
         },
-        amenityIds: Array.from(selectedAmenityIds),
-      };
+        amenityIds: amenityArray,
+      } as CreateHotelInput;
 
       let hotelResult: Hotel;
       if (isEdit && editHotelId) {
-        hotelResult = await partnerService.updateHotel(editHotelId, payload);
+        hotelResult = await hotelService.updateHotel(editHotelId, payload);
       } else {
-        hotelResult = await partnerService.createHotel(payload);
+        hotelResult = await hotelService.createHotel(payload);
       }
 
+      // Xử lý upload ảnh (nếu có ảnh mới)
       if (pendingImages.length > 0 && hotelResult?.id) {
         try {
           setIsUploading(true);
-          await partnerService.uploadHotelImages(hotelResult.id, pendingImages);
+          await hotelService.uploadHotelImages(hotelResult.id, pendingImages);
         } catch {
           setErrorMsg('Khách sạn đã được lưu nhưng upload ảnh thất bại. Bạn có thể thêm ảnh sau.');
         } finally {
           setIsUploading(false);
         }
       }
+      
       setSuccessMsg(isEdit ? 'Cập nhật khách sạn thành công!' : 'Tạo khách sạn thành công!');
       setTimeout(() => {
         handleGoBack();
       }, 1500);
+      
     } catch (err: any) {
       setErrorMsg(err.message || 'Có lỗi xảy ra khi lưu khách sạn');
     } finally {

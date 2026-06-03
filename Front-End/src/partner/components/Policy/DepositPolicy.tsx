@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { partnerService } from '../../services/partner.service';
-import type { Hotel } from '../../services/partner.service';
+import { hotelService } from '../../services/hotel.service';
+import { Hotel } from '../../types/hotel.type';
 import { ArrowLeft, Wallet, Check, Save, Info, Hotel as HotelIcon, Plus } from 'lucide-react-native';
 import { SuccessModal } from '../shared/SuccessModal';
 
@@ -29,7 +29,7 @@ export function DepositPolicy({ onBack }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    partnerService.getHotels().then(({ items }) => {
+    hotelService.getHotels().then(({ items }) => {
       if (items.length > 0) {
         setHotelId(items[0].id);
         setNoHotel(false);
@@ -42,7 +42,7 @@ export function DepositPolicy({ onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    if (hotelId) partnerService.getHotel(hotelId).then(setCurrentHotel);
+    if (hotelId) hotelService.getHotel(hotelId).then(setCurrentHotel);
   }, [hotelId]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export function DepositPolicy({ onBack }: Props) {
     try {
       setErrorMsg('');
       setIsSaving(true);
-      await partnerService.updateHotel(hotelId, { depositPercent: selectedPercent });
+      await hotelService.updateHotel(hotelId, { depositPercent: selectedPercent });
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);

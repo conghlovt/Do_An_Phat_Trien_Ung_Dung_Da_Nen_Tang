@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useAuth } from '../../../login/hooks/useAuth';
-import { ChevronRight, ShieldCheck, Wallet, User, Mail, BadgeCheck, Settings as SettingsIcon } from 'lucide-react-native';
+import { ChevronRight, ShieldCheck, Wallet, User, Mail, BadgeCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 const isMobile = Platform.OS !== 'web';

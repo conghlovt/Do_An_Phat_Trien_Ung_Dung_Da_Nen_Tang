@@ -61,9 +61,10 @@ export class BookingService {
    */
   async listByPartner(partnerId: string, status?: string) {
     const whereClause: any = {
-      property: {
-        ownerId: partnerId,
-      },
+      OR: [
+        { property: { ownerId: partnerId } },
+        { hotel: { ownerId: partnerId } }
+      ]
     };
 
     const normalizedStatus = normalizeBookingStatus(status);
@@ -131,6 +132,11 @@ export class BookingService {
             ownerId: true,
           },
         },
+        hotel: {
+          select: {
+            ownerId: true,
+          },
+        },
       },
     });
 
@@ -141,7 +147,7 @@ export class BookingService {
       );
     }
 
-    const isOwner = booking.property?.ownerId === partnerId;
+    const isOwner = booking.property?.ownerId === partnerId || booking.hotel?.ownerId === partnerId;
 
     if (!isOwner) {
       throw new ForbiddenError('Bạn không có quyền cập nhật đơn đặt phòng này');

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { Image } from 'expo-image';
+
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'lucide-react-native';
 

@@ -32,8 +32,10 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
-import { partnerService } from '../../services/partner.service';
-import type { Booking, Hotel } from '../../services/partner.service';
+import { hotelService } from '../../services/hotel.service';
+import { bookingService } from '../../services/booking.service';
+import { Hotel } from '../../types/hotel.type';
+import { Booking } from '../../types/booking.type';
 
 const isMobile = Platform.OS !== 'web';
 
@@ -453,13 +455,13 @@ export function StatsView() {
   useEffect(() => {
     let mounted = true;
 
-    const loadData = async () => {
+const loadData = async () => {
       try {
         setIsLoading(true);
-        const { items } = await partnerService.getHotels();
+        const hotelRes = await hotelService.getHotels();
+        const hotelItems = Array.isArray(hotelRes.items) ? hotelRes.items : [];
+        
         if (!mounted) return;
-
-        const hotelItems = Array.isArray(items) ? items : [];
         setHotels(hotelItems);
 
         if (hotelItems.length === 0) {
@@ -467,13 +469,10 @@ export function StatsView() {
           return;
         }
 
-        const bookingData = await partnerService.getBookings();
+        const bookingData = await bookingService.getBookings();
         if (!mounted) return;
 
         setBookings(Array.isArray(bookingData) ? bookingData : []);
-        setSelectedHotel(null);
-        setHotelDetail(null);
-        setHotelSearch('');
       } catch (err) {
         console.error('Không tải được dữ liệu thống kê:', err);
       } finally {
@@ -515,7 +514,7 @@ export function StatsView() {
       setSelectedHotel(hotel);
       setHotelSearch(hotel.name || '');
       setShowHotelSuggestions(false);
-      const detail = await partnerService.getHotel(hotel.id);
+      const detail = await hotelService.getHotel(hotel.id);
       setHotelDetail(detail);
     } catch (err) {
       console.error('Không tải được chi tiết khách sạn:', err);

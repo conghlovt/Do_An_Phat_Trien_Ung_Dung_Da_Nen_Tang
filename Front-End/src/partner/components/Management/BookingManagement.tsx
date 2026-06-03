@@ -27,8 +27,10 @@ import {
   DoorOpen,
 } from 'lucide-react-native';
 
-import { partnerService } from '../../services/partner.service';
-import type { Booking, BookingStatus } from '../../services/partner.service';
+
+import { bookingService } from '../../services/booking.service';
+import { Booking, BookingStatus } from '../../types/booking.type';
+
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import { MessageModal, MessageType } from '../shared/MessageModal';
 
@@ -101,6 +103,7 @@ const STATUS_CONFIG: Record<
     Icon: XCircle,
   },
 };
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -115,13 +118,8 @@ const formatDate = (value: string) =>
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('vi-VN').format(value) + ' VNĐ';
 
-const getBookingHotelName = (booking: any) => {
-  return (
-    booking.property?.name ||
-    booking.hotel?.name ||
-    booking.hotelName ||
-    'Cơ sở lưu trú'
-  );
+const getBookingHotelName = (booking: Booking) => {
+  return booking.property?.name || 'Cơ sở lưu trú';
 };
 
 // ============================================================
@@ -194,7 +192,7 @@ const BookingCard = ({
   onAction: (id: string, status: BookingStatus) => void;
 }) => {
   const cfg = STATUS_CONFIG[booking.status];
-  const hotelName = getBookingHotelName(booking as any);
+  const hotelName = getBookingHotelName(booking);
 
   return (
     <View style={[s.card, { borderLeftColor: cfg.color, borderLeftWidth: 4 }]}>
@@ -240,12 +238,6 @@ const BookingCard = ({
   );
 };
 
-/**
- * Luồng trạng thái:
- * PENDING -> CONFIRMED / CANCELLED
- * CONFIRMED -> CHECKED_IN / CANCELLED
- * CHECKED_IN -> COMPLETED / CANCELLED
- */
 function renderActions(
   booking: Booking,
   onAction: (id: string, status: BookingStatus) => void
@@ -300,7 +292,7 @@ function renderActions(
     return (
       <View style={s.actionRow}>
         <ActionButton
-          label="Đã nhận phòng"
+          label="Đã trả phòng"
           color="#28d122"
           bgColor="#FFF7ED"
           Icon={Banknote}
@@ -334,8 +326,6 @@ function renderActions(
 
   return null;
 }
-
-
 
 // ============================================================
 // MAIN SCREEN
@@ -372,7 +362,7 @@ export function BookingManagement() {
     setLoading(true);
 
     try {
-      const data = await partnerService.getBookings(
+      const data = await bookingService.getBookings(
         filter === 'ALL' ? undefined : filter
       );
 
@@ -393,14 +383,8 @@ export function BookingManagement() {
 
     if (!q) return bookings;
 
-    return bookings.filter((booking: any) => {
-      const hotelName = String(
-        booking.property?.name ||
-          booking.hotel?.name ||
-          booking.hotelName ||
-          ''
-      ).toLowerCase();
-
+    return bookings.filter((booking: Booking) => {
+      const hotelName = String(booking.property?.name || '').toLowerCase();
       const roomName = String(booking.room?.name || '').toLowerCase();
       const customerName = String(booking.user?.username || '').toLowerCase();
       const customerPhone = String(booking.user?.phone || '').toLowerCase();
@@ -416,19 +400,15 @@ export function BookingManagement() {
 
   const handleAction = async (id: string, status: BookingStatus) => {
     try {
-      await partnerService.updateBookingStatus(id, status);
+      await bookingService.updateBookingStatus(id, status);
 
-
-
-    const statusLabels: Record<string, string> = {
-      CONFIRMED: 'Đã xác nhận đơn đặt phòng',
-      CHECKED_IN: 'Đã cập nhật trạng thái nhận phòng',
-      PAYMENT_PENDING: 'Đã cập nhật trạng thái nhận phòng',
-      COMPLETED: 'Đã thanh toán và hoàn thành đơn',
-      CANCELLED: 'Đã hủy đơn đặt phòng',
-    };
-
-
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'Đã xác nhận đơn đặt phòng',
+        CHECKED_IN: 'Đã cập nhật trạng thái nhận phòng',
+        PAYMENT_PENDING: 'Đã cập nhật trạng thái trả phòng / chờ thanh toán',
+        COMPLETED: 'Đã thanh toán và hoàn thành đơn',
+        CANCELLED: 'Đã hủy đơn đặt phòng',
+      };
 
       showMsg('success', statusLabels[status] || 'Cập nhật thành công');
 

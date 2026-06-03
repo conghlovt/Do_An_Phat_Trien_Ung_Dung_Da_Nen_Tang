@@ -191,8 +191,6 @@ export const SelectDropdown = forwardRef<SelectDropdownRef, SelectDropdownProps>
   );
 });
 
-SelectDropdown.displayName = 'SelectDropdown';
-
 const styles = StyleSheet.create({
   container: {
     marginBottom: 14,
@@ -370,3 +368,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+
+SelectDropdown.displayName = 'SelectDropdown';
+

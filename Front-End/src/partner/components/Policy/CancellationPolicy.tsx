@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { partnerService } from '../../services/partner.service';
-import type { Hotel } from '../../services/partner.service';
+import { hotelService } from '../../services/hotel.service';
+import { Hotel } from '../../types/hotel.type';
 import { ArrowLeft, ShieldCheck, Clock, Check, Save, Hotel as HotelIcon, Plus } from 'lucide-react-native';
 import { SuccessModal } from '../shared/SuccessModal';
 
@@ -30,7 +30,7 @@ export function CancellationPolicy({ onBack }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    partnerService.getHotels().then(({ items }) => {
+    hotelService.getHotels().then(({ items }) => {
       if (items.length > 0) {
         setHotelId(items[0].id);
         setNoHotel(false);
@@ -43,7 +43,7 @@ export function CancellationPolicy({ onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    if (hotelId) partnerService.getHotel(hotelId).then(setCurrentHotel);
+    if (hotelId) hotelService.getHotel(hotelId).then(setCurrentHotel);
   }, [hotelId]);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function CancellationPolicy({ onBack }: Props) {
     try {
       setErrorMsg('');
       setIsSaving(true);
-      await partnerService.updateHotel(hotelId, {
+      await hotelService.updateHotel(hotelId, {
         cancellationPolicy: selectedPolicy,
         cancellationHours: parseInt(cancellationHours) || 0,
       });

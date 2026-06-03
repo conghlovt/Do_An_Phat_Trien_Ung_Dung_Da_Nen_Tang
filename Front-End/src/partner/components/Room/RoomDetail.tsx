@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl, TextInput } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StatusBadge } from '../shared/StatusBadge';
 import { LoadingSpinner, EmptyState } from '../shared/LoadingSpinner';
 import { ImageUploader } from '../shared/ImageUploader';
 import { ConfirmModal } from '../shared/ConfirmModal';
 import { MessageModal, MessageType } from '../shared/MessageModal';
-import { partnerService } from '../../services/partner.service';
-import type { RoomType, RoomUnit } from '../../services/partner.service';
+import { roomService } from '../../services/room.service';
+import { RoomType, RoomUnit } from '../../types/room.type';
 import { Image } from 'expo-image';
 import { ArrowLeft, Pencil, Trash2, Users, BedDouble, Maximize, DoorOpen, ImagePlus, Plus, X } from 'lucide-react-native';
 import { useForm, Controller } from 'react-hook-form';
@@ -52,9 +52,9 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
 
   const loadData = async () => {
     try {
-      const typeData = await partnerService.getRoomType(hotelId, roomTypeId);
+      const typeData = await roomService.getRoomType(hotelId, roomTypeId);
       setRoomType(typeData);
-      const unitsData = await partnerService.getRoomUnits(hotelId, roomTypeId);
+      const unitsData = await roomService.getRoomUnit(hotelId, roomTypeId);
       setUnits(unitsData);
     } catch (err: any) {
       showError(err.message || 'Không thể tải dữ liệu phòng');
@@ -63,13 +63,14 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (hotelId && roomTypeId) loadData(); }, [hotelId, roomTypeId]);
 
   const onRefresh = async () => { setRefreshing(true); await loadData(); setRefreshing(false); };
 
   const handleAddUnit = async (data: UnitFormData) => {
     try {
-      await partnerService.createRoomUnit(hotelId, roomTypeId, {
+      await roomService.createRoomUnit(hotelId, roomTypeId, {
         roomNumber: data.roomNumber,
         floor: data.floor ? parseInt(data.floor) : undefined,
         notes: data.notes,
@@ -84,7 +85,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
 
   const handleDeleteUnit = async (unitId: string) => {
     try {
-      await partnerService.deleteRoomUnit(hotelId, roomTypeId, unitId);
+      await roomService.deleteRoomUnit(hotelId, roomTypeId, unitId);
       await loadData();
     } catch (err: any) {
       showError(err.message || 'Không thể xóa phòng');
@@ -94,7 +95,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
   const handleUploadMedia = async (files: any[]) => {
     try {
       setIsUploading(true);
-      await partnerService.uploadRoomMedia(hotelId, roomTypeId, files);
+      await roomService.uploadRoomMedia(hotelId, roomTypeId, files);
       await loadData();
     } catch (err: any) {
       showError('Lỗi tải ảnh: ' + (err.message || 'Không rõ nguyên nhân'));
@@ -105,7 +106,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
 
   const handleDeleteMedia = async (mediaId: string) => {
     try {
-      await partnerService.deleteRoomMedia(hotelId, roomTypeId, mediaId);
+      await roomService.deleteRoomMedia(hotelId, roomTypeId, mediaId);
       await loadData();
     } catch (err: any) {
       showError(err.message || 'Không thể xóa ảnh');
@@ -114,7 +115,7 @@ export function RoomDetail({ hotelId, roomTypeId, onBack }: Props) {
 
   const handleDeleteRoomType = async () => {
     try {
-      await partnerService.deleteRoomType(hotelId, roomTypeId);
+      await roomService.deleteRoomType(hotelId, roomTypeId);
       onBack?.();
     } catch (err: any) {
       showError(err.message || 'Không thể xóa loại phòng');

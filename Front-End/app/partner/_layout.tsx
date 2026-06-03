@@ -1,26 +1,44 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  Platform,
   Animated,
   TouchableWithoutFeedback,
-  useWindowDimensions,
+  Platform,
   Text,
 } from 'react-native';
 import { Slot, useRouter, usePathname } from 'expo-router';
-import {
-  Sidebar,
-  SIDEBAR_EXPANDED,
-} from '../../src/partner/components/shared/Sidebar';
+import { Sidebar, SIDEBAR_EXPANDED } from '../../src/partner/components/shared/Sidebar';
 import { Header } from '../../src/partner/components/shared/Header';
 import { useAuth } from '../../src/login/hooks/useAuth';
 
-const isMobile = Platform.OS !== 'web';
+const getPageTitle = (pathname: string): string => {
+  const routes: Record<string, string> = {
+    '/partner/dashboard': 'Trang chủ',
+    '/partner': 'Trang chủ',
+    '/rooms': 'Quản lý phòng',
+    '/booking': 'Đơn đặt phòng',
+    '/vouchers': 'Quản lý Voucher',
+    '/stats': 'Thống kê',
+    '/settings': 'Thiết lập',
+    '/hotel/new-hotel': 'Thêm khách sạn mới',
+    '/hotel/edit-hotel': 'Chỉnh sửa khách sạn',
+    '/room/new-room': 'Thêm loại phòng mới',
+    '/room/edit-room': 'Chỉnh sửa phòng',
+  };
+
+  if (routes[pathname]) return routes[pathname];
+
+  for (const [key, title] of Object.entries(routes)) {
+    if (pathname.includes(key)) return title;
+  }
+
+  return 'Partner';
+};
 
 export default function PartnerLayout() {
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 768;
+  const isMobile = Platform.OS !== 'web';
+  
   const router = useRouter();
   const pathname = usePathname();
   const { isLoading, isAuthenticated, logout } = useAuth();
@@ -29,28 +47,27 @@ export default function PartnerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerAnim = useRef(new Animated.Value(-SIDEBAR_EXPANDED)).current;
 
-  React.useEffect(() => {
-    if (isLoading) return;
-
-    if (!isAuthenticated) {
-      router.replace('/login' as any);
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login'); 
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading]);
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/login' as any);
+    router.replace('/login');
   };
 
   const openMobileDrawer = () => {
     setDrawerOpen(true);
-
-    Animated.spring(drawerAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      speed: 14,
-      bounciness: 0,
-    }).start();
+    setTimeout(() => {
+      Animated.spring(drawerAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 0,
+      }).start();
+    }, 0);
   };
 
   const closeMobileDrawer = () => {
@@ -64,38 +81,15 @@ export default function PartnerLayout() {
   if (isLoading || !isAuthenticated) {
     return (
       <View style={s.center}>
-        <Text>Loading...</Text>
+        <Text>Đang tải dữ liệu...</Text>
       </View>
     );
   }
 
-  let title = 'Partner';
+  const title = getPageTitle(pathname);
 
-  if (pathname === '/partner/dashboard' || pathname === '/partner') {
-    title = 'Trang chủ';
-  } else if (pathname.includes('/rooms')) {
-    title = 'Quản lý phòng';
-  } else if (pathname.includes('/booking')) {
-    title = 'Đơn đặt phòng';
-  } else if (pathname.includes('/vouchers')) {
-    title = 'Quản lý Voucher';
-  } else if (pathname.includes('/stats')) {
-    title = 'Thống kê';
-  } else if (pathname.includes('/settings')) {
-    title = 'Thiết lập';
-  } else if (pathname.includes('/hotel/new-hotel')) {
-    title = 'Thêm khách sạn mới';
-  } else if (pathname.includes('/hotel/edit-hotel')) {
-    title = 'Chỉnh sửa khách sạn';
-  } else if (pathname.includes('/room/new-room')) {
-    title = 'Thêm loại phòng mới';
-  } else if (pathname.includes('/room/edit-room')) {
-    title = 'Chỉnh sửa phòng';
-  } else if (pathname.includes('/room/')) {
-    title = 'Chi tiết phòng';
-  }
-
-  if (isMobile || !isDesktop) {
+  // Giao diện Mobile
+  if (isMobile) {
     return (
       <View style={s.container}>
         <Header title={title} onMenuPress={openMobileDrawer} />
@@ -128,6 +122,7 @@ export default function PartnerLayout() {
     );
   }
 
+  // Giao diện Desktop
   return (
     <View style={s.row}>
       <Sidebar
@@ -135,7 +130,6 @@ export default function PartnerLayout() {
         onToggle={() => setSidebarCollapsed((prev) => !prev)}
         onLogout={handleLogout}
       />
-
       <View style={s.main}>
         <Header title={title} />
         <Slot />
@@ -145,26 +139,11 @@ export default function PartnerLayout() {
 }
 
 const s = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-  },
-  content: {
-    flex: 1,
-  },
-  main: {
-    flex: 1,
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  row: { flex: 1, flexDirection: 'row', backgroundColor: '#F8FAFC' },
+  content: { flex: 1 },
+  main: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
