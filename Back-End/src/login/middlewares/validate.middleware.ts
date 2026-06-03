@@ -16,6 +16,7 @@ import { sendError, sendPartnerError } from '../../shared/utils/response.util';
 export const validate = (schema: ZodSchema, source: 'body' | 'query' | 'params' = 'body') => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log(`[VALIDATE MIDDLEWARE] Source: ${source}, data:`, req[source]);
       const data = schema.parse(req[source]);
 
       if (source === 'body') {

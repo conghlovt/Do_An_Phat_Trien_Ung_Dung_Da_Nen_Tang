@@ -18,6 +18,7 @@ const inactiveAuthResponse = (res: Response, status?: string | null) => {
 };
 
 export const register = async (req: Request, res: Response) => {
+  console.log('[REGISTER CONTROLLER] Received body:', req.body);
   const { email, password, username, role } = req.body;
 
   if (!email || !password || !username || !role) {

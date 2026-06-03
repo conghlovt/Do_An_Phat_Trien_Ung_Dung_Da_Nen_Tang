@@ -78,6 +78,26 @@ export const toAppError = (error: unknown) => {
     });
   }
 
+  if (error instanceof Error && typeof (error as any).statusCode === 'number') {
+    const statusCode = (error as any).statusCode;
+    const internalCode: InternalCode =
+      statusCode === 401
+        ? 'AUTH_TOKEN_MISSING'
+        : statusCode === 403
+          ? 'AUTH_FORBIDDEN'
+          : statusCode === 404
+            ? 'RESOURCE_NOT_FOUND'
+            : statusCode === 409
+              ? 'USER_EXISTS'
+              : 'VALIDATION_ERROR';
+
+    return new AppError(statusCode, internalCode, {
+      userMessage: error.message,
+      details: error.message,
+      cause: error,
+    });
+  }
+
   return new AppError(500, 'INTERNAL_ERROR', {
     details: error instanceof Error ? error.message : error,
     cause: error,

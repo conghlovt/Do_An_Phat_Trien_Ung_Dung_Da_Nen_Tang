@@ -46,8 +46,10 @@ const FILTERS: {
   Icon: React.ElementType;
 }[] = [
   { key: 'ALL', label: 'Tất cả', Icon: ClipboardList },
-  { key: 'CHECKED_IN', label: 'Đã nhận phòng', Icon: DoorOpen },
-  { key: 'PAYMENT_PENDING', label: 'Trả phòng/thanh toán', Icon: Banknote },
+  { key: 'PENDING', label: 'Chờ duyệt', Icon: Clock},
+  { key: 'CONFIRMED', label: 'Đã xác nhận', Icon: CheckCircle},
+  { key: 'CHECKED_IN', label: 'Đang ở', Icon: DoorOpen },
+  { key: 'PAYMENT_PENDING', label: 'Chờ thanh toán', Icon: Banknote },
   { key: 'COMPLETED', label: 'Hoàn thành', Icon: Trophy },
   { key: 'CANCELLED', label: 'Đã hủy', Icon: XCircle },
 ];
@@ -404,8 +406,8 @@ export function BookingManagement() {
 
       const statusLabels: Record<string, string> = {
         CONFIRMED: 'Đã xác nhận đơn đặt phòng',
-        CHECKED_IN: 'Đã cập nhật trạng thái nhận phòng',
-        PAYMENT_PENDING: 'Đã cập nhật trạng thái trả phòng / chờ thanh toán',
+        CHECKED_IN: 'Khách đã nhận phòng thành công',
+        PAYMENT_PENDING: 'Đã cập nhật trạng thái chờ thanh toán',
         COMPLETED: 'Đã thanh toán và hoàn thành đơn',
         CANCELLED: 'Đã hủy đơn đặt phòng',
       };

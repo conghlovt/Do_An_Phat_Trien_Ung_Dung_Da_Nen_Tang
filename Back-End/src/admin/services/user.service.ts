@@ -119,6 +119,13 @@ export const userService = {
   createUser: async (data: any, requesterRole: string) => {
     const { email, password, username, role } = data;
 
+    if (!email || !password || !username || !role) {
+      throw new AppError(400, 'VALIDATION_ERROR', {
+        userMessage: 'Thiếu thông tin bắt buộc.',
+        errors: { fields: 'Email, password, username, and role are required.' }
+      });
+    }
+
     if (PROTECTED_ADMIN_ROLES.includes(role) && !ROOT_ADMIN_ROLES.includes(requesterRole)) {
       throw new AppError(403, 'ADMIN_ACCOUNT_FORBIDDEN');
     }
