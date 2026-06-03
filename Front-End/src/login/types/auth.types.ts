@@ -10,6 +10,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  nickname?: string | null;
   role: Role;
   avatar?: string;
   code?: string;

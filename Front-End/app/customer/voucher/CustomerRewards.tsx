@@ -52,6 +52,9 @@ export default function CustomerRewards({
   const [scrollX, setScrollX] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
+  const scrollStep = useMemo(() => {
+    return isWebLayout ? 360 : 300;
+  }, [isWebLayout]);
 
   if (!data || data.length === 0) return null;
 
@@ -97,10 +100,6 @@ export default function CustomerRewards({
   };
 
   // Khoảng scroll mỗi lần bấm trái / phải
-  const scrollStep = useMemo(() => {
-    return isWebLayout ? 360 : 300;
-  }, [isWebLayout]);
-
   const maxScrollX = Math.max(0, contentWidth - containerWidth);
   const canScrollLeft = scrollX > 5;
   const canScrollRight = scrollX < maxScrollX - 5;
