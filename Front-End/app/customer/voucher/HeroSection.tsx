@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
-import { Bell, ChevronRight, CreditCard, Search } from "lucide-react-native";
+import { Bell, ChevronRight, CreditCard } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { styles } from "./styles";
 
 interface Props {
@@ -18,6 +19,8 @@ export default function HeroSection({
   voucherCount = 12,
   onVoucherPress,
 }: Props) {
+  const router = useRouter();
+
   const cards = [
     {
       Icon: CreditCard,
@@ -46,11 +49,12 @@ export default function HeroSection({
           <Text style={styles.brandText}>STAYHUB</Text>
           <Text style={styles.heroTitle}>Ưu đãi</Text>
         </View>
+
         <View style={styles.heroActions}>
-          <Pressable style={styles.heroIconButton}>
-            <Search size={21} color="#ffffff" strokeWidth={2} />
-          </Pressable>
-          <Pressable style={styles.heroIconButton}>
+          <Pressable
+            style={styles.heroIconButton}
+            onPress={() => router.push("/customer/messages/notifications")}
+          >
             <Bell size={20} color="#ffffff" strokeWidth={2} />
             <View style={styles.notificationDot} />
           </Pressable>
@@ -70,6 +74,7 @@ export default function HeroSection({
             <View style={[styles.summaryIcon, { backgroundColor: bg }]}>
               <Icon size={22} color={color} strokeWidth={1.8} />
             </View>
+
             <View style={styles.summaryCopy}>
               <Text style={styles.summaryLabel}>{label}</Text>
               <View style={styles.summaryValueRow}>
@@ -90,6 +95,7 @@ export default function HeroSection({
                 )}
               </View>
             </View>
+
             <ChevronRight size={18} color="#c4cfdd" />
           </Pressable>
         ))}

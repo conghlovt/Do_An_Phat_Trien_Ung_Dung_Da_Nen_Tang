@@ -9,7 +9,6 @@ interface AuthStore extends AuthState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   restoreSession: () => Promise<void>;
-  updateUser: (updates: Partial<AuthState["user"]>) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -83,24 +82,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ isAuthenticated: false, user: null });
     } finally {
       set({ isLoading: false });
-    }
-  },
-
-  updateUser: async (updates: Partial<AuthState["user"]>) => {
-    try {
-      const currentUser = useAuthStore.getState().user;
-      if (!currentUser) return;
-
-      const updatedUser = { ...currentUser, ...updates };
-      set({ user: updatedUser });
-
-      try {
-        await userProfileStorage.saveCurrentUser(updatedUser);
-      } catch (e) {
-        console.error("Error saving updated user to storage", e);
-      }
-    } catch (e) {
-      console.error("Error updating user", e);
     }
   },
 }));

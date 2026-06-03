@@ -1,22 +1,29 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Platform } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
-import { getCurrentUser as getLoginCurrentUser } from '../api/auth.api';
-import { useAuthStore as useLoginAuthStore } from '../store/auth.store';
-import { forceLogout, getBlockedAuthMessage, isBlockedAuthError } from '../shared/api/api.instance';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform } from "react-native";
+import { usePathname, useRouter } from "expo-router";
+import { getCurrentUser as getLoginCurrentUser } from "../api/auth.api";
+import { useAuthStore as useLoginAuthStore } from "../store/auth.store";
+import {
+  forceLogout,
+  getBlockedAuthMessage,
+  isBlockedAuthError,
+} from "../shared/api/api.instance";
 
 const SESSION_POLL_INTERVAL_MS = 20_000;
-const BLOCKED_MESSAGE = 'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.';
+const BLOCKED_MESSAGE =
+  "Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.";
 
 const getInitialActiveState = () => {
-  if (Platform.OS === 'web' && typeof document !== 'undefined') {
-    return document.visibilityState === 'visible';
+  if (Platform.OS === "web" && typeof document !== "undefined") {
+    return document.visibilityState === "visible";
   }
 
-  return AppState.currentState === 'active';
+  return AppState.currentState === "active";
 };
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -33,20 +40,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     if (isLoginLoading || isLoginAuthenticated) return;
-    if (pathname.startsWith('/admin') || pathname.startsWith('/partner')) {
-      router.replace('/login' as any);
+    if (pathname.startsWith("/admin") || pathname.startsWith("/partner")) {
+      router.replace("/login" as any);
     }
   }, [isLoginAuthenticated, isLoginLoading, pathname, router]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const handleVisibilityChange = () => setIsAppActive(document.visibilityState === 'visible');
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const handleVisibilityChange = () =>
+        setIsAppActive(document.visibilityState === "visible");
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      return () =>
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange,
+        );
     }
 
-    const subscription = AppState.addEventListener('change', (state) => {
-      setIsAppActive(state === 'active');
+    const subscription = AppState.addEventListener("change", (state) => {
+      setIsAppActive(state === "active");
     });
     return () => subscription.remove();
   }, []);
@@ -64,10 +76,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const status = error?.response?.status;
       if (isBlockedAuthError(error)) {
         await forceLogout(getBlockedAuthMessage(error) || BLOCKED_MESSAGE);
-        router.replace('/login' as any);
+        router.replace("/login" as any);
       } else if (status === 401 || status === 403) {
-        await forceLogout(error?.response?.data?.message || 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.');
-        router.replace('/login' as any);
+        await forceLogout(
+          error?.response?.data?.message ||
+            "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+        );
+        router.replace("/login" as any);
       }
     } finally {
       checkingRef.current = false;

@@ -13,10 +13,6 @@ export interface User {
   role: Role;
   avatar?: string;
   code?: string;
-  nickname?: string | null;
-  phone?: string | null;
-  gender?: "MALE" | "FEMALE" | "OTHER" | null;
-  dateOfBirth?: string | null;
 }
 
 export interface AuthState {
