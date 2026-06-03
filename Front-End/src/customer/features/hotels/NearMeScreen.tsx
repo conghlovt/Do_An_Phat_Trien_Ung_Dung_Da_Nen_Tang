@@ -9,8 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { ChevronLeft } from 'lucide-react-native';
-import HotelListCard from '@/src/customer/features/hotels/HotelListCard';
-import HotelResultsSection from '@/src/customer/features/hotels/HotelResultsSection';
+import HotelListCard from '@/src/customer/components/hotels/HotelListCard';
+import HotelResultsSection from '@/src/customer/components/hotels/HotelResultsSection';
 import { useCustomerHotelsStore } from '@/src/customer/services/hotels/hotels.store';
 import { applyHotelListFilters } from '@/src/customer/utils/hotels/hotelListFilters';
 import {

@@ -262,6 +262,10 @@ export default function BookingDetailScreen() {
               <Text style={[styles.infoLabel, { color: currentTheme.textSecondary }]}>Họ tên</Text>
               <Text style={[styles.infoValue, { color: currentTheme.text }]}>{booking.customerName || 'Khách hàng'}</Text>
             </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: currentTheme.textSecondary }]}>Email</Text>
+              <Text style={[styles.infoValue, { color: currentTheme.text }]}>{booking.customerEmail || 'Chưa cập nhật'}</Text>
+            </View>
           </View>
 
           <View style={[styles.section, isWebLayout && styles.webSection, isWebLayout && styles.webGridSection, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
@@ -283,21 +287,6 @@ export default function BookingDetailScreen() {
               <Text style={[styles.totalLabel, { color: currentTheme.text }]}>Tổng thanh toán</Text>
               <Text style={[styles.totalValue, { color: currentTheme.text }]}>{booking.price}</Text>
             </View>
-          </View>
-
-          <View style={[styles.section, isWebLayout && styles.webSection, isWebLayout && styles.webGridSection, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Tận hưởng ưu đãi</Text>
-            <View style={styles.benefitRow}>
-              <Gift size={20} color={PRIMARY} />
-              <Text style={[styles.benefitText, { color: currentTheme.textSecondary }]}>
-                Nhận Joy Xu khi nhận phòng và hoàn tất đánh giá
-              </Text>
-            </View>
-            <Pressable style={styles.offerCard}>
-              <Gift size={30} color={PRIMARY} />
-              <Text style={[styles.offerText, { color: currentTheme.text }]}>Rinh ngay mã giảm giá cho lần đặt kế tiếp</Text>
-              <ChevronRight size={20} color={PRIMARY} />
-            </Pressable>
           </View>
 
           <View style={[styles.section, isWebLayout && styles.webSection, isWebLayout && styles.webGridSection, { backgroundColor: currentTheme.card, borderColor: currentTheme.border }]}>

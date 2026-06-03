@@ -1,4 +1,4 @@
-import { styles } from '@/src/customer/styles/messages/notificationSettings.styles';
+import { styles } from '@/src/customer/styles/notification/notificationSettings.styles';
 import React, { useState } from 'react';
 import {
   View,
@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
-import CustomSwitch from '@/src/customer/features/messages/CustomSwitch';
+import CustomSwitch from '@/src/customer/components/ui/CustomSwitch';
 
 export default function NotificationSettingsScreen() {
   const goBack = useCustomerBack('/customer/profile');

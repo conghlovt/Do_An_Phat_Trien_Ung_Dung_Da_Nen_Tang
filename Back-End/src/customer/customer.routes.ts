@@ -3,7 +3,7 @@ import authRoutes from './routes/auth.routes';
 import hotelRoutes from './routes/hotel.routes';
 import homeRoutes from './routes/home.routes';
 import locationRoutes from './routes/location.routes';
-import messageRoutes from './routes/message.routes';
+import messageRoutes from './routes/notification.routes';
 import bookingRoutes from './routes/booking.routes';
 import paymentRoutes from './routes/payment.routes';
 import offersRoutes from './routes/offers.routes';

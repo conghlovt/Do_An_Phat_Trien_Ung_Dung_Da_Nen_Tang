@@ -2,10 +2,10 @@ import React, { useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '@/src/customer/components/layout/Header';
-import CategoryNav from '@/src/customer/features/home/CategoryNav';
-import BookingGrid from '@/src/customer/features/home/BookingGrid';
-import Banners from '@/src/customer/features/home/Banners';
-import HotelSection from '@/src/customer/features/home/HotelSection';
+import CategoryNav from '@/src/customer/components/home/CategoryNav';
+import BookingGrid from '@/src/customer/components/home/BookingGrid';
+import Banners from '@/src/customer/components/home/Banners';
+import HotelSection from '@/src/customer/components/home/HotelSection';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 export default function HomeScreen() {
@@ -27,8 +27,6 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header
         onOpenSearch={() => router.push('/customer/search')}
-        onOpenMessages={() => router.push('/customer/messages')}
-        onOpenNotifications={() => router.push('/customer/messages/notifications')}
         isScrolled={isScrolled}
       />
       <ScrollView

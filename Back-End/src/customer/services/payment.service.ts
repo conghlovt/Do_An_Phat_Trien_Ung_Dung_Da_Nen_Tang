@@ -115,7 +115,10 @@ export const getHotelPaymentAccount = async (
       "STAYHUB_BANK_ACCOUNT_NAME",
       getEnv("VIETQR_ACCOUNT_NAME", DEFAULT_ACCOUNT_NAME),
     ),
-    template: getEnv("STAYHUB_SEPAY_TEMPLATE", getEnv("VIETQR_TEMPLATE", DEFAULT_TEMPLATE)),
+    template: getEnv(
+      "STAYHUB_SEPAY_TEMPLATE",
+      getEnv("VIETQR_TEMPLATE", DEFAULT_TEMPLATE),
+    ),
   };
 
   console.log("[getHotelPaymentAccount] StayHub admin account selected:", {
@@ -310,7 +313,7 @@ export const handleSepayWebhook = async (body: unknown) => {
   const rawPayload = body && typeof body === "object" ? body : {};
   const payload = normalizeSepayPayload(rawPayload);
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     const duplicateLog = payload.referenceCode
       ? await tx.paymentWebhookLog.findFirst({
           where: { referenceCode: payload.referenceCode },

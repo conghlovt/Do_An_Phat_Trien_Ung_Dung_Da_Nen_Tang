@@ -1,14 +1,9 @@
-import type {
-  CustomerMessage as CustomerMessageRow,
-  CustomerNotification as CustomerNotificationRow,
-} from '@prisma/client';
 import prisma from '../../login/lib/prisma';
 import { AppError } from '../../shared/utils/app-error.util';
 import type {
-  CustomerMessageDto,
   CustomerNotificationDto,
   CustomerNotificationType,
-} from '../models/message.model';
+} from '../models/notification.model';
 
 const CUSTOMER_SEED_EMAIL = 'customer@gmail.com';
 
@@ -29,15 +24,9 @@ const resolveCustomerId = async (userId?: string): Promise<string> => {
   return seededCustomer.id;
 };
 
-const mapMessage = (message: CustomerMessageRow): CustomerMessageDto => ({
-  id: message.id,
-  hotelName: message.hotelName,
-  preview: message.preview,
-  time: message.time,
-  isRead: message.isRead,
-});
+type CustomerNotificationRecord = Awaited<ReturnType<typeof prisma.customerNotification.findMany>>[number];
 
-const mapNotification = (notification: CustomerNotificationRow): CustomerNotificationDto => ({
+const mapNotification = (notification: CustomerNotificationRecord): CustomerNotificationDto => ({
   id: notification.id,
   type: notification.type as CustomerNotificationType,
   title: notification.title,
@@ -45,41 +34,6 @@ const mapNotification = (notification: CustomerNotificationRow): CustomerNotific
   time: notification.time,
   isRead: notification.isRead,
 });
-
-export const findMessages = async (userId?: string): Promise<CustomerMessageDto[]> => {
-  const customerId = await resolveCustomerId(userId);
-
-  const messages = await prisma.customerMessage.findMany({
-    where: { userId: customerId },
-    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-  });
-
-  return messages.map(mapMessage);
-};
-
-export const markMessageAsRead = async (
-  id: string,
-  userId?: string,
-): Promise<CustomerMessageDto> => {
-  const customerId = await resolveCustomerId(userId);
-
-  await prisma.customerMessage.updateMany({
-    where: { id, userId: customerId },
-    data: { isRead: true },
-  });
-
-  const message = await prisma.customerMessage.findFirst({
-    where: { id, userId: customerId },
-  });
-
-  if (!message) {
-    throw new AppError(404, 'RESOURCE_NOT_FOUND', {
-      userMessage: 'Không tìm thấy tin nhắn.',
-    });
-  }
-
-  return mapMessage(message);
-};
 
 export const findNotifications = async (
   userId?: string,

@@ -24,6 +24,7 @@ export interface Hotel {
   // Extended fields (thêm khi backend bổ sung)
   images?: string[];
   phone?: string;
+  email?: string;
   address?: string;
   description?: string;
   amenities?: string[];

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { MapPin } from 'lucide-react-native';
-import { SupportCard } from '@/src/customer/features/support/SupportCard';
+import { SupportCard } from '@/src/customer/components/support/SupportCard';
 import { SupportScreen } from '@/src/customer/features/support/SupportScreen';
 import { SUPPORT_ACCENT, supportStyles as styles } from '@/src/customer/styles/support/support.styles';
 import { CONTACT_ITEMS } from '@/src/customer/constants/support/contactSupport';
@@ -14,12 +14,10 @@ export default function ContactSupportScreen() {
 
   return (
     <SupportScreen title="Liên hệ & Hỗ trợ">
-      {CONTACT_ITEMS.map(({ action, buttonLabel, icon, subtitle, title, type }) => (
+      {CONTACT_ITEMS.map(({ icon, subtitle, title, type }) => (
         <SupportCard
           key={type}
-          actionLabel={buttonLabel}
           icon={icon}
-          onAction={action}
           subtitle={subtitle}
           title={title}
         />

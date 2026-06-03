@@ -9,8 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import {
-  ChevronLeft, MessageCircle, Heart, Share2,
-  Star, Flame, MapPin, Phone, Clock, ChevronRight,
+  ChevronLeft, MessageCircle, Heart,
+  Star, Flame, MapPin, Phone, Mail, Clock, ChevronRight,
 } from 'lucide-react-native';
 import { AmenityIcon } from '@/src/customer/components/common/AmenityIcon';
 import ImageGalleryViewer from '@/src/customer/components/common/ImageGalleryViewer';
@@ -126,11 +126,10 @@ export default function HotelDetailScreen() {
           <Text style={[styles.headerTitleText, { color: currentTheme.text }]} numberOfLines={1}>{hotel.name}</Text>
         </Animated.View>
         <View style={[styles.iconRow, isWebLayout && styles.webHeaderSideRight]}>
-          <Pressable style={[styles.iconBtn, { backgroundColor: currentTheme.card }]}><MessageCircle size={22} color={currentTheme.text} /></Pressable>
           <Pressable style={[styles.iconBtn, { backgroundColor: currentTheme.card }]} onPress={() => setLiked(l => !l)}>
             <Heart size={22} color={liked ? '#ef4444' : currentTheme.text} fill={liked ? '#ef4444' : 'none'} />
           </Pressable>
-          <Pressable style={[styles.iconBtn, { backgroundColor: currentTheme.card }]}><Share2 size={22} color={currentTheme.text} /></Pressable>
+
         </View>
       </View>
 
@@ -216,6 +215,16 @@ export default function HotelDetailScreen() {
           <View style={styles.ratingSummary}>
             <Text style={[styles.bigScore, { color: currentTheme.text }]}>{hotel.rating}</Text>
             <View>
+              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+                {[1,2,3,4,5].map(i => (
+                  <Star
+                    key={i}
+                    size={16}
+                    color={STAR_COLOR}
+                    fill={i <= Math.round(hotel.rating) ? STAR_COLOR : 'none'}
+                  />
+                ))}
+              </View>
               <Text style={[styles.ratingLabel, { color: currentTheme.text }]}>Tuyệt vời</Text>
               <Text style={[styles.ratingSubLabel, { color: currentTheme.textSecondary }]}>{hotel.reviews} đánh giá</Text>
             </View>
@@ -230,6 +239,12 @@ export default function HotelDetailScreen() {
             <Pressable style={styles.phoneRow}>
               <Phone size={14} color={PRIMARY} />
               <Text style={styles.phoneText}>{hotel.phone}</Text>
+            </Pressable>
+          )}
+          {hotel.email && (
+            <Pressable style={styles.phoneRow}>
+              <Mail size={14} color={PRIMARY} />
+              <Text style={styles.phoneText}>{hotel.email}</Text>
             </Pressable>
           )}
         </View>
@@ -274,14 +289,7 @@ export default function HotelDetailScreen() {
           <Text style={[styles.descText, { color: currentTheme.textSecondary }]}>Việc hủy phòng sẽ tuân theo quy định riêng của từng loại phòng và thời điểm đặt.</Text>
         </View>
 
-        {/* Chat */}
-        <View style={[styles.sectionDivider, { backgroundColor: currentTheme.card, borderTopColor: currentTheme.border }]}>
-          <Text style={[styles.chatPrompt, { color: currentTheme.textSecondary }]}>Bạn có thắc mắc cần được giải đáp? Hãy nhắn tin cho khách sạn ngay để được hỗ trợ nhé!</Text>
-          <Pressable style={styles.chatBtn}>
-            <MessageCircle size={16} color="#fff" />
-            <Text style={styles.chatBtnText}>Chat với khách sạn</Text>
-          </Pressable>
-        </View>
+
 
         </View>
       </Animated.ScrollView>

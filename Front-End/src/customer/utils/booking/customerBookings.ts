@@ -25,6 +25,7 @@ export type CustomerBooking = {
   hours?: string;
   customerName?: string;
   customerPhone?: string;
+  customerEmail?: string;
   status: CustomerBookingStatus;
   paymentMethod?: 'VIETQR' | 'PAY_AT_HOTEL';
   paymentStatus?: PaymentStatus;

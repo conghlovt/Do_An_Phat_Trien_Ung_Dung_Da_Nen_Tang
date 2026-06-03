@@ -10,12 +10,11 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, Copy, Ticket, WalletCards } from "lucide-react-native";
+import { ChevronLeft, Ticket, WalletCards } from "lucide-react-native";
 import { useThemeContext } from "@/src/customer/theme/ThemeContext";
 import { useVoucherCollect } from "@/src/customer/context/VoucherCollectContext";
 
 const PRIMARY = "#85c2a4";
-const MUTED = "#8390ae";
 
 export default function VoucherWalletScreen() {
   const router = useRouter();
@@ -29,19 +28,19 @@ export default function VoucherWalletScreen() {
   );
 
   // Simple filtering - show collected offers from context
-  
-const visibleVouchers = useMemo(() => {
-  if (activeTab === "newSaved") {
-    return [...collectedOffers].reverse();
-  } else if (activeTab === "used") {
-    // TODO: Show used vouchers from backend
+
+  const visibleVouchers = useMemo(() => {
+    if (activeTab === "newSaved") {
+      return [...collectedOffers].reverse();
+    } else if (activeTab === "used") {
+      // TODO: Show used vouchers from backend
+      return [];
+    } else if (activeTab === "history") {
+      // TODO: Show expired vouchers from backend
+      return [];
+    }
     return [];
-  } else if (activeTab === "history") {
-    // TODO: Show expired vouchers from backend
-    return [];
-  }
-  return [];
-}, [activeTab, collectedOffers]);
+  }, [activeTab, collectedOffers]);
 
   return (
     <View

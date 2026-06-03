@@ -1,38 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import type { CustomerAuthRequest } from "../middlewares/auth.middleware";
-import * as messageService from "../services/message.service";
+import * as notificationService from "../services/notification.service";
 import { sendResponse } from "../../shared/utils/response.util";
 
 const getCustomerId = (req: Request) => (req as CustomerAuthRequest).user?.id;
 
-export const getMessages = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const messages = await messageService.findMessages(getCustomerId(req));
-    sendResponse(res, 200, "Lấy danh sách tin nhắn thành công", messages);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const markMessageAsRead = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const message = await messageService.markMessageAsRead(
-      req.params.id as string,
-      getCustomerId(req),
-    );
-    sendResponse(res, 200, "Đánh dấu tin nhắn thành công", message);
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const getNotifications = async (
   req: Request,
@@ -40,7 +12,7 @@ export const getNotifications = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const notifications = await messageService.findNotifications(
+    const notifications = await notificationService.findNotifications(
       getCustomerId(req),
     );
     sendResponse(res, 200, "Lấy danh sách thông báo thành công", notifications);
@@ -55,7 +27,7 @@ export const markAllNotificationsAsRead = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const notifications = await messageService.markAllNotificationsAsRead(
+    const notifications = await notificationService.markAllNotificationsAsRead(
       getCustomerId(req),
     );
     sendResponse(
@@ -75,7 +47,7 @@ export const deleteAllNotifications = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const notifications = await messageService.deleteAllNotifications(
+    const notifications = await notificationService.deleteAllNotifications(
       getCustomerId(req),
     );
     sendResponse(res, 200, "Xóa tất cả thông báo thành công", notifications);
@@ -90,7 +62,7 @@ export const deleteNotification = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const notifications = await messageService.deleteNotification(
+    const notifications = await notificationService.deleteNotification(
       req.params.id as string,
       getCustomerId(req),
     );

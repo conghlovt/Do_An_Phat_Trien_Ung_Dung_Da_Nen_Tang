@@ -20,7 +20,6 @@ import {
   ChevronLeft,
   Clock,
   Mail,
-  MessageCircle,
   RefreshCw,
 } from 'lucide-react-native';
 import {
@@ -32,95 +31,18 @@ import { getParamText } from '@/src/customer/navigation/routeParams';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { getStayHubPaymentView } from '@/src/customer/utils/booking/sepay';
 
+import {
+  formatCountdown, getErrorMessage, getTimeMs, withLocalQrCountdown,
+  getLocalPaymentPhase, getPaymentFailureText,
+  SUPPORT_EMAIL, PAYMENT_RULES, QR_PAYMENT_DURATION_MS, QR_GRACE_DURATION_MS,
+} from '@/src/customer/utils/booking/bookingConfirm.utils';
+
 const PRIMARY = '#85c2a4';
 const TEXT_DARK = '#25252d';
 const TEXT_MUTED = '#85858d';
 const BORDER = '#ededf1';
 const SURFACE = '#ffffff';
 const PAGE_BG = '#f7f7f8';
-const SUPPORT_EMAIL = 'support@stayhub.com';
-const SUPPORT_CHATBOX = 'Chatbox realtime';
-const QR_PAYMENT_DURATION_MS = 15 * 60 * 1000;
-const QR_GRACE_DURATION_MS = 5 * 60 * 1000;
-const PAYMENT_RULES = [
-  'Vui lòng thanh toán trong vòng 15 phút.',
-  'Chuyển khoản đúng số tiền và đúng nội dung hiển thị trên màn hình.',
-  'Sau khi hết 15 phút, hệ thống tiếp tục kiểm tra giao dịch trong tối đa 5 phút.',
-  'Sau thời gian này, nếu quý khách vẫn thực hiện chuyển khoản, hệ thống có thể không tự động ghi nhận thanh toán.',
-  'Nếu đã chuyển tiền nhưng chưa được xác nhận, vui lòng gửi khiếu nại hoặc liên hệ trung tâm hỗ trợ qua email/chatbox.',
-];
-
-function getErrorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as any).response;
-    return response?.data?.message || 'Không thể xử lý thanh toán.';
-  }
-
-  return error instanceof Error ? error.message : 'Không thể xử lý thanh toán.';
-}
-
-function formatCountdown(milliseconds: number) {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function getTimeMs(value?: string | null) {
-  if (!value) return 0;
-  const time = new Date(value).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-function withLocalQrCountdown(session: CreateQrBookingResponse, nowMs = Date.now()): CreateQrBookingResponse {
-  const expiresAtMs = getTimeMs(session.payment.expiresAt) || nowMs + QR_PAYMENT_DURATION_MS;
-  const graceExpiresAtMs = getTimeMs(session.payment.graceExpiresAt) || expiresAtMs + QR_GRACE_DURATION_MS;
-
-  return {
-    ...session,
-    payment: {
-      ...session.payment,
-      expiresAt: new Date(expiresAtMs).toISOString(),
-      graceExpiresAt: new Date(graceExpiresAtMs).toISOString(),
-    },
-  };
-}
-
-function getLocalPaymentPhase(payment: BookingPaymentQr, nowMs: number) {
-  if (payment.status === 'PAID') return 'PAID';
-  if (payment.status === 'EXPIRED_FINAL' || payment.status === 'PAYMENT_NOT_RECORDED') return 'EXPIRED_FINAL';
-  if (payment.status !== 'PENDING') return payment.status;
-
-  const expiresAt = getTimeMs(payment.expiresAt);
-  const graceExpiresAt = getTimeMs(payment.graceExpiresAt);
-
-  if (graceExpiresAt && nowMs >= graceExpiresAt) return 'EXPIRED_FINAL';
-  if (expiresAt && nowMs >= expiresAt) return 'GRACE';
-  return 'ACTIVE';
-}
-
-function getPaymentFailureText(payment: BookingPaymentQr) {
-  if (payment.failureMessage) return payment.failureMessage;
-
-  switch (payment.failureReason) {
-    case 'NO_VALID_WEBHOOK':
-      return 'Không có webhook hợp lệ gửi về backend trong thời gian tự động ghi nhận.';
-    case 'INVALID_AMOUNT':
-      return 'Giao dịch chuyển thiếu tiền so với số tiền cần thanh toán.';
-    case 'INVALID_CONTENT':
-      return 'Nội dung chuyển khoản không khớp bookingCode/paymentCode.';
-    case 'LATE_PAYMENT':
-      return 'Giao dịch đến sau thời gian cho phép và cần được hỗ trợ kiểm tra thủ công.';
-    case 'INVALID_ACCOUNT':
-      return 'Giao dịch gửi tới sai tài khoản nhận tiền.';
-    case 'PAYMENT_EXPIRED_OR_CANCELLED':
-      return 'Payment đã hết hạn hoặc đã bị hủy.';
-    case 'PAYMENT_NOT_FOUND':
-      return 'Hệ thống không tìm được booking/payment tương ứng.';
-    default:
-      return 'Không ghi nhận được thanh toán tự động.';
-  }
-}
 
 function parseQrSession(value: unknown): CreateQrBookingResponse | null {
   const raw = getParamText(value);
@@ -334,12 +256,8 @@ export default function BookingPaymentScreen() {
     Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}`).catch(() => { });
   };
 
-  const openSupportChat = () => {
-    router.push('/customer/support/contact' as any);
-  };
-
   const openComplaint = () => {
-    router.push('/customer/support/contact' as any);
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => { });
   };
 
   if (confirmed) {
@@ -398,7 +316,6 @@ export default function BookingPaymentScreen() {
   const isGracePeriod = paymentPhase === 'GRACE';
   const isPaymentFinal = paymentPhase === 'EXPIRED_FINAL';
   const supportEmail = paymentSession.support?.email || SUPPORT_EMAIL;
-  const supportChatbox = paymentSession.support?.chatbox || SUPPORT_CHATBOX;
   const qrImageUri = stayHubPayment.vietQrUrl;
   const expiresAtMs = getTimeMs(payment.expiresAt);
   const graceExpiresAtMs = getTimeMs(payment.graceExpiresAt);
@@ -514,16 +431,9 @@ export default function BookingPaymentScreen() {
               <Mail size={18} color={PRIMARY} />
               <Text style={styles.supportInfoText}>{supportEmail}</Text>
             </View>
-            <View style={styles.supportInfoRow}>
-              <MessageCircle size={18} color={PRIMARY} />
-              <Text style={styles.supportInfoText}>{supportChatbox}</Text>
-            </View>
             <View style={styles.supportActionsRow}>
               <Pressable style={styles.supportActionBtn} onPress={() => openSupportEmail(`Khiếu nại thanh toán ${booking.code}`)}>
                 <Text style={styles.supportActionText}>Email</Text>
-              </Pressable>
-              <Pressable style={styles.supportActionBtn} onPress={openSupportChat}>
-                <Text style={styles.supportActionText}>Chatbox</Text>
               </Pressable>
             </View>
           </View>
@@ -539,7 +449,7 @@ export default function BookingPaymentScreen() {
 
           {!!paymentError && <Text style={styles.paymentErrorText}>{paymentError}</Text>}
 
-          {isPaymentFinal ? (
+          {isPaymentFinal && (
             <>
               <Pressable
                 style={[styles.successPrimaryBtn, creatingNewQr && styles.buttonDisabled]}
@@ -556,16 +466,6 @@ export default function BookingPaymentScreen() {
                 <Text style={styles.complaintBtnText}>Gửi khiếu nại</Text>
               </Pressable>
             </>
-          ) : (
-            <Pressable
-              style={[styles.successPrimaryBtn, checkingPayment && styles.buttonDisabled]}
-              onPress={() => checkPaymentStatus(true)}
-              disabled={checkingPayment}
-            >
-              <Text style={styles.successPrimaryText}>
-                {checkingPayment ? 'Đang kiểm tra...' : 'Kiểm tra thanh toán'}
-              </Text>
-            </Pressable>
           )}
           <Pressable style={styles.successGhostBtn} onPress={() => router.replace('/customer/bookings' as any)}>
             <Text style={styles.successGhostText}>Xem phòng đã đặt</Text>

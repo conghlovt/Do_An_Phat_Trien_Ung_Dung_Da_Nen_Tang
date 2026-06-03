@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import ExploreMoreSection from '@/src/customer/features/home/ExploreMoreSection';
+import ExploreMoreSection from '@/src/customer/components/home/ExploreMoreSection';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 
 export default function DiscoverScreen() {

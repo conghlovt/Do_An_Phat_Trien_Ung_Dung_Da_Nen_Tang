@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HotelCardProps } from '@/src/customer/features/hotels/HotelCard';
+import { HotelCardProps } from '@/src/customer/components/hotels/HotelCard';
 
 const FAVORITES_STORAGE_KEY = '@stayhub_favorite_hotels';
 

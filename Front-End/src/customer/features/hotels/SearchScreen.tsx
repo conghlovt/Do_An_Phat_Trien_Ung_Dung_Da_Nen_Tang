@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
 import { X, Navigation, Calendar, Search } from 'lucide-react-native';
-import BookingDateModal from '@/src/customer/features/booking/BookingDateModal';
+import BookingDateModal from '@/src/customer/components/booking/BookingDateModal';
 import {
   BOOKING_TAB_TO_TYPE,
   BOOKING_TYPE_TITLES,

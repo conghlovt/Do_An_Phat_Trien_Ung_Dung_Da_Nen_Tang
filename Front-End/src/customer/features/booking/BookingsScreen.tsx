@@ -8,7 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import ImageWithFallback from '@/src/customer/components/common/ImageWithFallback';
 import { customerBookingsStorage, type CustomerBooking } from '@/src/customer/utils/booking/customerBookings';
-import BookingStatusFilterSheet from '@/src/customer/features/booking/BookingStatusFilterSheet';
+import BookingStatusFilterSheet from '@/src/customer/components/booking/BookingStatusFilterSheet';
 import type { BookingStatusFilter } from '@/src/customer/constants/booking/bookingStatusFilters';
 
 const PRIMARY = '#85c2a4';

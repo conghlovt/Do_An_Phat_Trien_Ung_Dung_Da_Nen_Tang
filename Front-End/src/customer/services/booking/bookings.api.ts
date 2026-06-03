@@ -16,6 +16,7 @@ export type CreateBookingPayload = {
   durationValue?: number;
   customerName?: string;
   customerPhone?: string;
+  customerEmail?: string;
   voucherCode?: string;
 };
 

@@ -53,7 +53,7 @@ export default function HeroSection({
         <View style={styles.heroActions}>
           <Pressable
             style={styles.heroIconButton}
-            onPress={() => router.push("/customer/messages/notifications")}
+            onPress={() => router.push("/customer/messages/notifications" as any)}
           >
             <Bell size={20} color="#ffffff" strokeWidth={2} />
             <View style={styles.notificationDot} />

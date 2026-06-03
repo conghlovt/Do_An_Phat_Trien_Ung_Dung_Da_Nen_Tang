@@ -17,7 +17,7 @@ import SettingsItem from "@/src/customer/components/ui/SettingsItem";
 import { useThemeContext } from "@/src/customer/theme/ThemeContext";
 import { useAuth } from "@/src/customer/hooks/useAuth";
 import { useFavoritesContext } from "@/src/customer/context/FavoritesContext";
-import HotelCard from "@/src/customer/features/hotels/HotelCard";
+import HotelCard from "@/src/customer/components/hotels/HotelCard";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -31,10 +31,8 @@ export default function ProfileScreen() {
 
   const getInitials = () => {
     if (!user) return "TK";
-    const name = user.username || user.email || "";
-    const parts = name.split(/[\s@]/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+    const name = user.nickname || user.username || user.email || "";
+    return name.slice(0, 1).toUpperCase();
   };
 
   const displayName =
@@ -71,50 +69,33 @@ export default function ProfileScreen() {
         ]}
       >
         <View style={isWebLayout && styles.webContent}>
-          {isAuthenticated ? (
-            <View style={styles.header}>
-              <View style={[styles.avatarContainer, styles.avatarFilled]}>
-                <Text style={styles.avatarInitials}>{getInitials()}</Text>
-              </View>
-              <View style={styles.userInfo}>
+          <View style={styles.header}>
+            <View style={[styles.avatarContainer, styles.avatarFilled]}>
+              <Text style={styles.avatarInitials}>{getInitials()}</Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text
+                style={[styles.headerText, { color: currentTheme.text }]}
+                numberOfLines={1}
+              >
+                {displayName}
+              </Text>
+              {user?.email && (
                 <Text
-                  style={[styles.headerText, { color: currentTheme.text }]}
+                  style={[
+                    styles.emailText,
+                    { color: currentTheme.textSecondary },
+                  ]}
                   numberOfLines={1}
                 >
-                  {displayName}
+                  {user.email}
                 </Text>
-                {user?.email && (
-                  <Text
-                    style={[
-                      styles.emailText,
-                      { color: currentTheme.textSecondary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {user.email}
-                  </Text>
-                )}
-              </View>
+              )}
             </View>
-          ) : (
-            <View style={styles.authActions}>
-              <Pressable
-                style={styles.loginBtn}
-                onPress={() => router.push("/login" as any)}
-              >
-                <Text style={styles.loginBtnText}>Đăng nhập</Text>
-              </Pressable>
-              <Pressable
-                style={styles.registerBtn}
-                onPress={() => router.push("/login/register" as any)}
-              >
-                <Text style={styles.registerBtnText}>Đăng ký</Text>
-              </Pressable>
-            </View>
-          )}
+          </View>
 
           {/* Phần Khách sạn yêu thích */}
-          {isAuthenticated && favorites.length > 0 && (
+          {favorites.length > 0 && (
             <View style={styles.section}>
               <Text
                 style={[
@@ -143,49 +124,45 @@ export default function ProfileScreen() {
               Cài đặt
             </Text>
             <View style={[styles.card, { backgroundColor: currentTheme.card }]}>
-              {isAuthenticated && (
-                <>
-                  <SettingsItem
-                    icon={<Feather name="user" size={20} color="#85C2A4" />}
-                    title="Thông tin cá nhân"
-                    onPress={() =>
-                      router.push("/customer/profile/profile-info" as any)
-                    }
-                    currentTheme={currentTheme}
+              <SettingsItem
+                icon={<Feather name="user" size={20} color="#85C2A4" />}
+                title="Thông tin cá nhân"
+                onPress={() =>
+                  router.push("/customer/profile/profile-info" as any)
+                }
+                currentTheme={currentTheme}
+              />
+              <SettingsItem
+                icon={<Feather name="bell" size={20} color="#85C2A4" />}
+                title="Thông báo"
+                onPress={() =>
+                  router.push(
+                    "/customer/messages/notification-settings" as any,
+                  )
+                }
+                currentTheme={currentTheme}
+              />
+              <SettingsItem
+                icon={
+                  <Ionicons
+                    name="language-outline"
+                    size={20}
+                    color="#85C2A4"
                   />
-                  <SettingsItem
-                    icon={<Feather name="bell" size={20} color="#85C2A4" />}
-                    title="Thông báo"
-                    onPress={() =>
-                      router.push(
-                        "/customer/messages/notification-settings" as any,
-                      )
-                    }
-                    currentTheme={currentTheme}
-                  />
-                  <SettingsItem
-                    icon={
-                      <Ionicons
-                        name="language-outline"
-                        size={20}
-                        color="#85C2A4"
-                      />
-                    }
-                    title="Ngôn ngữ"
-                    rightText="Tiếng Việt"
-                    currentTheme={currentTheme}
-                  />
-                  <SettingsItem
-                    icon={<Feather name="settings" size={20} color="#85C2A4" />}
-                    title="Giao diện Sáng/Tối"
-                    hasSwitch
-                    currentTheme={currentTheme}
-                    isDarkMode={isDarkMode}
-                    setIsDarkMode={setIsDarkMode}
-                    isLast
-                  />
-                </>
-              )}
+                }
+                title="Ngôn ngữ"
+                rightText="Tiếng Việt"
+                currentTheme={currentTheme}
+              />
+              <SettingsItem
+                icon={<Feather name="settings" size={20} color="#85C2A4" />}
+                title="Giao diện Sáng/Tối"
+                hasSwitch
+                currentTheme={currentTheme}
+                isDarkMode={isDarkMode}
+                setIsDarkMode={setIsDarkMode}
+                isLast
+              />
             </View>
           </View>
 
@@ -226,20 +203,20 @@ export default function ProfileScreen() {
               />
             </View>
           </View>
-          {isAuthenticated && (
-            <View style={styles.section}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.logoutButton,
-                  pressed && styles.logoutButtonPressed,
-                ]}
-                onPress={handleLogout}
-              >
-                <Feather name="log-out" size={18} color="#e05252" />
-                <Text style={styles.logoutButtonText}>Đăng xuất</Text>
-              </Pressable>
-            </View>
-          )}
+
+          {/* Đăng xuất */}
+          <View style={styles.section}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.logoutButton,
+                pressed && styles.logoutButtonPressed,
+              ]}
+              onPress={handleLogout}
+            >
+              <Feather name="log-out" size={18} color="#e05252" />
+              <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </View>

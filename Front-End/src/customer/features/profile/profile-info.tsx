@@ -16,11 +16,13 @@ import {
   getMyProfile,
   updateMyProfile,
 } from "@/src/customer/core/api/profile.api";
+import { useAuthStore } from "@/src/login/store/auth.store";
 
 type GenderValue = "MALE" | "FEMALE" | "OTHER" | null;
 
 export default function ProfileInfoScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,9 +126,9 @@ export default function ProfileInfoScreen() {
   }, [nickname, phone, email, gender, dateOfBirth, day, month, year]);
 
   const initials = useMemo(() => {
-    const source = nickname || email || "TK";
+    const source = nickname || user?.username || email || user?.email || "TK";
     return source.slice(0, 1).toUpperCase();
-  }, [nickname, email]);
+  }, [nickname, user?.username, email, user?.email]);
 
   const genderText = useMemo(() => {
     switch (gender) {
@@ -178,6 +180,12 @@ export default function ProfileInfoScreen() {
         avatar: avatar || undefined,
       });
 
+      // Đồng bộ thông tin mới vào global state cho customer
+      useAuthStore.getState().updateUser({
+        email: email.trim() || undefined,
+        username: nickname.trim() || user?.username || undefined,
+      });
+
       setDateOfBirth(builtDob);
 
       Alert.alert("Thành công", "Lưu hồ sơ thành công.");
@@ -219,7 +227,7 @@ export default function ProfileInfoScreen() {
         </View>
       </View>
 
-      <Text style={styles.displayName}>{nickname || "Nickname"}</Text>
+      <Text style={styles.displayName}>{nickname || user?.username || user?.email?.split("@")[0] || "Nickname"}</Text>
       <Text style={styles.memberText}>Thành viên</Text>
 
       {!canEdit && (

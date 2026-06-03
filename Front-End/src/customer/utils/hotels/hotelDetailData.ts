@@ -5,6 +5,7 @@ export function enrichHotel(hotel: Hotel): Hotel {
     ...hotel,
     images: hotel.images?.length ? hotel.images : [hotel.image].filter(Boolean),
     phone: hotel.phone,
+    email: hotel.email || 'contact@stayhub.com',
     address: hotel.address,
     description: hotel.description ?? 'Thông tin giới thiệu đang được cập nhật.',
     amenities: hotel.amenities?.length ? hotel.amenities : [],

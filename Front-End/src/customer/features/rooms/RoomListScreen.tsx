@@ -13,8 +13,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react-native';
-import RoomCard from '@/src/customer/features/rooms/RoomCard';
-import RoomDetailModal from '@/src/customer/features/rooms/RoomDetailModal';
+import RoomCard from '@/src/customer/components/rooms/RoomCard';
+import RoomDetailModal from '@/src/customer/components/rooms/RoomDetailModal';
 import { roomListStyles as styles } from '@/src/customer/styles/rooms/roomList.styles';
 import { ROOM_LIST_PRIMARY } from '@/src/customer/constants/rooms/roomList';
 import { getParamText } from '@/src/customer/navigation/routeParams';

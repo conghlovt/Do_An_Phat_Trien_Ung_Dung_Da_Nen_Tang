@@ -165,15 +165,6 @@ export const styles = StyleSheet.create({
   hoursLabel: { fontSize: 14, color: '#374151' },
   hoursValue: { fontSize: 14, color: '#374151', fontWeight: '500' },
 
-  // Chat
-  chatPrompt: { fontSize: 14, color: '#374151', marginBottom: 12, lineHeight: 22 },
-  chatBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    borderWidth: 1, borderColor: PRIMARY, borderRadius: 12,
-    paddingVertical: 14, backgroundColor: PRIMARY,
-  },
-  chatBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
   // Suggestions
   suggestRow: { flexDirection: 'row', gap: 12 },
   suggestCard: { flex: 1, borderRadius: 14, overflow: 'hidden', backgroundColor: '#f9fafb', borderWidth: 1, borderColor: 'rgba(133,194,164,0.25)' },

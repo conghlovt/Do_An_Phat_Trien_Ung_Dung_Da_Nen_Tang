@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable, ScrollView, Animated, useWindowDimensions } from 'react-native';
 import { ChevronRight, Zap, Star, Trophy, Sparkles, Crown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import HotelCard from '@/src/customer/features/hotels/HotelCard';
+import HotelCard from '@/src/customer/components/hotels/HotelCard';
 import { hotelsApi, Hotel } from '@/src/customer/services/hotels/hotels.api';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { SECTION_COLORS, SECTION_PREVIEW_LIMIT, SECTION_TAG_MAP } from '@/src/customer/utils/hotels/hotelSections';

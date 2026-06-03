@@ -1,11 +1,12 @@
 import { create } from "zustand";
-import { AuthState, AuthResponse } from "../types/auth.types";
+import { AuthState, AuthResponse, User } from "../types/auth.types";
 import { tokenStorage } from "../shared/storage/secure-token.storage";
 import { userProfileStorage } from "../shared/storage/sqlite-user.storage";
 
 interface AuthStore extends AuthState {
   setAuth: (data: AuthResponse) => Promise<void>;
   clearAuth: () => Promise<void>;
+  updateUser: (userUpdates: Partial<User>) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   restoreSession: () => Promise<void>;
@@ -34,6 +35,22 @@ export const useAuthStore = create<AuthStore>((set) => ({
       console.error("Error saving auth state", e);
     }
   },
+
+  updateUser: (userUpdates) => set((state) => {
+    if (!state.user) return state;
+    const updatedUser = { ...state.user, ...userUpdates };
+    
+    // Update persistent storage only for customer
+    if (updatedUser.role === 'customer') {
+      try {
+        userProfileStorage.saveCurrentUser(updatedUser);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    
+    return { user: updatedUser };
+  }),
 
   clearAuth: async () => {
     set({

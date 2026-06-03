@@ -1,4 +1,4 @@
-import { styles } from '@/src/customer/styles/messages/notifications.styles';
+import { styles } from '@/src/customer/styles/notification/notifications.styles';
 import React, { useEffect, useState } from 'react';
 import {
   Image, Platform, View, Text, Pressable, ScrollView, Modal, useWindowDimensions,
@@ -10,9 +10,9 @@ import {
 } from 'lucide-react-native';
 import { useThemeContext } from '@/src/customer/theme/ThemeContext';
 import { useCustomerBack } from '@/src/customer/navigation/useCustomerBack';
-import { messagesApi } from '@/src/customer/services/messages/messages.api';
-import { NOTIFICATION_TABS } from '@/src/customer/constants/messages/messageTabs';
-import type { CustomerNotification, NotificationTab } from '@/src/customer/types/messages';
+import { notificationsApi } from '@/src/customer/services/notification/notification.api';
+import { NOTIFICATION_TABS } from '@/src/customer/constants/notification/notificationTabs';
+import type { CustomerNotification, NotificationTab } from '@/src/customer/types/notification';
 
 const getNotificationMeta = (type: NotificationTab) => {
   switch (type) {
@@ -49,7 +49,7 @@ export default function NotificationsScreen() {
 
     const loadNotifications = async () => {
       try {
-        const data = await messagesApi.getNotifications();
+        const data = await notificationsApi.getNotifications();
         if (isMounted) setNotifications(data);
       } catch {
         if (isMounted) setNotifications([]);
@@ -71,7 +71,7 @@ export default function NotificationsScreen() {
     setShowMenu(false);
 
     try {
-      const updatedNotifications = await messagesApi.markAllNotificationsAsRead();
+      const updatedNotifications = await notificationsApi.markAllNotificationsAsRead();
       setNotifications(updatedNotifications);
     } catch {
       setNotifications(previousNotifications);
@@ -84,7 +84,7 @@ export default function NotificationsScreen() {
     setShowMenu(false);
 
     try {
-      const updatedNotifications = await messagesApi.deleteAllNotifications();
+      const updatedNotifications = await notificationsApi.deleteAllNotifications();
       setNotifications(updatedNotifications);
     } catch {
       setNotifications(previousNotifications);
@@ -96,7 +96,7 @@ export default function NotificationsScreen() {
     setNotifications((current) => current.filter(n => n.id !== id));
 
     try {
-      const updatedNotifications = await messagesApi.deleteNotification(id);
+      const updatedNotifications = await notificationsApi.deleteNotification(id);
       setNotifications(updatedNotifications);
     } catch {
       setNotifications(previousNotifications);
