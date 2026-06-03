@@ -29,18 +29,19 @@ export default function VoucherWalletScreen() {
   );
 
   // Simple filtering - show collected offers from context
-  const visibleVouchers = useMemo(() => {
-    if (activeTab === "newSaved") {
-      return collectedOffers;
-    } else if (activeTab === "used") {
-      // TODO: Show used vouchers from backend
-      return [];
-    } else if (activeTab === "history") {
-      // TODO: Show expired vouchers from backend
-      return [];
-    }
+  
+const visibleVouchers = useMemo(() => {
+  if (activeTab === "newSaved") {
+    return [...collectedOffers].reverse();
+  } else if (activeTab === "used") {
+    // TODO: Show used vouchers from backend
     return [];
-  }, [activeTab, collectedOffers]);
+  } else if (activeTab === "history") {
+    // TODO: Show expired vouchers from backend
+    return [];
+  }
+  return [];
+}, [activeTab, collectedOffers]);
 
   return (
     <View
