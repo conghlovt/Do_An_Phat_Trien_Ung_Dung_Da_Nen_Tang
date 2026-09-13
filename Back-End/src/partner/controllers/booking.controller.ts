@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import { bookingService } from '../services/booking.service';
 import { sendSuccess } from '../../shared/utils/response.util';
-import type { AuthRequest } from '../../login/middlewares/auth.middleware';
+import type { AuthRequest } from '../../auth/middlewares/auth.middleware';
 import type { BookingStatus } from '@prisma/client';
 
 export class BookingController {

@@ -9,7 +9,7 @@ import * as permissionController from './controllers/permission.controller';
 import * as financeController from './controllers/finance.controller';
 import * as exportController from './controllers/export.controller';
 import type { NextFunction, Request, Response } from 'express';
-import { authenticate, authorize } from '../login/middlewares/auth.middleware';
+import { authenticate, authorize } from '../auth/middlewares/auth.middleware';
 import { permissionGuard, requireRootAdmin } from './middlewares/admin-permission.middleware';
 import { sendResponse } from '../shared/utils/response.util';
 

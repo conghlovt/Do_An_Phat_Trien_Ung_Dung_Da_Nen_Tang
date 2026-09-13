@@ -6,7 +6,7 @@
 import type { Request, Response } from 'express';
 import { hotelService } from '../services/hotel.service';
 import { sendSuccess, buildPaginationMeta } from '../../shared/utils/response.util';
-import type { AuthRequest } from '../../login/middlewares/auth.middleware';
+import type { AuthRequest } from '../../auth/middlewares/auth.middleware';
 import { BadRequestError } from '../../shared/errors/AppError';
 
 export class HotelController {

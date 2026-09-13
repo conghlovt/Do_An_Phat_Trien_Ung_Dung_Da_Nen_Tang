@@ -26,6 +26,315 @@ def numbered(items: list[str]) -> str:
     return "\n".join(f"{index}. {item}" for index, item in enumerate(items, 1))
 
 
+def get_input_data(prefix: str, title: str, steps: list[str]) -> str:
+    title_lower = title.lower()
+    
+    # 1. AUTH
+    if prefix == "AUTH":
+        if "đăng ký" in title_lower or "register" in title_lower:
+            if "email sai" in title_lower:
+                return "Dữ liệu đăng ký (email lỗi):\n- username: customer_test01\n- email: customer_test01_wrong_email\n- password: Test@123456\n- confirmPassword: Test@123456\n- role: customer"
+            if "dưới 6 ký tự" in title_lower:
+                return "Dữ liệu đăng ký (mật khẩu ngắn):\n- username: customer_test01\n- email: customer_test01@gmail.com\n- password: 123\n- confirmPassword: 123\n- role: customer"
+            if "không khớp" in title_lower:
+                return "Dữ liệu đăng ký (mật khẩu không khớp):\n- username: customer_test01\n- email: customer_test01@gmail.com\n- password: Test@123456\n- confirmPassword: DifferentPassword999\n- role: customer"
+            if "partner" in title_lower:
+                return "Dữ liệu đăng ký đối tác:\n- username: partner_test01\n- email: partner_test01@gmail.com\n- password: Test@123456\n- confirmPassword: Test@123456\n- role: partner"
+            if "admin" in title_lower:
+                return "Dữ liệu đăng ký admin (public register):\n- username: admin_fake01\n- email: admin_fake01@gmail.com\n- password: Test@123456\n- confirmPassword: Test@123456\n- role: admin"
+            return "Dữ liệu đăng ký khách hàng:\n- username: customer_test01\n- email: customer_test01@gmail.com\n- password: Test@123456\n- confirmPassword: Test@123456\n- role: customer"
+            
+        if "đăng nhập" in title_lower or "login" in title_lower:
+            if "sai mật khẩu" in title_lower:
+                return "Dữ liệu đăng nhập (sai mật khẩu):\n- email: customer_test01@gmail.com\n- password: WrongPassword123"
+            if "partner" in title_lower:
+                return "Dữ liệu đăng nhập đối tác:\n- email: partner_test01@gmail.com\n- password: Test@123456"
+            if "admin" in title_lower:
+                return "Dữ liệu đăng nhập quản trị viên:\n- email: admin_test01@gmail.com\n- password: Test@123456"
+            return "Dữ liệu đăng nhập khách hàng:\n- email: customer_test01@gmail.com\n- password: Test@123456"
+            
+        if "refresh token" in title_lower:
+            return "Dữ liệu refresh token:\n- refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjdXN0b21lcl9pZF8wMSIsImlhdCI6MTY4NjY2NjY2NiwiZXhwIjoxNjg5MjU5MjU5fQ..."
+        if "logout" in title_lower:
+            return "Dữ liệu logout:\n- accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjdXN0b21lcl9pZF8wM..."
+
+    # 2. CUS_SEARCH
+    if prefix == "CUS_SEARCH":
+        if "tên khách sạn" in title_lower:
+            return "Dữ liệu tìm kiếm:\n- keyword: \"Luxury\"\n- API: GET /api/customer/hotels?keyword=Luxury"
+        if "bỏ qua từ hành chính" in title_lower:
+            return "Dữ liệu tìm kiếm địa danh:\n- keyword: \"Quận Liên Chiểu Đà Nẵng\"\n- API: GET /api/customer/hotels?keyword=Quận%20Liên%20Chiểu%20Đà%20Nẵng"
+        if "khoảng giá hợp lệ" in title_lower:
+            return "Dữ liệu lọc khoảng giá:\n- minPrice: 100000\n- maxPrice: 300000\n- API: GET /api/customer/hotels?minPrice=100000&maxPrice=300000"
+        if "maxprice nhỏ hơn minprice" in title_lower:
+            return "Dữ liệu lọc khoảng giá (lỗi):\n- minPrice: 300000\n- maxPrice: 100000\n- API: GET /api/customer/hotels?minPrice=300000&maxPrice=100000"
+        if "rating giảm dần" in title_lower:
+            return "Dữ liệu sắp xếp:\n- sort: \"rating\"\n- API: GET /api/customer/hotels?sort=rating"
+        if "giá tăng dần" in title_lower:
+            return "Dữ liệu sắp xếp:\n- sort: \"price-asc\"\n- API: GET /api/customer/hotels?sort=price-asc"
+        if "giá giảm dần" in title_lower:
+            return "Dữ liệu sắp xếp:\n- sort: \"price-desc\"\n- API: GET /api/customer/hotels?sort=price-desc"
+        if "limit tối đa 50" in title_lower:
+            return "Dữ liệu giới hạn kết quả:\n- limit: 55\n- API: GET /api/customer/hotels?limit=55"
+        if "tiện nghi phòng" in title_lower:
+            return "Dữ liệu lọc tiện nghi:\n- roomAmenities: \"wifi\"\n- API: GET /api/customer/hotels?roomAmenities=wifi"
+        if "địa điểm" in title_lower:
+            return "Dữ liệu địa điểm:\n- API: GET /api/customer/hotels/locations"
+        if "rỗng" in title_lower or "không có kết quả" in title_lower:
+            return "Dữ liệu tìm kiếm (không khớp):\n- keyword: \"non_existing_hotel_xyz\"\n- API: GET /api/customer/hotels?keyword=non_existing_hotel_xyz"
+        return "Dữ liệu tìm kiếm:\n- API: GET /api/customer/hotels"
+
+    # 3. HOTEL
+    if prefix == "HOTEL":
+        if "không tồn tại" in title_lower:
+            return "Mã khách sạn không tồn tại:\n- hotelId: \"invalid_id_uuid\"\n- API: GET /api/customer/hotels/invalid_id_uuid"
+        if "ghi nhận khách sạn đã xem" in title_lower or "view" in title_lower:
+            return "Dữ liệu ghi nhận đã xem:\n- hotelId: \"hotel_uuid_9999\"\n- API: POST /api/customer/hotels/hotel_uuid_9999/view"
+        if "phòng của khách sạn" in title_lower:
+            return "Dữ liệu lấy phòng:\n- hotelId: \"hotel_uuid_9999\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/rooms"
+        if "theo giờ" in title_lower or "availability" in title_lower or "slot" in title_lower:
+            if "hôm nay" in title_lower:
+                return "Dữ liệu phòng trống (Hôm nay):\n- hotelId: \"hotel_uuid_9999\"\n- bookingType: \"Theo giờ\"\n- date: \"2026-06-12\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/availability?bookingType=Theo%20giờ&date=2026-06-12"
+            if "tương lai" in title_lower:
+                return "Dữ liệu phòng trống (Tương lai):\n- hotelId: \"hotel_uuid_9999\"\n- bookingType: \"Theo giờ\"\n- date: \"2026-06-15\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/availability?bookingType=Theo%20giờ&date=2026-06-15"
+            if "qua đêm" in title_lower:
+                return "Dữ liệu phòng trống (Qua đêm):\n- hotelId: \"hotel_uuid_9999\"\n- bookingType: \"Qua đêm\"\n- date: \"2026-06-15\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/availability?bookingType=Qua%20đêm&date=2026-06-15"
+            if "theo ngày" in title_lower:
+                return "Dữ liệu phòng trống (Theo ngày):\n- hotelId: \"hotel_uuid_9999\"\n- bookingType: \"Theo ngày\"\n- date: \"2026-06-15\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/availability?bookingType=Theo%20ngày&date=2026-06-15"
+        if "định dạng" in title_lower or "date sai" in title_lower:
+            return "Dữ liệu ngày lỗi:\n- bookingType: \"Theo ngày\"\n- date: \"12-06-2026\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/availability?bookingType=Theo%20ngày&date=12-06-2026"
+        if "responsive" in title_lower or "hẹp" in title_lower:
+            return "Cấu hình thiết bị kiểm thử:\n- Viewport Mobile: 375px x 812px"
+        return "Mã khách sạn:\n- hotelId: \"hotel_uuid_9999\"\n- API: GET /api/customer/hotels/hotel_uuid_9999"
+
+    # 4. BOOKING
+    if prefix == "BOOKING":
+        base_booking = "- hotelId: \"hotel_uuid_9999\"\n- roomId: \"room_uuid_1111\"\n- guests: 2\n- amount: 250000"
+        if "theo giờ" in title_lower or "vietqr" in title_lower:
+            return f"Dữ liệu đặt phòng theo giờ:\n{base_booking}\n- bookingType: \"Theo giờ\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T10:00:00Z\"\n- checkOut: \"2026-06-15T12:00:00Z\""
+        if "qua đêm" in title_lower:
+            return f"Dữ liệu đặt phòng qua đêm:\n{base_booking}\n- bookingType: \"Qua đêm\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T22:00:00Z\"\n- checkOut: \"2026-06-16T08:00:00Z\""
+        if "theo ngày" in title_lower:
+            return f"Dữ liệu đặt phòng theo ngày:\n{base_booking}\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "pay at hotel" in title_lower or "trả tại khách sạn" in title_lower:
+            return f"Dữ liệu đặt phòng trả sau:\n{base_booking}\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"PAY_AT_HOTEL\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "không sau" in title_lower or "checkout" in title_lower:
+            return f"Dữ liệu lỗi ngày đặt:\n{base_booking}\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-15T12:00:00Z\""
+        if "nhỏ hơn 1" in title_lower:
+            return f"Dữ liệu đặt phòng (guests < 1):\n- hotelId: \"hotel_uuid_9999\"\n- roomId: \"room_uuid_1111\"\n- guests: 0\n- amount: 250000\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "vượt quá 20" in title_lower:
+            return f"Dữ liệu đặt phòng (guests > 20):\n- hotelId: \"hotel_uuid_9999\"\n- roomId: \"room_uuid_1111\"\n- guests: 21\n- amount: 250000\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "không dương" in title_lower:
+            return f"Dữ liệu đặt phòng (amount <= 0):\n- hotelId: \"hotel_uuid_9999\"\n- roomId: \"room_uuid_1111\"\n- guests: 2\n- amount: -100\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "hết" in title_lower:
+            return f"Dữ liệu đặt phòng (hết phòng):\n{base_booking}\n- bookingType: \"Theo ngày\"\n- paymentMethod: \"VIETQR\"\n- checkIn: \"2026-06-15T14:00:00Z\"\n- checkOut: \"2026-06-16T12:00:00Z\""
+        if "danh sách booking" in title_lower:
+            return "Yêu cầu danh sách đặt phòng:\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1...\n- API: GET /api/customer/bookings"
+        if "chi tiết booking" in title_lower:
+            return "Yêu cầu chi tiết đơn đặt:\n- bookingId: \"booking_uuid_7777\"\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1...\n- API: GET /api/customer/bookings/booking_uuid_7777"
+        if "user khác" in title_lower:
+            return "Yêu cầu chi tiết của user khác:\n- bookingId: \"booking_uuid_of_user_b\"\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1... (Token User A)\n- API: GET /api/customer/bookings/booking_uuid_of_user_b"
+        if "hủy" in title_lower:
+            return "Yêu cầu hủy đơn đặt:\n- bookingId: \"booking_uuid_7777\"\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1...\n- API: PATCH /api/customer/bookings/booking_uuid_7777/cancel"
+        return f"Dữ liệu đặt phòng:\n{base_booking}"
+
+    # 5. PAY
+    if prefix == "PAY":
+        if "sepay" in title_lower or "webhook" in title_lower:
+            base_webhook = "- API: POST /api/customer/payments/sepay/webhook\n- Payload JSON:\n{\n  \"id\": 88888,\n  \"gateway\": \"vietcombank\",\n  \"transactionDate\": \"2026-06-03 22:50:00\",\n  \"accountNumber\": \"0000000001\",\n  \"transferType\": \"in\","
+            if "hợp lệ" in title_lower:
+                return f"{base_webhook}\n  \"transferAmount\": 100000,\n  \"content\": \"Thanh toan don BK202606030001\",\n  \"referenceCode\": \"VCB12345678\"\n}}"
+            if "số tiền" in title_lower:
+                return f"{base_webhook}\n  \"transferAmount\": 50000,\n  \"content\": \"Thanh toan don BK202606030001\",\n  \"referenceCode\": \"VCB12345678\"\n}}"
+            if "nội dung" in title_lower:
+                return f"{base_webhook}\n  \"transferAmount\": 100000,\n  \"content\": \"Sai noi dung ck hoan toan\",\n  \"referenceCode\": \"VCB12345678\"\n}}"
+            if "tài khoản" in title_lower:
+                return f"{base_webhook}\n  \"transferAmount\": 100000,\n  \"content\": \"Thanh toan don BK202606030001\",\n  \"accountNumber\": \"9999999999\",\n  \"referenceCode\": \"VCB12345678\"\n}}"
+            if "hết hạn" in title_lower:
+                return f"{base_webhook}\n  \"transferAmount\": 100000,\n  \"content\": \"Thanh toan don BK_EXPIRED_01\",\n  \"referenceCode\": \"VCB12345678\"\n}}"
+            return f"{base_webhook}\n  \"transferAmount\": 100000,\n  \"content\": \"Thanh toan don BK202606030001\"\n}}"
+        if "countdown" in title_lower or "grace" in title_lower:
+            return "Cấu hình thời gian thanh toán:\n- Thừa số thời gian hết hạn (expiresAt): 15 phút\n- Thời gian ân hạn (gracePeriod): 5 phút"
+        if "qr" in title_lower:
+            if "mới" in title_lower:
+                return "Mã đặt phòng cần tạo QR mới:\n- bookingId: \"booking_uuid_7777\"\n- API: POST /api/customer/bookings/booking_uuid_7777/payment/new-qr"
+            if "pay at hotel" in title_lower:
+                return "Mã đặt phòng PAY_AT_HOTEL:\n- bookingId: \"booking_uuid_pay_at_hotel_01\"\n- API: GET /api/customer/bookings/booking_uuid_pay_at_hotel_01/payment-status"
+            return "Thông tin QR thanh toán:\n- bookingCode: \"BK202606030001\"\n- paymentCode: \"PAY202606030001\"\n- amount: 100000"
+        if "paid trên ui" in title_lower:
+            return "Mã đặt phòng đã thanh toán:\n- bookingId: \"booking_uuid_paid_9999\"\n- API: GET /api/customer/bookings/booking_uuid_paid_9999/payment-status"
+        if "hết hạn sau grace" in title_lower:
+            return "Mã đặt phòng quá hạn:\n- bookingId: \"booking_uuid_expired_9999\"\n- API: GET /api/customer/bookings/booking_uuid_expired_9999/payment-status"
+        return "Thông tin thanh toán:\n- bookingId: \"booking_uuid_7777\""
+
+    # 6. VOUCHER
+    if prefix == "VOUCHER":
+        base_v = "- voucherCode: \"SALE10\"\n- minOrderValue: 200000\n- discountPercent: 10\n- maxDiscount: 50000"
+        if "liệt kê" in title_lower:
+            return "Tham số lấy voucher:\n- hotelId: \"hotel_uuid_9999\"\n- API: GET /api/customer/hotels/hotel_uuid_9999/vouchers"
+        if "percent" in title_lower:
+            return f"Voucher giảm phần trăm:\n{base_v}\n- orderAmount: 300000"
+        if "fixed" in title_lower:
+            return f"Voucher giảm số tiền:\n- voucherCode: \"FIXED50\"\n- minOrderValue: 150000\n- discountValue: 50000\n- orderAmount: 100000"
+        if "minordervalue" in title_lower:
+            return f"Áp dụng voucher dưới giá trị tối thiểu:\n{base_v}\n- orderAmount: 150000"
+        if "expired" in title_lower:
+            return f"Áp dụng voucher hết hạn:\n{base_v}\n- endDate: \"2026-05-01\""
+        if "startDate" in title_lower or "chưa đến ngày" in title_lower:
+            return f"Áp dụng voucher chưa hoạt động:\n{base_v}\n- startDate: \"2026-07-01\""
+        if "usagelimit" in title_lower:
+            return f"Áp dụng voucher hết lượt dùng:\n{base_v}\n- usageLimit: 10\n- currentUsedCount: 10"
+        if "peruser" in title_lower:
+            return f"Áp dụng voucher hết lượt của user:\n{base_v}\n- limitPerUser: 1\n- userUsedCount: 1"
+        if "bookingtype" in title_lower:
+            return f"Áp dụng voucher sai loại đặt phòng:\n{base_v}\n- allowedBookingType: \"Theo ngày\"\n- currentBookingType: \"Theo giờ\""
+        if "roomtype" in title_lower:
+            return f"Áp dụng voucher sai loại phòng:\n{base_v}\n- allowedRoomTypeIds: [\"room_uuid_1111\"]\n- currentRoomTypeId: \"room_uuid_2222\""
+        if "firstbooking" in title_lower:
+            return f"Áp dụng voucher đặt lần đầu (lỗi do không phải đơn đầu):\n{base_v}\n- isFirstBookingOnly: true\n- customerBookingCount: 3"
+        if "refunded" in title_lower:
+            return "Hủy đặt phòng có voucher:\n- bookingId: \"booking_uuid_with_voucher_01\"\n- voucherCode: \"SALE10\""
+        return f"Thông tin voucher:\n{base_v}"
+
+    # 7. CUS_ACCOUNT
+    if prefix == "CUS_ACCOUNT":
+        if "hồ sơ cá nhân" in title_lower:
+            if "phone trùng" in title_lower:
+                return "Cập nhật hồ sơ (trùng số điện thoại):\n- username: \"customer_test01\"\n- phone: \"0912345678\"\n- API: PATCH /api/customer/profile/me"
+            if "cập nhật" in title_lower:
+                return "Cập nhật hồ sơ:\n- username: \"NewCustomerName\"\n- phone: \"0988888888\"\n- API: PATCH /api/customer/profile/me"
+            return "API xem hồ sơ cá nhân:\n- API: GET /api/customer/profile/me"
+        if "message" in title_lower or "tin nhắn" in title_lower:
+            if "read" in title_lower:
+                return "Mã tin nhắn:\n- messageId: \"message_uuid_1234\"\n- API: PATCH /api/customer/messages/message_uuid_1234/read"
+            return "API xem tin nhắn:\n- API: GET /api/customer/messages"
+        if "notification" in title_lower or "thông báo" in title_lower:
+            if "read" in title_lower or "đánh dấu" in title_lower:
+                return "API đánh dấu đọc hết thông báo:\n- API: PATCH /api/customer/notifications/read-all"
+            if "delete" in title_lower or "xóa" in title_lower:
+                return "Mã thông báo:\n- notificationId: \"noti_uuid_5555\"\n- API: DELETE /api/customer/notifications/noti_uuid_5555"
+            if "clear" in title_lower:
+                return "API xóa hết thông báo:\n- API: DELETE /api/customer/notifications/clear-all"
+            return "API xem thông báo:\n- API: GET /api/customer/notifications"
+        if "faq" in title_lower or "support" in title_lower:
+            if "contact" in title_lower or "yêu cầu hỗ trợ" in title_lower:
+                return "Yêu cầu hỗ trợ liên hệ:\n- subject: \"Lỗi thanh toán VietQR\"\n- message: \"Tôi chuyển khoản nhưng đơn hàng chưa chuyển trạng thái PAID\"\n- email: \"customer_test01@gmail.com\"\n- API: POST /api/customer/support/contact"
+            return "API lấy danh sách FAQ:\n- API: GET /api/customer/support/faqs"
+        return "Thông tin tài khoản khách hàng:\n- username: customer_test01"
+
+    # 8. PARTNER_HOTEL
+    if prefix == "PARTNER_HOTEL":
+        base_h = "- name: \"Khách Sạn Luxury Hà Nội\"\n- description: \"Khách sạn 4 sao đẳng cấp tại trung tâm thành phố\"\n- propertyType: \"hotel\"\n- starRating: 4\n- address: {\"addressLine\": \"123 Phố Huế\", \"ward\": \"Hàng Bài\", \"district\": \"Hoàn Kiếm\", \"city\": \"Hà Nội\", \"country\": \"Vietnam\"}"
+        if "tên khách sạn quá ngắn" in title_lower:
+            return "Dữ liệu tạo khách sạn (tên ngắn):\n- name: \"A\"\n- description: \"Mô tả...\"\n- propertyType: \"hotel\"\n- starRating: 4"
+        if "starrating ngoài" in title_lower:
+            return "Dữ liệu tạo khách sạn (sao lỗi):\n- name: \"Khách Sạn Luxury Hà Nội\"\n- propertyType: \"hotel\"\n- starRating: 6"
+        if "địa chỉ quá ngắn" in title_lower:
+            return "Dữ liệu tạo khách sạn (địa chỉ lỗi):\n- name: \"Khách Sạn Luxury Hà Nội\"\n- propertyType: \"hotel\"\n- addressLine: \"abc\""
+        if "tọa độ" in title_lower:
+            return "Dữ liệu tạo khách sạn (latitude lỗi):\n- name: \"Khách Sạn Luxury Hà Nội\"\n- propertyType: \"hotel\"\n- latitude: 95.0"
+        if "cross-partner" in title_lower or "truy cập chéo" in title_lower:
+            return "Truy cập khách sạn của đối tác khác:\n- hotelId: \"hotel_of_partner_b\"\n- API: PATCH /api/v1/partner/hotels/hotel_of_partner_b"
+        if "upload" in title_lower or "ảnh" in title_lower:
+            if "sai mime" in title_lower or "không phải" in title_lower:
+                return "Tệp tin tải lên (lỗi định dạng):\n- hotelId: \"hotel_uuid_9999\"\n- file: \"malicious_script.sh\"\n- size: 5 KB\n- MIME: \"application/x-sh\"\n- API: POST /api/v1/partner/hotels/hotel_uuid_9999/images"
+            return "Tệp tin tải lên (ảnh hợp lệ):\n- hotelId: \"hotel_uuid_9999\"\n- file: \"hotel_facade.jpg\"\n- size: 1.5 MB\n- MIME: \"image/jpeg\"\n- API: POST /api/v1/partner/hotels/hotel_uuid_9999/images"
+        if "xác nhận" in title_lower or "review" in title_lower:
+            return "Yêu cầu duyệt khách sạn:\n- hotelId: \"hotel_uuid_9999\"\n- API: POST /api/v1/partner/hotels/hotel_uuid_9999/submit-review"
+        if "xóa" in title_lower or "delete" in title_lower:
+            return "Xóa khách sạn bản nháp:\n- hotelId: \"hotel_draft_uuid_01\"\n- API: DELETE /api/v1/partner/hotels/hotel_draft_uuid_01"
+        return f"Dữ liệu tạo khách sạn đối tác:\n{base_h}\n- API: POST /api/v1/partner/hotels"
+
+    # 9. PARTNER_ROOM
+    if prefix == "PARTNER_ROOM":
+        base_r = "- roomTypeName: \"Phòng Deluxe Giường Đôi\"\n- maxGuests: 2\n- totalUnits: 5\n- basePrice: 350000"
+        if "tên trống" in title_lower:
+            return "- roomTypeName: \"\"\n- maxGuests: 2\n- totalUnits: 5\n- basePrice: 350000"
+        if "guests < 1" in title_lower or "maxguests < 1" in title_lower:
+            return "- roomTypeName: \"Phòng Standard\"\n- maxGuests: 0\n- totalUnits: 5\n- basePrice: 200000"
+        if "guests > 20" in title_lower or "maxguests > 20" in title_lower:
+            return "- roomTypeName: \"Phòng Suite Lớn\"\n- maxGuests: 21\n- totalUnits: 5\n- basePrice: 2000000"
+        if "totalunits < 1" in title_lower:
+            return "- roomTypeName: \"Phòng Standard\"\n- maxGuests: 2\n- totalUnits: 0\n- basePrice: 200000"
+        if "duplicate" in title_lower or "trùng số phòng" in title_lower:
+            return "Dữ liệu tạo phòng đơn vị (trùng số phòng):\n- roomTypeId: \"room_type_uuid_2222\"\n- roomNumber: \"202\"\n- API: POST /api/v1/partner/rooms/units"
+        if "maintenance" in title_lower or "bảo trì" in title_lower:
+            return "Cập nhật trạng thái bảo trì phòng:\n- roomUnitId: \"unit_uuid_8888\"\n- status: \"MAINTENANCE\"\n- API: PATCH /api/v1/partner/rooms/units/unit_uuid_8888"
+        if "pricing" in title_lower or "chính sách giá" in title_lower:
+            if "âm" in title_lower or "negative" in title_lower:
+                return "Chính sách giá theo giờ (lỗi giá âm):\n- roomTypeId: \"room_type_uuid_2222\"\n- priceHourly: -50000"
+            if "giờ" in title_lower:
+                return "Chính sách giá theo giờ:\n- roomTypeId: \"room_type_uuid_2222\"\n- priceHourly: 80000\n- priceFirst2Hours: 150000\n- API: POST /api/v1/partner/rooms/pricing/hourly"
+            if "calendar" in title_lower or "lịch đặc biệt" in title_lower:
+                return "Chính sách giá đặc biệt theo lịch:\n- roomTypeId: \"room_type_uuid_2222\"\n- date: \"2026-09-02\"\n- priceDailyOverride: 600000\n- API: POST /api/v1/partner/rooms/pricing/calendar"
+        if "inventory" in title_lower or "phòng trống" in title_lower:
+            return "Cập nhật số lượng phòng theo ngày:\n- roomTypeId: \"room_type_uuid_2222\"\n- date: \"2026-06-15\"\n- availableUnits: 4\n- API: PUT /api/v1/partner/rooms/inventory"
+        return f"Dữ liệu tạo loại phòng:\n{base_r}\n- API: POST /api/v1/partner/rooms"
+
+    # 10. PARTNER_OPS
+    if prefix == "PARTNER_OPS":
+        if "danh sách" in title_lower or "bookings list" in title_lower:
+            return "Lấy danh sách đơn đặt của đối tác:\n- hotelId: \"hotel_uuid_9999\"\n- statusFilter: \"PENDING\"\n- API: GET /api/v1/partner/bookings?hotelId=hotel_uuid_9999&status=PENDING"
+        if "trạng thái đơn đặt" in title_lower or "booking status" in title_lower:
+            if "wrong booking status" in title_lower or "sai enum" in title_lower:
+                return "Cập nhật trạng thái booking (sai enum):\n- bookingId: \"booking_uuid_7777\"\n- status: \"INVALID_STATUS_ENUM\"\n- API: PATCH /api/v1/partner/bookings/booking_uuid_7777/status"
+            return "Cập nhật trạng thái booking:\n- bookingId: \"booking_uuid_7777\"\n- status: \"CONFIRMED\"\n- API: PATCH /api/v1/partner/bookings/booking_uuid_7777/status"
+        if "edit other partner" in title_lower or "can thiệp đơn" in title_lower:
+            return "Cập nhật booking của đối tác khác:\n- bookingId: \"booking_uuid_of_hotel_b\"\n- status: \"CONFIRMED\"\n- API: PATCH /api/v1/partner/bookings/booking_uuid_of_hotel_b/status"
+        if "thống kê" in title_lower or "dashboard" in title_lower:
+            return "Lấy số liệu thống kê doanh thu:\n- hotelId: \"hotel_uuid_9999\"\n- startDate: \"2026-06-01\"\n- endDate: \"2026-06-30\"\n- API: GET /api/v1/partner/dashboard/stats?hotelId=hotel_uuid_9999&startDate=2026-06-01&endDate=2026-06-30"
+        if "cancellation policy" in title_lower or "hủy phòng" in title_lower:
+            return "Thiết lập chính sách hủy phòng:\n- hotelId: \"hotel_uuid_9999\"\n- policyDetails: \"Hủy miễn phí trước 24h\"\n- API: POST /api/v1/partner/hotels/hotel_uuid_9999/cancellation-policy"
+        if "deposit" in title_lower or "đặt cọc" in title_lower:
+            if "0 and 100" in title_lower or "ngoài" in title_lower:
+                return "Thiết lập phần trăm cọc (lỗi):\n- hotelId: \"hotel_uuid_9999\"\n- depositPercentage: 120"
+            return "Thiết lập phần trăm cọc:\n- hotelId: \"hotel_uuid_9999\"\n- depositPercentage: 50\n- API: POST /api/v1/partner/hotels/hotel_uuid_9999/deposit-policy"
+        return "Yêu cầu vận hành của đối tác:\n- hotelId: \"hotel_uuid_9999\""
+
+    # 11. ADMIN
+    if prefix == "ADMIN":
+        if "sidebar" in title_lower or "phân quyền" in title_lower:
+            return "Thông tin vai trò admin:\n- adminRole: \"OPERATOR\"\n- allowedMenus: [\"Users\", \"Lodgings\"]\n- restrictedMenus: [\"Permissions\"]"
+        if "người dùng" in title_lower or "users" in title_lower:
+            if "phân trang" in title_lower:
+                return "Lấy danh sách người dùng:\n- page: 1\n- limit: 5\n- API: GET /api/admin/users?page=1&limit=5"
+            if "email hoặc username" in title_lower or "keyword" in title_lower:
+                return "Tìm kiếm người dùng:\n- keyword: \"partner_test\"\n- API: GET /api/admin/users?keyword=partner_test"
+            if "nhân viên" in title_lower:
+                if "thiếu trường" in title_lower:
+                    return "Tạo tài khoản nhân viên (thiếu password):\n- email: operator_new@gmail.com\n- username: \"New Staff\"\n- role: \"OPERATOR\""
+                return "Tạo tài khoản nhân viên:\n- email: operator_new@gmail.com\n- password: \"Password@123\"\n- username: \"New Staff\"\n- role: \"OPERATOR\"\n- API: POST /api/admin/users"
+            if "khóa" in title_lower or "self block" in title_lower or "block" in title_lower:
+                return "Khóa tài khoản chính mình (chặn self-block):\n- userId: \"my_own_admin_id\"\n- API: PUT /api/admin/users/my_own_admin_id/block"
+        if " lodging" in title_lower or "cơ sở lưu trú" in title_lower or "phê duyệt" in title_lower:
+            return "Phê duyệt cơ sở lưu trú:\n- hotelId: \"hotel_uuid_9999\"\n- action: \"APPROVE\"\n- API: POST /api/admin/lodgings/hotel_uuid_9999/review"
+        if "review" in title_lower or "đánh giá" in title_lower:
+            return "Phê duyệt đánh giá:\n- reviewId: \"review_uuid_3333\"\n- action: \"APPROVE\"\n- API: POST /api/admin/reviews/review_uuid_3333/approve"
+        if "content" in title_lower or "bài viết" in title_lower:
+            return "Tạo bài viết nội dung:\n- title: \"Hướng dẫn đặt phòng theo giờ\"\n- content: \"Nội dung chi tiết bài viết...\"\n- status: \"PUBLISHED\"\n- API: POST /api/admin/content/pages"
+        if "export" in title_lower or "xuất dữ liệu" in title_lower:
+            return "Xuất dữ liệu Excel:\n- exportType: \"bookings\"\n- fileFormat: \"xlsx\"\n- API: GET /api/admin/exports/bookings?format=xlsx"
+        return "Thông tin quyền quản trị:\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1... (Token Admin)"
+
+    # 12. NONFUNC
+    if prefix == "NONFUNC":
+        if "thiếu token" in title_lower or "401" in title_lower:
+            return "Gửi yêu cầu không kèm token:\n- API: GET /api/customer/bookings\n- headers: {}"
+        if "sai role" in title_lower or "403" in title_lower:
+            return "Gửi yêu cầu sai vai trò (Customer gọi API của Partner):\n- API: GET /api/v1/partner/bookings\n- headers: Authorization: Bearer eyJhbGciOiJIUzI1... (Token Customer)"
+        if "quá dài" in title_lower or "zod" in title_lower or "payload" in title_lower:
+            if "json" in title_lower or "10mb" in title_lower:
+                return "Gửi JSON request quá lớn:\n- Content-Size: 11 MB\n- API: POST /api/customer/bookings"
+            return "Gửi chuỗi dữ liệu quá dài:\n- username: \"A\" * 300\n- API: PATCH /api/customer/profile/me"
+        if "ký tự đặc biệt" in title_lower or "xss" in title_lower or "sql" in title_lower:
+            return "Chuỗi ký tự đặc biệt/tấn công:\n- sql_payload: \"admin' OR 1=1 --\"\n- xss_payload: \"<script>alert('XSS')</script>\""
+        if "hiệu năng" in title_lower or "100ms" in title_lower or "50ms" in title_lower:
+            return "Cấu hình test hiệu năng:\n- API: GET /api/customer/hotels?limit=50\n- Số lượng request song song: 100 requests"
+        return "Điều kiện kiểm thử bảo mật/hiệu năng/giao diện"
+
+    return "N/A"
+
+
 def build_test_cases() -> list[dict[str, str]]:
     groups: list[tuple[str, str, list[tuple[str, str, list[str], list[str]]]]] = [
         (
@@ -2194,13 +2503,16 @@ def build_test_cases() -> list[dict[str, str]]:
         counters[prefix] = 0
         for title, preconditions, steps, expected in specs:
             counters[prefix] += 1
+            # Thêm bước đầu tiên chuẩn bị dữ liệu test theo cột Dữ Liệu Đầu Vào
+            prepared_steps = ["Chuẩn bị dữ liệu test đầu vào theo cột Dữ Liệu Đầu Vào."] + steps
             cases.append(
                 {
                     "Mã TC": f"TC_{prefix}_{counters[prefix]:02d}",
                     "Phân Hệ": module,
                     "Tên Kiểm Thử": title,
                     "Điều Kiện Tiên Quyết": preconditions,
-                    "Các Bước Thực Hiện": numbered(steps),
+                    "Dữ Liệu Đầu Vào": get_input_data(prefix, title, steps),
+                    "Các Bước Thực Hiện": numbered(prepared_steps),
                     "Kết Quả Mong Đợi": numbered(expected),
                     "Trạng Thái": "Not Run",
                     "Ghi Chú": "",
@@ -2245,6 +2557,7 @@ def create_detail_sheet(wb: Workbook, test_cases: list[dict[str, str]]) -> None:
         "Phân Hệ",
         "Tên Kiểm Thử",
         "Điều Kiện Tiên Quyết",
+        "Dữ Liệu Đầu Vào",
         "Các Bước Thực Hiện",
         "Kết Quả Mong Đợi",
         "Trạng Thái",
@@ -2256,23 +2569,25 @@ def create_detail_sheet(wb: Workbook, test_cases: list[dict[str, str]]) -> None:
 
     style_header_row(ws, 1, 1, len(headers))
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:H{ws.max_row}"
+    last_col_letter = get_column_letter(len(headers))
+    ws.auto_filter.ref = f"A1:{last_col_letter}{ws.max_row}"
 
     widths = {
         "A": 15,
         "B": 26,
         "C": 40,
         "D": 42,
-        "E": 52,
-        "F": 54,
-        "G": 15,
-        "H": 24,
+        "E": 38,
+        "F": 52,
+        "G": 54,
+        "H": 15,
+        "I": 24,
     }
     for col_letter, width in widths.items():
         ws.column_dimensions[col_letter].width = width
 
-    center_columns = {"A", "B", "G"}
-    left_columns = {"C", "D", "E", "F", "H"}
+    center_columns = {"A", "B", "H"}
+    left_columns = {"C", "D", "E", "F", "G", "I"}
     for row_idx in range(2, ws.max_row + 1):
         fill_color = ZEBRA if row_idx % 2 == 1 else WHITE
         for col_idx in range(1, len(headers) + 1):
@@ -2298,7 +2613,7 @@ def create_detail_sheet(wb: Workbook, test_cases: list[dict[str, str]]) -> None:
     status_validation.prompt = "Chọn trạng thái chạy test case."
     status_validation.promptTitle = "Trạng thái"
     ws.add_data_validation(status_validation)
-    status_validation.add(f"G2:G{ws.max_row}")
+    status_validation.add(f"H2:H{ws.max_row}")
 
 
 def create_summary_sheet(wb: Workbook, test_cases: list[dict[str, str]]) -> None:
@@ -2347,8 +2662,8 @@ def create_summary_sheet(wb: Workbook, test_cases: list[dict[str, str]]) -> None
         ws.cell(row=row, column=1, value=offset + 1)
         ws.cell(row=row, column=2, value=module)
         ws.cell(row=row, column=3, value=f'=COUNTIF({detail_ref}!$B:$B,B{row})')
-        ws.cell(row=row, column=4, value=f'=COUNTIFS({detail_ref}!$B:$B,B{row},{detail_ref}!$G:$G,"Pass")')
-        ws.cell(row=row, column=5, value=f'=COUNTIFS({detail_ref}!$B:$B,B{row},{detail_ref}!$G:$G,"Fail")')
+        ws.cell(row=row, column=4, value=f'=COUNTIFS({detail_ref}!$B:$B,B{row},{detail_ref}!$H:$H,"Pass")')
+        ws.cell(row=row, column=5, value=f'=COUNTIFS({detail_ref}!$B:$B,B{row},{detail_ref}!$H:$H,"Fail")')
         ws.cell(row=row, column=6, value=f"=C{row}-D{row}-E{row}")
 
     total_row = first_data_row + len(modules)

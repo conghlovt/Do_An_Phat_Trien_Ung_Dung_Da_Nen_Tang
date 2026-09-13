@@ -4,15 +4,11 @@
   "description": "Project gộp Admin và Partner",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/login/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/login/server.js",
+    "start": "node dist/server.js",
     "test": "jest --runInBand"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",

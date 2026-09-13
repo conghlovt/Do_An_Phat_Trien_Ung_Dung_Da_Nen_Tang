@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import * as authController from '../../login/login.controller';
+import * as authController from '../../auth/auth.controller';
 import {
   customerLoginSchema,
   customerRegisterSchema,

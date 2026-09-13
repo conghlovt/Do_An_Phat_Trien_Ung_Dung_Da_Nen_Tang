@@ -1,7 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import app from '../src/login/app';
-import prisma from '../src/login/lib/prisma';
+import app from '../src/app';
+import prisma from '../src/lib/prisma';
 import fs from 'fs';
 
 // ============================================================================
@@ -9,7 +9,7 @@ import fs from 'fs';
 // ============================================================================
 
 // Mock Prisma Client
-jest.mock('../src/login/lib/prisma', () => {
+jest.mock('../src/lib/prisma', () => {
   return {
     __esModule: true,
     default: {
@@ -48,7 +48,7 @@ jest.mock('../src/customer/services/offers.service', () => {
   return {
     OffersService: jest.fn().mockImplementation(() => ({
       async getGroupedOffers() {
-        const prismaMock = require('../src/login/lib/prisma').default;
+        const prismaMock = require('../src/lib/prisma').default;
         const customerVouchers = await prismaMock.voucher.findMany({
           where: { status: 'ACTIVE', hotelId: null },
         });
@@ -73,12 +73,12 @@ jest.mock('../src/customer/services/offers.service', () => {
         return collected[userId] || [];
       },
       async collectOffer(userId: string, offerId: string) {
-        const prismaMock = require('../src/login/lib/prisma').default;
+        const prismaMock = require('../src/lib/prisma').default;
         const fsMock = require('fs');
         const offer = await prismaMock.voucher.findUnique({ where: { id: offerId } });
 
         if (!offer) {
-          return { success: false, message: 'Voucher khÃ´ng tá»“n táº¡i' };
+          return { success: false, message: 'Voucher không tồn tại' };
         }
 
         const collected = JSON.parse(fsMock.readFileSync() || '{}');
@@ -88,7 +88,7 @@ jest.mock('../src/customer/services/offers.service', () => {
 
         return {
           success: true,
-          message: 'Thu th\u1eadp voucher th\u00e0nh c\u00f4ng',
+          message: 'Thu thập voucher thành công',
           data: { code: offer.code, name: offer.name },
         };
       },
@@ -97,7 +97,7 @@ jest.mock('../src/customer/services/offers.service', () => {
 });
 
 // Mock Authentication & Authorization Middlewares
-jest.mock('../src/login/middlewares/auth.middleware', () => {
+jest.mock('../src/auth/middlewares/auth.middleware', () => {
   return {
     authenticate: (req: any, res: any, next: any) => {
       // Simulate authenticating an Admin/Partner based on request headers

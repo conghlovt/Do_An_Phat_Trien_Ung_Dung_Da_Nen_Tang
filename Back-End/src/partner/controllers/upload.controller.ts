@@ -3,7 +3,7 @@
 // ============================================================
 
 import type { Response } from 'express';
-import type { AuthRequest } from '../../login/middlewares/auth.middleware';
+import type { AuthRequest } from '../../auth/middlewares/auth.middleware';
 import { uploadService } from '../services/upload.service';
 import { sendSuccess } from '../../shared/utils/response.util';
 import { BadRequestError } from '../../shared/errors/AppError';

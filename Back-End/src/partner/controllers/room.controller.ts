@@ -5,7 +5,7 @@
 import type { Response } from 'express';
 import { roomService } from '../services/room.service';
 import { sendSuccess } from '../../shared/utils/response.util';
-import type { AuthRequest } from '../../login/middlewares/auth.middleware';
+import type { AuthRequest } from '../../auth/middlewares/auth.middleware';
 import { BadRequestError } from '../../shared/errors/AppError';
 
 export class RoomController {

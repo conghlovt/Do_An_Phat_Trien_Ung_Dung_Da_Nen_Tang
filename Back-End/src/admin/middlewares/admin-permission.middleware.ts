@@ -2,7 +2,7 @@ import type { NextFunction, Response } from 'express';
 import prisma from '../../login/lib/prisma';
 import { sendError, sendResponse } from '../../shared/utils/response.util';
 import { USER_MESSAGES } from '../../shared/utils/app-error.util';
-import type { AuthRequest } from '../../login/middlewares/auth.middleware';
+import type { AuthRequest } from '../../auth/middlewares/auth.middleware';
 import {
   normalizePermissionAction,
   normalizePermissionModule,

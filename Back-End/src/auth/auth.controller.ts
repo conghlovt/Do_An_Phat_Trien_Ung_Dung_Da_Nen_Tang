@@ -1,0 +1,259 @@
+import { type Request, type Response } from 'express';
+import bcrypt from 'bcryptjs';
+import prisma from '../lib/prisma';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../shared/utils/jwt.util';
+import { sendError, sendResponse } from '../shared/utils/response.util';
+import { USER_MESSAGES } from '../shared/utils/app-error.util';
+import { isActiveUserStatus, isPendingUserStatus } from '../shared/utils/user-status.util';
+
+const inactiveAuthResponse = (res: Response, status?: string | null) => {
+  const isPending = isPendingUserStatus(status);
+  return sendResponse(
+    res,
+    403,
+    isPending ? USER_MESSAGES.AUTH_USER_PENDING : USER_MESSAGES.AUTH_USER_BLOCKED,
+    undefined,
+    { code: isPending ? 'AUTH_USER_PENDING' : 'AUTH_USER_BLOCKED' },
+  );
+};
+
+export const register = async (req: Request, res: Response) => {
+  console.log('[REGISTER CONTROLLER] Received body:', req.body);
+  const { email, password, username, role } = req.body;
+
+  if (!email || !password || !username || !role) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_REQUIRED_FIELDS);
+  }
+
+  if (!['customer', 'partner'].includes(role)) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_REGISTER_ROLE_INVALID);
+  }
+
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return sendResponse(res, 409, USER_MESSAGES.USER_EXISTS);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        username,
+        role: role as any,
+        status: role === 'partner' ? 'PENDING' : 'ACTIVE',
+        code: role === 'partner' ? 'PT' + Math.floor(Math.random() * 100) : 'CUS' + Math.floor(Math.random() * 100),
+        avatar: `https://i.pravatar.cc/150?u=${email}`,
+      },
+    });
+
+    const finalAccessToken = generateAccessToken({ id: newUser.id, role: newUser.role });
+    const finalRefreshToken = generateRefreshToken({ id: newUser.id, role: newUser.role });
+
+    await prisma.user.update({
+      where: { id: newUser.id },
+      data: { refreshToken: finalRefreshToken },
+    });
+
+    const { password: _, refreshToken: __, ...userWithoutPassword } = newUser;
+
+    return sendResponse(res, 201, 'Đăng ký thành công.', {
+      user: userWithoutPassword,
+      accessToken: finalAccessToken,
+      refreshToken: finalRefreshToken,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_EMAIL_PASSWORD_REQUIRED);
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_INVALID_CREDENTIALS);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_INVALID_CREDENTIALS);
+    }
+
+    if (!isActiveUserStatus(user.status)) {
+      return inactiveAuthResponse(res, user.status);
+    }
+
+    const accessToken = generateAccessToken({ id: user.id, role: user.role });
+    const refreshToken = generateRefreshToken({ id: user.id, role: user.role });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
+
+    const { password: _, refreshToken: __, ...userWithoutPassword } = user;
+
+    return sendResponse(res, 200, 'Đăng nhập thành công.', {
+      user: userWithoutPassword,
+      accessToken,
+      refreshToken,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_REFRESH_TOKEN_MISSING);
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (!user || user.refreshToken !== refreshToken) {
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_REFRESH_TOKEN_INVALID, undefined, { code: 'AUTH_REFRESH_TOKEN_INVALID' });
+    }
+
+    if (!isActiveUserStatus(user.status)) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshToken: null },
+      });
+      return inactiveAuthResponse(res, user.status);
+    }
+
+    const accessToken = generateAccessToken({ id: user.id, role: user.role });
+    return sendResponse(res, 200, 'Làm mới phiên đăng nhập thành công.', { accessToken });
+  } catch (error) {
+    return sendResponse(res, 401, USER_MESSAGES.AUTH_REFRESH_TOKEN_INVALID, undefined, { code: 'AUTH_REFRESH_TOKEN_INVALID' });
+  }
+};
+
+export const me = async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user;
+    if (!authUser?.id) {
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID, undefined, { code: 'AUTH_TOKEN_INVALID' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        phone: true,
+        role: true,
+        code: true,
+        avatar: true,
+        status: true,
+        emailVerified: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return sendResponse(res, 401, USER_MESSAGES.AUTH_TOKEN_INVALID, undefined, { code: 'AUTH_TOKEN_INVALID' });
+    }
+
+    if (!isActiveUserStatus(user.status)) {
+      return inactiveAuthResponse(res, user.status);
+    }
+
+    return sendResponse(res, 200, 'Lấy thông tin phiên đăng nhập thành công.', { user });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  if (refreshToken) {
+    try {
+      await prisma.user.updateMany({
+        where: { refreshToken },
+        data: { refreshToken: null },
+      });
+    } catch (error) {
+      // Ignore errors if token doesn't exist
+    }
+  }
+  return sendResponse(res, 200, 'Đăng xuất thành công.');
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_EMAIL_REQUIRED);
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return sendResponse(res, 404, USER_MESSAGES.USER_NOT_FOUND);
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await prisma.user.update({
+      where: { email },
+      data: { code: resetCode },
+    });
+
+    console.log(`Reset code for ${email}: ${resetCode}`);
+
+    return sendResponse(res, 200, 'Mã xác nhận đã được gửi đến email của bạn.');
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword) {
+    return sendResponse(res, 400, USER_MESSAGES.AUTH_RESET_FIELDS_REQUIRED);
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.code !== code) {
+      return sendResponse(res, 400, USER_MESSAGES.AUTH_RESET_CODE_INVALID);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { email },
+      data: { 
+        password: hashedPassword,
+        code: null
+      },
+    });
+
+    return sendResponse(res, 200, 'Đặt lại mật khẩu thành công.');
+  } catch (error) {
+    return sendError(res, error);
+  }
+};

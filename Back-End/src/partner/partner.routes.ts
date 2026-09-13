@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../login/middlewares/auth.middleware';
-import { validate } from '../login/middlewares/validate.middleware';
+import { authenticate, authorize } from '../auth/middlewares/auth.middleware';
+import { validate } from '../auth/middlewares/validate.middleware';
 import { asyncHandler } from '../shared/utils/asyncHandler';
-import { uploadGenericFile, uploadMultipleFiles, uploadMultipleImages, uploadSingleVideo } from '../login/middlewares/upload.middleware';
+import { uploadGenericFile, uploadMultipleFiles, uploadMultipleImages, uploadSingleVideo } from '../auth/middlewares/upload.middleware';
 
 // Controllers
 import { authController } from './controllers/auth.controller';

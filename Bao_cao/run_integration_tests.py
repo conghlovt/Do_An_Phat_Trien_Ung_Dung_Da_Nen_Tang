@@ -1397,17 +1397,17 @@ def update_excel_results(test_results):
     fail_count = 0
     not_run_count = 0
     
-    # Columns: A: Mã TC, G: Trạng Thái, H: Ghi Chú
+    # Columns: A: Mã TC, H: Trạng Thái, I: Ghi Chú
     for row in range(2, ws_detail.max_row + 1):
         tc_id = ws_detail.cell(row=row, column=1).value
         if tc_id in test_results:
             status, note = test_results[tc_id]
             note_vi = translate_to_vietnamese(note)
-            ws_detail.cell(row=row, column=7, value=status)
-            ws_detail.cell(row=row, column=8, value=note_vi)
+            ws_detail.cell(row=row, column=8, value=status)
+            ws_detail.cell(row=row, column=9, value=note_vi)
             
             # Apply color style
-            cell_status = ws_detail.cell(row=row, column=7)
+            cell_status = ws_detail.cell(row=row, column=8)
             if status == "Pass":
                 cell_status.fill = fill_pass
                 pass_count += 1
@@ -1415,7 +1415,7 @@ def update_excel_results(test_results):
                 cell_status.fill = fill_fail
                 fail_count += 1
         else:
-            ws_detail.cell(row=row, column=7, value="Not Run")
+            ws_detail.cell(row=row, column=8, value="Not Run")
             not_run_count += 1
             
     print(f"Detail sheet updated: {pass_count} Pass, {fail_count} Fail, {not_run_count} Not Run")

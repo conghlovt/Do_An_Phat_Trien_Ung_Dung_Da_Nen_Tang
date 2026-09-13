@@ -193,6 +193,40 @@ export class BookingService {
         });
       }
 
+      if (booking.userId) {
+        try {
+          const statusTitles: Record<string, string> = {
+            CONFIRMED: 'Đơn đặt phòng đã được xác nhận!',
+            CHECKED_IN: 'Nhận phòng thành công!',
+            COMPLETED: 'Hoàn tất chuyến đi!',
+            CANCELLED: 'Đơn đặt phòng đã bị hủy',
+          };
+          const statusMsgs: Record<string, string> = {
+            CONFIRMED: `Khách sạn đã xác nhận đơn đặt phòng ${booking.bookingCode || booking.id.slice(0, 8).toUpperCase()}.`,
+            CHECKED_IN: `Bạn đã làm thủ tục nhận phòng thành công cho đơn ${booking.bookingCode || booking.id.slice(0, 8).toUpperCase()}.`,
+            COMPLETED: `Đơn đặt phòng ${booking.bookingCode || booking.id.slice(0, 8).toUpperCase()} đã hoàn thành. Hãy chia sẻ trải nghiệm của bạn!`,
+            CANCELLED: `Đơn đặt phòng ${booking.bookingCode || booking.id.slice(0, 8).toUpperCase()} đã bị hủy.`,
+          };
+
+          if (statusTitles[normalizedStatus]) {
+            const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            await tx.customerNotification.create({
+              data: {
+                code: `NOTIF_PTR_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                userId: booking.userId as string,
+                type: 'booking',
+                title: statusTitles[normalizedStatus]!,
+                description: statusMsgs[normalizedStatus]!,
+                time: timeStr,
+                isRead: false,
+              },
+            });
+          }
+        } catch (notifErr) {
+          console.warn('[Partner updateStatus] Could not create notification record:', notifErr);
+        }
+      }
+
       return updatedBooking;
     });
 

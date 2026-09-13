@@ -516,6 +516,25 @@ export const handleSepayWebhook = async (body: unknown) => {
       data: { status: "CONFIRMED" },
     });
 
+    if (payment.booking?.userId) {
+      try {
+        const timeStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+        await tx.customerNotification.create({
+          data: {
+            code: `NOTIF_PAY_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            userId: payment.booking.userId,
+            type: "booking",
+            title: "Thanh toán thành công!",
+            description: `Đơn đặt phòng ${bookingCode || payment.booking.bookingCode || "BK"} đã được thanh toán thành công và chuyển sang trạng thái Chờ nhận phòng.`,
+            time: timeStr,
+            isRead: false,
+          },
+        });
+      } catch (notifErr) {
+        console.warn("[handleSepayWebhook] Could not create notification record:", notifErr);
+      }
+    }
+
     await createWebhookLog(
       tx,
       payload,

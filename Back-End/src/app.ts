@@ -3,25 +3,25 @@ import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 
-// --- Utilities ---
-import { isAppError, toAppError } from '../shared/utils/app-error.util';
-import { sendError, sendResponse } from '../shared/utils/response.util';
+// --- Shared Utilities ---
+import { isAppError, toAppError } from './shared/utils/app-error.util';
+import { sendError, sendResponse } from './shared/utils/response.util';
 
-// --- Admin ---
-import authRoutes from './login.routes';
-import adminRoutes from '../admin/admin.routes';
+// --- Auth & Admin Routes ---
+import authRoutes from './auth/auth.routes';
+import adminRoutes from './admin/admin.routes';
 
 // --- Customer Routes ---
-import customerRoutes from '../customer/customer.routes';
+import customerRoutes from './customer/customer.routes';
+import hotelCardRoutes from './customer/routes/hotelCard.routes';
 
 // --- Partner Routes ---
-import partnerRoutes from '../partner/partner.routes';
-import hotelCardRoutes from '../customer/routes/hotelCard.routes';
+import partnerRoutes from './partner/partner.routes';
 
 const app: Application = express();
 
 // ============================================================
-// GLOBAL MIDDLEWARE (Tối ưu nhất từ 2 bên)
+// GLOBAL MIDDLEWARE
 // ============================================================
 app.use(helmet());
 app.use(cors());
@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // ============================================================
-// ADMIN
+// AUTH & ADMIN API
 // ============================================================
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -42,7 +42,7 @@ app.use('/api/customer', customerRoutes);
 app.use('/api/hotel-cards', hotelCardRoutes);
 
 // ============================================================
-// PARTNER API (Giữ nguyên prefix /v1 để không xung đột)
+// PARTNER API
 // ============================================================
 app.use('/api/v1', partnerRoutes.publicRouter);
 app.use('/api/v1/files', partnerRoutes.fileRouter);
@@ -51,7 +51,7 @@ app.use('/api/v1/partner', partnerRoutes.partnerRouter);
 // ============================================================
 // HEALTH CHECK
 // ============================================================
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   sendResponse(res, 200, 'Máy chủ hoạt động bình thường.', {
     status: 'OK',
     uptime: process.uptime(),
@@ -60,9 +60,9 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // ============================================================
-// GLOBAL ERROR HANDLER (Dùng chuẩn của Admin)
+// GLOBAL ERROR HANDLER
 // ============================================================
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   const appError = toAppError(err);
 
   console.error('Request failed', {
